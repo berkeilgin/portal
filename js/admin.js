@@ -45,20 +45,24 @@ async function ghPut(path, content, sha, message) {
 function b64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 
-// ==================== TOGGLE BUTON İŞLEVLERİ ====================
+// ==================== TOGGLE BUTONLARINI BAŞLAT ====================
 function initToggles() {
-  // Bakım modu toggle
   const maintToggle = document.getElementById('maintToggle');
-  maintToggle.addEventListener('click', function(e) {
-    e.stopPropagation();
-    this.classList.toggle('on');
-  });
-  
-  // Duyuru toggle
   const annToggle = document.getElementById('annToggle');
-  annToggle.addEventListener('click', function(e) {
+  
+  // Mevcut click event'lerini kaldır (varsa)
+  const newMaint = maintToggle.cloneNode(true);
+  maintToggle.parentNode.replaceChild(newMaint, maintToggle);
+  const newAnn = annToggle.cloneNode(true);
+  annToggle.parentNode.replaceChild(newAnn, annToggle);
+  
+  newMaint.addEventListener('click', (e) => {
     e.stopPropagation();
-    this.classList.toggle('on');
+    newMaint.classList.toggle('on');
+  });
+  newAnn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    newAnn.classList.toggle('on');
   });
 }
 
