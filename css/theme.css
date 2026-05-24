@@ -63,3 +63,39 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add(theme);
   renderThemeButtons();
 });
+
+  body.dark {
+  --bg: #0d0d14;
+  --surface: #141420;
+  --card: #1a1a26;
+  --text: #eeeef5;
+  --border: rgba(255,255,255,.09);
+  --accent2: #7c6dfa;
+}
+
+body.light {
+  --bg: #f0f0f8;
+  --surface: #fff;
+  --card: #fafafe;
+  --text: #1a1a2e;
+  --border: rgba(0,0,0,.1);
+  --accent2: #7c6dfa;
+}
+
+body.tp {
+  --bg: #0e0812;
+  --surface: #14091c;
+  --card: #1c1026;
+  --text: #f5eef8;
+  --border: rgba(255,0,130,.1);
+  --accent2: #9b30c0;
+}
+
+body.grey {
+  --bg: #1f1f28;
+  --surface: #272734;
+  --card: #2e2e3e;
+  --text: #e2e2f0;
+  --border: rgba(255,255,255,.09);
+  --accent2: #7c6dfa;
+}
