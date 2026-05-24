@@ -9,8 +9,10 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/components.css">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-/* Modal gizleme / gösterme */
+/* Modal ve diğer stiller (önceki gibi) */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -29,10 +31,12 @@
 .modal {
   background: var(--surface);
   border-radius: 16px;
-  max-width: 500px;
+  max-width: 600px;
   width: 90%;
   padding: 20px;
   border: 1px solid var(--border);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 .stats-grid {
   display: grid;
@@ -119,6 +123,10 @@
   padding: 4px 10px;
   font-size: 12px;
 }
+.chart-container {
+  max-width: 600px;
+  margin: 20px auto;
+}
 </style>
 </head>
 <body class="grey">
@@ -166,6 +174,7 @@
       <button class="btn btn-ghost" onclick="showTab('topics')">🏷️ Konular</button>
       <button class="btn btn-ghost" onclick="showTab('users')">👥 Kullanıcılar</button>
       <button class="btn btn-ghost" onclick="showTab('mail')">📧 Mail Ayarları</button>
+      <button class="btn btn-ghost" onclick="showTab('stats')">📊 İstatistikler</button>
     </div>
 
     <!-- Case'ler Tab -->
@@ -213,77 +222,41 @@
 
     <!-- Mail Ayarları Tab -->
     <div id="mailTab" class="panel" style="display:none">
-      <div class="form-group"><label>EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input" placeholder="örnek: 5Q-xyzABC..."></div>
-      <div class="form-group"><label>EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input" placeholder="service_xxxx"></div>
-      <div class="form-group"><label>EmailJS Template ID</label><input type="text" id="emailjsTemplateId" class="form-input" placeholder="template_xxxx"></div>
-      <div class="form-group"><label>Admin Bildirim E-posta (alıcı)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
-      <div class="form-group"><label>CC E-posta (opsiyonel)</label><input type="email" id="ccEmail" class="form-input" placeholder="cc@example.com"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="saveMailSettings()">Kaydet</button>
-        <button class="btn btn-ghost" onclick="testEmail()">Test Maili Gönder</button>
+      <div class="form-group"><label>EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input" placeholder=""></div>
+      <div class="form-group"><label>EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input" placeholder=""></div>
+      <div class="form-group"><label>EmailJS Template ID</label><input type="text" id="emailjsTemplateId" class="form-input" placeholder=""></div>
+      <div class="form-group"><label>Alıcı E-posta</label><input type="email" id="adminNotifyEmail" class="form-input"></div>
+      <div class="form-group"><label>CC E-posta</label><input type="email" id="ccEmail" class="form-input"></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">Kaydet</button><button class="btn btn-ghost" onclick="testEmail()">Test Maili Gönder</button></div>
+      <div id="mailStatus" style="margin-top:12px"></div>
+    </div>
+
+    <!-- İstatistikler Tab -->
+    <div id="statsTab" class="panel" style="display:none">
+      <div class="chart-container">
+        <canvas id="statsChart"></canvas>
       </div>
-      <div id="mailStatus" style="margin-top:12px; font-size:12px"></div>
+      <div id="statsTable" style="margin-top:20px; overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse">
+          <thead><tr><th>Çözen Kişi</th><th>Çözülen Case Sayısı</th><th>Toplam Çözüm Süresi (saat)</th><th>Ortalama Çözüm Süresi (saat)</th></tr></thead>
+          <tbody id="statsTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<footer class="footer">
-  <div class="copyright-text">© 2026 QA Portal</div>
-</footer>
+<footer class="footer"><div class="copyright-text">© 2026 QA Portal</div></footer>
 
-<!-- Modal: Case Detay -->
-<div class="modal-overlay" id="caseDetailModal">
-  <div class="modal">
-    <h3>Case Detay</h3>
-    <div id="caseDetailContent"></div>
-    <div class="btn-row" style="margin-top:20px; justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeModal('caseDetailModal')">Kapat</button>
-    </div>
-  </div>
-</div>
+<!-- Modallar -->
+<div class="modal-overlay" id="caseDetailModal"><div class="modal"><h3>Case Detay</h3><div id="caseDetailContent"></div><div class="btn-row" style="justify-content:flex-end;"><button class="btn btn-ghost" onclick="closeModal('caseDetailModal')">Kapat</button></div></div></div>
+<div class="modal-overlay" id="topicModal"><div class="modal"><h3 id="topicModalTitle">Konu</h3><div class="form-group"><label>Başlık</label><input type="text" id="topicTitle"></div><div class="form-group"><label>Açıklama</label><textarea id="topicDesc" rows="2"></textarea></div><div class="form-group"><label>Sorumlu E-posta</label><input type="email" id="topicResponsibleEmail"></div><div class="form-group"><label><input type="checkbox" id="topicActive" checked> Aktif</label></div><div class="btn-row"><button class="btn btn-ghost" onclick="closeModal('topicModal')">İptal</button><button class="btn btn-primary" id="saveTopicBtn">Kaydet</button></div></div></div>
+<div class="modal-overlay" id="userEditModal"><div class="modal"><h3 id="userEditModalTitle">Kullanıcı</h3><div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="editUsername"></div><div class="form-group"><label>Şifre</label><input type="password" id="editPassword" placeholder="Değiştirmek için yazın"></div><div class="form-group"><label>E-posta</label><input type="email" id="editUserEmail"></div><div class="form-group"><label>Rol</label><select id="editUserRole"><option value="user">Kullanıcı</option><option value="admin">Admin</option></select></div><div class="btn-row"><button class="btn btn-ghost" onclick="closeModal('userEditModal')">İptal</button><button class="btn btn-primary" id="saveUserEditBtn">Kaydet</button></div></div></div>
 
-<!-- Modal: Konu Ekle/Düzenle -->
-<div class="modal-overlay" id="topicModal">
-  <div class="modal">
-    <h3 id="topicModalTitle">+ Yeni Konu</h3>
-    <div class="form-group"><label>Başlık</label><input type="text" id="topicTitle" class="form-input"></div>
-    <div class="form-group"><label>Açıklama</label><textarea id="topicDesc" rows="2" class="form-input"></textarea></div>
-    <div class="form-group"><label>Sorumlu E-posta</label><input type="email" id="topicResponsibleEmail" class="form-input"></div>
-    <div class="form-group"><label><input type="checkbox" id="topicActive" checked> Aktif</label></div>
-    <div class="btn-row" style="justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeModal('topicModal')">İptal</button>
-      <button class="btn btn-primary" id="saveTopicBtn">Kaydet</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Kullanıcı Ekle/Düzenle -->
-<div class="modal-overlay" id="userEditModal">
-  <div class="modal">
-    <h3 id="userEditModalTitle">+ Yeni Kullanıcı</h3>
-    <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="editUsername" class="form-input"></div>
-    <div class="form-group"><label>Şifre</label><input type="password" id="editPassword" class="form-input" placeholder="Değiştirmek için yazın"></div>
-    <div class="form-group"><label>E-posta</label><input type="email" id="editUserEmail" class="form-input"></div>
-    <div class="form-group"><label>Rol</label>
-      <select id="editUserRole" class="form-input">
-        <option value="user">Kullanıcı</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-    <div class="btn-row" style="justify-content:flex-end;">
-      <button class="btn btn-ghost" onclick="closeModal('userEditModal')">İptal</button>
-      <button class="btn btn-primary" id="saveUserEditBtn">Kaydet</button>
-    </div>
-  </div>
-</div>
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
-<!-- EmailJS -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<!-- Diğer scriptler -->
 <script src="js/theme.js"></script>
 <script src="js/caseyonetim.js"></script>
 </body>
