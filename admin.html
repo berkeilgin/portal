@@ -187,162 +187,196 @@
   margin-top: 4px;
   word-break: break-all;
 }
+/* Login ekranı stilleri */
+#loginScreen {
+  max-width: 400px;
+  margin: 80px auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+}
+#loginScreen h2 {
+  margin-bottom: 24px;
+  color: var(--accent2);
+}
+#adminPanel {
+  display: none;
+}
 </style>
 </head>
 <body class="grey">
 
-<div class="header">
-  <div class="logo">⚙️ QA Portal Admin</div>
-  <div class="theme-switch"></div>
-  <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Portal</button>
-  <button class="btn btn-primary" id="saveBtn" onclick="saveToGitHub()" disabled>💾 Kaydet & Yayınla</button>
+<!-- GİRİŞ EKRANI (Token ile) -->
+<div id="loginScreen">
+  <h2>🔐 Admin Girişi</h2>
+  <div class="form-group">
+    <label>GitHub Personal Access Token</label>
+    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" style="font-family: monospace;">
+    <div class="small-note" style="font-size: 11px; color: var(--muted); margin-top: 6px;">
+      Token'ınızın <strong>repo</strong> kapsamı olmalıdır.
+    </div>
+  </div>
+  <button class="btn btn-primary" id="loginBtn" style="width: 100%;">Giriş Yap</button>
+  <div id="loginError" style="margin-top: 16px; color: var(--accent3); font-size: 12px;"></div>
 </div>
 
-<div class="main">
-  <!-- Durum çubuğu -->
-  <div class="panel" style="margin-bottom: 20px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-    <div class="status" id="statusBar">
-      <span class="dot" style="background: var(--accent2);"></span>
-      <span id="statusMsg">Yükleniyor...</span>
-    </div>
-    <div>
-      <span class="badge" id="roleBadge">ADMIN</span>
-    </div>
+<!-- ADMIN PANELİ (Giriş sonrası gösterilecek) -->
+<div id="adminPanel">
+  <div class="header">
+    <div class="logo">⚙️ QA Portal Admin</div>
+    <div class="theme-switch"></div>
+    <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Portal</button>
+    <button class="btn btn-primary" id="saveBtn" onclick="saveToGitHub()" disabled>💾 Kaydet & Yayınla</button>
   </div>
 
-  <!-- Sekmeler -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="tools">🛠 Araçlar</button>
-    <button class="tab-btn" data-tab="categories">📂 Kategoriler</button>
-    <button class="tab-btn" data-tab="settings">⚙️ Ayarlar</button>
-    <button class="tab-btn" data-tab="stats">📊 İstatistikler</button>
-    <button class="tab-btn" data-tab="users">👥 Kullanıcılar</button>
-    <button class="tab-btn" data-tab="uploads">📁 İkonlar</button>
-  </div>
-
-  <!-- TOOLS TAB -->
-  <div class="tab-pane active" id="tab-tools">
-    <div class="panel">
-      <div class="admin-toolbar">
-        <h3>🛠 Araç Yönetimi</h3>
-        <button class="btn btn-primary" onclick="openToolModal()">+ Yeni Araç</button>
+  <div class="main">
+    <!-- Durum çubuğu -->
+    <div class="panel" style="margin-bottom: 20px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="status" id="statusBar">
+        <span class="dot" style="background: var(--accent2);"></span>
+        <span id="statusMsg">Yükleniyor...</span>
       </div>
-      <div class="form-group">
-        <input type="text" id="searchTools" class="form-group" placeholder="🔍 Araç ara..." style="width: 100%;">
-      </div>
-      <div class="chips" id="catFilterChips"></div>
-      <div class="table-wrapper">
-        <table id="toolsTable">
-          <thead>
-            <tr><th>İkon</th><th>Ad / ID</th><th>Kategori</th><th>URL</th><th>Aktif</th><th>NEW</th><th>TEST</th><th>BEST</th><th>İşlem</th></tr>
-          </thead>
-          <tbody id="toolsTableBody"></tbody>
-        </table>
+      <div>
+        <span class="badge" id="roleBadge">ADMIN</span>
       </div>
     </div>
-  </div>
 
-  <!-- CATEGORIES TAB -->
-  <div class="tab-pane" id="tab-categories">
-    <div class="panel">
-      <div class="admin-toolbar">
-        <h3>📂 Kategori Yönetimi</h3>
-        <button class="btn btn-primary" onclick="openCategoryModal()">+ Yeni Kategori</button>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>Sıra</th><th>ID</th><th>Etiket</th><th>İkon</th><th>Araç Sayısı</th><th>İşlem</th></tr></thead>
-          <tbody id="categoriesTableBody"></tbody>
-        </table>
-      </div>
+    <!-- Sekmeler -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tools">🛠 Araçlar</button>
+      <button class="tab-btn" data-tab="categories">📂 Kategoriler</button>
+      <button class="tab-btn" data-tab="settings">⚙️ Ayarlar</button>
+      <button class="tab-btn" data-tab="stats">📊 İstatistikler</button>
+      <button class="tab-btn" data-tab="users">👥 Kullanıcılar</button>
+      <button class="tab-btn" data-tab="uploads">📁 İkonlar</button>
     </div>
-  </div>
 
-  <!-- SETTINGS TAB -->
-  <div class="tab-pane" id="tab-settings">
-    <div class="panel">
-      <h3>🔧 Genel Ayarlar</h3>
-      <div class="grid-2">
-        <div class="form-group">
-          <label>Bakım Modu</label>
-          <button class="toggle-switch" id="maintToggle"></button>
+    <!-- TOOLS TAB -->
+    <div class="tab-pane active" id="tab-tools">
+      <div class="panel">
+        <div class="admin-toolbar">
+          <h3>🛠 Araç Yönetimi</h3>
+          <button class="btn btn-primary" onclick="openToolModal()">+ Yeni Araç</button>
         </div>
         <div class="form-group">
-          <label>Bakım Mesajı</label>
-          <textarea id="maintMsg" rows="2" placeholder="Bakım mesajı..."></textarea>
+          <input type="text" id="searchTools" class="form-group" placeholder="🔍 Araç ara..." style="width: 100%;">
         </div>
-        <div class="form-group">
-          <label>Duyuru Aktif</label>
-          <button class="toggle-switch" id="annToggle"></button>
-        </div>
-        <div class="form-group">
-          <label>Duyuru Metni</label>
-          <input type="text" id="annText" placeholder="Duyuru metni...">
-        </div>
-        <div class="form-group">
-          <label>Duyuru Türü</label>
-          <select id="annType">
-            <option value="info">Bilgi (mavi)</option>
-            <option value="success">Başarılı (yeşil)</option>
-            <option value="warn">Uyarı (sarı)</option>
-            <option value="danger">Acil (kırmızı)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Telif Hakkı Metni</label>
-          <input type="text" id="copyrightInput" placeholder="© 2025 QA Portal. Tüm hakları saklıdır.">
+        <div class="chips" id="catFilterChips"></div>
+        <div class="table-wrapper">
+          <table id="toolsTable">
+            <thead>
+              <tr><th>İkon</th><th>Ad / ID</th><th>Kategori</th><th>URL</th><th>Aktif</th><th>NEW</th><th>TEST</th><th>BEST</th><th>İşlem</th></tr>
+            </thead>
+            <tbody id="toolsTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- STATS TAB -->
-  <div class="tab-pane" id="tab-stats">
-    <div class="panel">
-      <div class="admin-toolbar">
-        <h3>📊 Kullanım İstatistikleri</h3>
-        <button class="btn btn-ghost" onclick="loadStats()">↺ Yenile</button>
-        <button class="btn btn-danger" onclick="clearStats()">🗑 Sıfırla</button>
+    <!-- CATEGORIES TAB -->
+    <div class="tab-pane" id="tab-categories">
+      <div class="panel">
+        <div class="admin-toolbar">
+          <h3>📂 Kategori Yönetimi</h3>
+          <button class="btn btn-primary" onclick="openCategoryModal()">+ Yeni Kategori</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Sıra</th><th>ID</th><th>Etiket</th><th>İkon</th><th>Araç Sayısı</th><th>İşlem</th></tr></thead>
+            <tbody id="categoriesTableBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="stats-grid" id="statsCards"></div>
-      <div id="statsDetails"></div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-pane" id="tab-settings">
+      <div class="panel">
+        <h3>🔧 Genel Ayarlar</h3>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Bakım Modu</label>
+            <button class="toggle-switch" id="maintToggle"></button>
+          </div>
+          <div class="form-group">
+            <label>Bakım Mesajı</label>
+            <textarea id="maintMsg" rows="2" placeholder="Bakım mesajı..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Duyuru Aktif</label>
+            <button class="toggle-switch" id="annToggle"></button>
+          </div>
+          <div class="form-group">
+            <label>Duyuru Metni</label>
+            <input type="text" id="annText" placeholder="Duyuru metni...">
+          </div>
+          <div class="form-group">
+            <label>Duyuru Türü</label>
+            <select id="annType">
+              <option value="info">Bilgi (mavi)</option>
+              <option value="success">Başarılı (yeşil)</option>
+              <option value="warn">Uyarı (sarı)</option>
+              <option value="danger">Acil (kırmızı)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Telif Hakkı Metni</label>
+            <input type="text" id="copyrightInput" placeholder="© 2025 QA Portal. Tüm hakları saklıdır.">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div class="tab-pane" id="tab-stats">
+      <div class="panel">
+        <div class="admin-toolbar">
+          <h3>📊 Kullanım İstatistikleri</h3>
+          <button class="btn btn-ghost" onclick="loadStats()">↺ Yenile</button>
+          <button class="btn btn-danger" onclick="clearStats()">🗑 Sıfırla</button>
+        </div>
+        <div class="stats-grid" id="statsCards"></div>
+        <div id="statsDetails"></div>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div class="tab-pane" id="tab-users">
+      <div class="panel">
+        <div class="admin-toolbar">
+          <h3>👥 Kullanıcı Yönetimi</h3>
+          <button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Kullanıcı Adı</th><th>Rol</th><th>İşlem</th></tr></thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOADS TAB -->
+    <div class="tab-pane" id="tab-uploads">
+      <div class="panel">
+        <h3>📁 İkon / Logo Yükleme</h3>
+        <div class="drop-zone" id="dropZone">
+          📂 Dosyaları sürükleyin veya tıklayın
+          <input type="file" id="fileInput" multiple accept="image/*" style="display:none;">
+        </div>
+        <div class="upload-preview" id="uploadPreview"></div>
+        <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadFiles()">⬆️ GitHub'a Yükle</button>
+        <div id="uploadStatus"></div>
+      </div>
     </div>
   </div>
 
-  <!-- USERS TAB -->
-  <div class="tab-pane" id="tab-users">
-    <div class="panel">
-      <div class="admin-toolbar">
-        <h3>👥 Kullanıcı Yönetimi</h3>
-        <button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>Kullanıcı Adı</th><th>Rol</th><th>İşlem</th></tr></thead>
-          <tbody id="usersTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- UPLOADS TAB -->
-  <div class="tab-pane" id="tab-uploads">
-    <div class="panel">
-      <h3>📁 İkon / Logo Yükleme</h3>
-      <div class="drop-zone" id="dropZone">
-        📂 Dosyaları sürükleyin veya tıklayın
-        <input type="file" id="fileInput" multiple accept="image/*" style="display:none;">
-      </div>
-      <div class="upload-preview" id="uploadPreview"></div>
-      <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadFiles()">⬆️ GitHub'a Yükle</button>
-      <div id="uploadStatus"></div>
-    </div>
-  </div>
+  <footer class="footer">
+    <div class="copyright-text"></div>
+  </footer>
 </div>
-
-<footer class="footer">
-  <div class="copyright-text"></div>
-</footer>
 
 <!-- MODAL: Araç Düzenleme -->
 <div class="modal-overlay" id="toolModal">
