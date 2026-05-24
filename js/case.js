@@ -1,4 +1,4 @@
-// Firebase config (mevcut proje)
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBDClqNyqtNL_h8Yovoe2r9RFAs8VjNef8",
   authDomain: "case-management-system-53f44.firebaseapp.com",
@@ -10,23 +10,20 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ==================== Mail Ayarlarını localStorage'dan al ====================
 function loadMailSettings() {
   return JSON.parse(localStorage.getItem('case_mail_settings_emailjs') || '{}');
 }
 
-// ==================== Konuları yükle ====================
 async function loadTopics() {
   const snapshot = await db.collection('topics').where('active', '==', true).get();
   const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   const select = document.getElementById('caseTopic');
   if (select) {
-    select.innerHTML = '<option value="">Seçiniz</option>' + topics.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
+    select.innerHTML = '<option value="">Seçiniz</option>' + topics.map(t => `<option value="${t.id}" data-responsible="${t.responsibleEmail || ''}">${escapeHtml(t.title)}</option>`).join('');
   }
   return topics;
 }
 
-// ==================== Case Oluştur + Mail Gönder ====================
 window.createCase = async function() {
   const fullname = document.getElementById('userFullname').value.trim();
   const email = document.getElementById('userEmail').value.trim();
@@ -46,6 +43,11 @@ window.createCase = async function() {
   }
 
   try {
+    // Topic bilgilerini al (sorumlu e-posta için)
+    const topicDoc = await db.collection('topics').doc(topicId).get();
+    const topicData = topicDoc.exists ? topicDoc.data() : {};
+    const responsibleEmail = topicData.responsibleEmail || '';
+
     const newCaseRef = db.collection('cases').doc();
     const caseData = {
       id: newCaseRef.id,
@@ -59,33 +61,48 @@ window.createCase = async function() {
     };
     await newCaseRef.set(caseData);
 
-    // --- EmailJS ile bildirim gönder ---
+    // --- EmailJS ile bildirim gönder (admin + CC + sorumlu) ---
     const mailSettings = loadMailSettings();
     if (mailSettings.publicKey && mailSettings.serviceId && mailSettings.templateId && typeof emailjs !== 'undefined') {
       emailjs.init(mailSettings.publicKey);
+      
+      // Alıcı listesi: admin + sorumlu kişi
+      let toEmails = [mailSettings.adminEmail || 'admin@example.com'];
+      if (responsibleEmail && responsibleEmail.trim() !== '') {
+        toEmails.push(responsibleEmail);
+      }
+      // Benzersiz yap
+      toEmails = [...new Set(toEmails)];
+      
+      // CC'yi al (virgülle ayrılmış string)
+      let ccList = mailSettings.ccEmail || '';
+      
+      // Her bir alıcıya ayrı ayrı göndermek yerine, to alanına virgüllü liste yazılabilir
+      // EmailJS "to" alanında virgülle ayrılmış birden fazla e-postayı destekler.
+      const toAddress = toEmails.join(',');
+      
       const templateParams = {
-        to_email: mailSettings.adminEmail || 'admin@example.com',
-        cc: mailSettings.ccEmail || '',
+        to_email: toAddress,
+        cc: ccList,
         caseId: newCaseRef.id,
         caseTitle: title,
         caseDescription: description,
-        topicTitle: document.querySelector('#caseTopic option:checked')?.text || 'Belirtilmemiş',
-        topicDescription: '',
+        topicTitle: topicData.title || 'Belirtilmemiş',
+        topicDescription: topicData.description || '',
         casePriorityText: priority === 'yüksek' ? 'Yüksek' : (priority === 'orta' ? 'Orta' : 'Düşük'),
         caseStatusText: 'Beklemede',
         createdAt: new Date().toLocaleString('tr'),
         message: `Yeni bir case oluşturuldu. Detaylar için admin panele bakın.`
       };
-      // CC'yi düzgün iletmek için (EmailJS birden fazla CC'yi virgülle kabul eder)
-      if (mailSettings.ccEmail) templateParams.cc = mailSettings.ccEmail;
       
       await emailjs.send(mailSettings.serviceId, mailSettings.templateId, templateParams);
-      console.log('Bildirim maili gönderildi.');
+      console.log('Bildirim maili gönderildi. Alıcılar:', toAddress, 'CC:', ccList);
     } else {
       console.warn('EmailJS ayarları eksik, mail gönderilmedi.');
     }
 
     statusEl.innerHTML = '<span style="color:#2e7d32">✅ Case başarıyla oluşturuldu. Case ID: ' + newCaseRef.id.slice(-6) + '</span>';
+    // Form temizleme
     document.getElementById('userFullname').value = '';
     document.getElementById('userEmail').value = '';
     document.getElementById('caseTitle').value = '';
