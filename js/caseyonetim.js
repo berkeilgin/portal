@@ -397,28 +397,40 @@ function loadMailSettingsToForm() {
 }
 
 async function testEmail() {
+async function testEmail() {
   const s = loadMailSettings();
   if (!s.smtpEmail || !s.smtpPassword) {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">SMTP ayarları eksik</span>';
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ SMTP ayarları eksik (e-posta veya şifre)</span>';
     return;
   }
   if (typeof window.Email === 'undefined') {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">SMTP.js yüklenemedi</span>';
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ SMTP.js kütüphanesi yüklenemedi</span>';
     return;
   }
   try {
-    await window.Email.send({
-      Host: "smtp.gmail.com", Port: 587,
-      Username: s.smtpEmail, Password: s.smtpPassword,
-      To: s.adminEmail || s.smtpEmail, From: s.smtpEmail,
-      Subject: "Test", Body: "Test maili başarıyla gönderildi.", Secure: true
+    const response = await window.Email.send({
+      Host: "smtp.gmail.com",
+      Port: 587,
+      Username: s.smtpEmail,
+      Password: s.smtpPassword,
+      To: s.adminEmail || s.smtpEmail,
+      From: s.smtpEmail,
+      Subject: "Test Maili - QA Case Yönetim",
+      Body: "Bu bir test mailidir. SMTP ayarlarınız doğru çalışıyor."
     });
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">Test maili gönderildi</span>';
+    
+    // SMTP.js başarılı olsa bile "OK" dönmeyebilir, kontrol edelim
+    if (response && response.includes("OK")) {
+      document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili başarıyla gönderildi</span>';
+    } else {
+      throw new Error(response || "SMTP servisi 'OK' dönmedi");
+    }
   } catch(e) {
-    document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">Hata: ${e.message}</span>`;
+    let errMsg = e.message || e;
+    if (errMsg === undefined) errMsg = "Bilinmeyen hata (muhtemelen ağ veya CORS)";
+    document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${errMsg}</span>`;
   }
 }
-
 // ==================== TAB MANAGEMENT ====================
 function showTab(tab) {
   const tabs = ['cases', 'topics', 'users', 'mail'];
