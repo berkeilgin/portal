@@ -3,6 +3,20 @@ const GITHUB_OWNER = "berkeilgin";
 const GITHUB_REPO = "portal";
 const GITHUB_BRANCH = "main";
 
+// ==================== FIREBASE YAPILANDIRMASI (CASE VERİLERİ İÇİN) ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyBDClqNyqtNL_h8Yovoe2r9RFAs8VjNef8",
+  authDomain: "case-management-system-53f44.firebaseapp.com",
+  projectId: "case-management-system-53f44",
+  storageBucket: "case-management-system-53f44.firebasestorage.app",
+  messagingSenderId: "381220130397",
+  appId: "1:381220130397:web:97124d8836681bc62c07b4"
+};
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const caseDb = firebase.firestore();
+
 // ==================== STATE ====================
 let data = null;
 let fileSha = null;
@@ -12,6 +26,7 @@ let editCatId = null;
 let editUsername = null;
 let catFilter = 'all';
 let uploadQueue = [];
+let caseStatsLoaded = false;
 
 // ==================== GITHUB HELPERS ====================
 function getToken() { return sessionStorage.getItem('gh_token') || ''; }
@@ -95,7 +110,7 @@ function renderToolsTable() {
         <button class="btn btn-ghost btn-sm" onclick="openToolModal('${t.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteTool('${t.id}')">🗑</button>
       </td>
-    </tr>
+    </table>
   `).join('') || '<tr><td colspan="9" style="text-align:center">Araç bulunamadı</td></tr>';
 }
 
@@ -113,7 +128,7 @@ function renderCategoriesTable() {
         <button class="btn btn-ghost btn-sm" onclick="openCategoryModal('${c.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑</button>
       </td>
-    </table>
+    </tr>
   `).join('') || '<tr><td colspan="6">Kategori yok</td></tr>';
 }
 
@@ -333,7 +348,7 @@ function deleteUser(username) {
   }
 }
 
-// ==================== STATS ====================
+// ==================== STATS (Kullanım İstatistikleri) ====================
 function loadStats() {
   const stats = JSON.parse(localStorage.getItem('qa_stats') || '{}');
   const total = Object.values(stats).reduce((a,b)=>a+b,0);
@@ -370,10 +385,92 @@ function clearStats() {
   }
 }
 
+// ==================== CASE STATS ====================
+async function loadCaseStats() {
+  const cardsContainer = document.getElementById('caseStatsCards');
+  const detailsContainer = document.getElementById('caseStatsDetails');
+  if (!cardsContainer) return;
+  
+  cardsContainer.innerHTML = '<div class="loading-spinner" style="margin:20px auto;"></div>';
+  detailsContainer.innerHTML = '';
+  
+  try {
+    const snapshot = await caseDb.collection('cases').get();
+    const cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    const total = cases.length;
+    const open = cases.filter(c => c.status !== 'çözüldü' && c.status !== 'reddedildi').length;
+    const resolved = cases.filter(c => c.status === 'çözüldü').length;
+    const rejected = cases.filter(c => c.status === 'reddedildi').length;
+    const inProgress = cases.filter(c => c.status === 'sürüyor').length;
+    const pending = cases.filter(c => c.status === 'beklemede').length;
+    
+    let avgTime = 0;
+    const times = cases.filter(c => c.resolutionTime).map(c => c.resolutionTime);
+    if (times.length) avgTime = (times.reduce((a,b)=>a+b,0) / times.length).toFixed(1);
+    
+    cardsContainer.innerHTML = `
+      <div class="stat-card"><div class="number">${total}</div><div>Toplam Case</div></div>
+      <div class="stat-card"><div class="number">${open}</div><div>Açık Case</div></div>
+      <div class="stat-card"><div class="number">${resolved}</div><div>Çözülen</div></div>
+      <div class="stat-card"><div class="number">${avgTime}</div><div>Ort. Çözüm (gün)</div></div>
+    `;
+    
+    // Son 7 gün trendi
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0,0,0,0);
+      last7Days.push(d);
+    }
+    const trend = last7Days.map(day => {
+      const count = cases.filter(c => {
+        const created = c.createdAt?.toDate();
+        if (!created) return false;
+        const d = new Date(created);
+        d.setHours(0,0,0,0);
+        return d.getTime() === day.getTime();
+      }).length;
+      return { date: day.toLocaleDateString('tr-TR'), count };
+    });
+    const maxCount = Math.max(...trend.map(t => t.count), 1);
+    const trendHtml = `<div style="display:flex; gap:8px; align-items:flex-end; height:120px;">
+      ${trend.map(t => `
+        <div style="flex:1; text-align:center;">
+          <div style="height:${(t.count / maxCount) * 100}px; background:var(--accent2); width:100%; border-radius:4px 4px 0 0;"></div>
+          <div style="font-size:10px; margin-top:4px;">${t.date}</div>
+          <div style="font-size:11px; font-weight:bold;">${t.count}</div>
+        </div>
+      `).join('')}
+    </div>`;
+    
+    detailsContainer.innerHTML = `
+      <div class="panel">
+        <h3>📊 Durum Dağılımı</h3>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+          <div><strong>Beklemede:</strong> ${pending}</div>
+          <div><strong>Sürüyor:</strong> ${inProgress}</div>
+          <div><strong>Çözüldü:</strong> ${resolved}</div>
+          <div><strong>Reddedildi:</strong> ${rejected}</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>📈 Son 7 Günlük Case Trendi</h3>
+        ${trendHtml}
+      </div>
+    `;
+  } catch (err) {
+    console.error(err);
+    cardsContainer.innerHTML = '<div class="status-bar err">Case verileri yüklenemedi: ' + err.message + '</div>';
+  }
+}
+
 // ==================== UPLOAD ====================
 function setupUpload() {
   const drop = document.getElementById('dropZone');
   const input = document.getElementById('fileInput');
+  if (!drop) return;
   drop.onclick = () => input.click();
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('drag'); };
   drop.ondragleave = () => drop.classList.remove('drag');
@@ -398,6 +495,7 @@ function handleFiles(files) {
 
 function renderUploadPreview() {
   const container = document.getElementById('uploadPreview');
+  if (!container) return;
   container.innerHTML = uploadQueue.map((f, i) => `
     <div class="upload-thumb">
       <img src="data:${f.type};base64,${f.b64}">
@@ -440,7 +538,6 @@ async function uploadFiles() {
 // ==================== SAVE TO GITHUB ====================
 async function saveToGitHub() {
   if (!data || !fileSha) { alert('Önce veri yükleyin'); return; }
-  // Settings'ten verileri al
   data.maintenance = document.getElementById('maintToggle').classList.contains('on');
   data.maintenanceMessage = document.getElementById('maintMsg').value;
   data.announcement = {
@@ -488,6 +585,10 @@ function switchTab(tabId, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${tabId}`).classList.add('active');
   btn.classList.add('active');
+  if (tabId === 'caseStats' && !caseStatsLoaded) {
+    loadCaseStats();
+    caseStatsLoaded = true;
+  }
 }
 
 // ==================== LOGIN ====================
@@ -499,32 +600,23 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     return;
   }
   errorDiv.textContent = '';
-  // Token'ı sessionStorage'a kaydet
   sessionStorage.setItem('gh_token', token);
-  // Kullanıcı bilgilerini almak için GitHub API'ye istek at (doğrulama)
   try {
     const res = await fetch('https://api.github.com/user', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Geçersiz token');
     const userData = await res.json();
-    // Başarılı giriş: session'a user bilgisini kaydet (geçici olarak admin rolü ver)
-    // Not: Gerçek yetkilendirme için tools.json'daki kullanıcıları da kontrol edebiliriz.
-    // Ancak şimdilik token sahibini admin kabul ediyoruz.
     sessionStorage.setItem('qa_user', JSON.stringify({ username: userData.login, role: 'admin' }));
-    // Giriş ekranını gizle, admin panelini göster
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
-    // Admin panelini başlat
     currentUser = { username: userData.login, role: 'admin' };
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
     setupUpload();
     await loadData();
-    // Tab butonları
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn));
     });
-    // Arama input
     document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
   } catch (err) {
     errorDiv.textContent = 'Giriş başarısız: ' + err.message;
@@ -532,29 +624,24 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   }
 });
 
-// Eğer zaten sessionStorage'da token varsa, doğrudan admin panelini göster
 document.addEventListener('DOMContentLoaded', () => {
   const token = sessionStorage.getItem('gh_token');
   if (token) {
-    // Token var, direkt admin panelini yüklemeyi dene
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
     currentUser = { username: 'admin', role: 'admin' };
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
     setupUpload();
     loadData().catch(() => {
-      // Hata olursa tekrar login ekranını göster
       document.getElementById('loginScreen').style.display = 'block';
       document.getElementById('adminPanel').style.display = 'none';
       sessionStorage.removeItem('gh_token');
     });
-    // Tab ve search eventleri
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn));
     });
     document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
   } else {
-    // Token yok, login ekranı zaten görünüyor
     document.getElementById('loginScreen').style.display = 'block';
     document.getElementById('adminPanel').style.display = 'none';
   }
