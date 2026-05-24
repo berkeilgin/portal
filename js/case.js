@@ -109,15 +109,8 @@ window.createCase = async function() {
       }
     }
 
-    // Başarı mesajı (Case ID çok net gösteriliyor)
-    statusEl.innerHTML = `
-      <div style="background:#e8f5e9; border-radius:16px; padding:16px; text-align:center; margin-top:10px;">
-        <div style="font-size:14px; color:#2e7d32;">✅ Case başarıyla oluşturuldu!</div>
-        <div style="font-size:28px; font-weight:800; margin:10px 0; background:#2e7d32; color:white; padding:12px; border-radius:16px; letter-spacing:1px;">${newCaseRef.id.slice(-6)}</div>
-        <div style="font-size:12px; color:#2e7d32;">Case ID'nizi not alın. Sorgulama yapmak için yukarıdaki "Case Sorgula" sekmesini kullanabilirsiniz.</div>
-        ${mailSent ? '<div style="margin-top:10px; font-size:12px;">📧 Bildirim maili gönderildi.</div>' : '<div style="margin-top:10px; font-size:12px; color:#f57c00;">⚠️ Mail ayarları eksik olduğu için bildirim gönderilemedi.</div>'}
-      </div>
-    `;
+// Başarı mesajını sadeleştir (enterprise mesajı kaldır)
+statusEl.innerHTML = `<span style="color:#2e7d32">✅ Case başarıyla oluşturuldu. Case ID: ${newCaseRef.id.slice(-6)}</span>`;
     // Form temizleme
     document.getElementById('userFullname').value = '';
     document.getElementById('userEmail').value = '';
