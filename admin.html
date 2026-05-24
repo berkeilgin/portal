@@ -187,7 +187,7 @@
   margin-top: 4px;
   word-break: break-all;
 }
-/* Login ekranı stilleri */
+/* Login ekranı */
 #loginScreen {
   max-width: 400px;
   margin: 80px auto;
@@ -201,8 +201,22 @@
   margin-bottom: 24px;
   color: var(--accent2);
 }
-#adminPanel {
-  display: none;
+.small-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.loading-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -214,16 +228,14 @@
   <div class="form-group">
     <label>GitHub Personal Access Token</label>
     <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" style="font-family: monospace;">
-    <div class="small-note" style="font-size: 11px; color: var(--muted); margin-top: 6px;">
-      Token'ınızın <strong>repo</strong> kapsamı olmalıdır.
-    </div>
+    <div class="small-note">Token'ınızın <strong>repo</strong> kapsamı olmalıdır.</div>
   </div>
   <button class="btn btn-primary" id="loginBtn" style="width: 100%;">Giriş Yap</button>
   <div id="loginError" style="margin-top: 16px; color: var(--accent3); font-size: 12px;"></div>
 </div>
 
 <!-- ADMIN PANELİ (Giriş sonrası gösterilecek) -->
-<div id="adminPanel">
+<div id="adminPanel" style="display: none;">
   <div class="header">
     <div class="logo">⚙️ QA Portal Admin</div>
     <div class="theme-switch"></div>
@@ -251,6 +263,7 @@
       <button class="tab-btn" data-tab="stats">📊 İstatistikler</button>
       <button class="tab-btn" data-tab="users">👥 Kullanıcılar</button>
       <button class="tab-btn" data-tab="uploads">📁 İkonlar</button>
+      <button class="tab-btn" data-tab="caseStats">📋 Case İstatistikleri</button>
     </div>
 
     <!-- TOOLS TAB -->
@@ -358,7 +371,7 @@
       </div>
     </div>
 
-    <!-- UPLOADS TAB -->
+    <!-- UPLOADS TAB (Logo Yükleme burada) -->
     <div class="tab-pane" id="tab-uploads">
       <div class="panel">
         <h3>📁 İkon / Logo Yükleme</h3>
@@ -369,6 +382,20 @@
         <div class="upload-preview" id="uploadPreview"></div>
         <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadFiles()">⬆️ GitHub'a Yükle</button>
         <div id="uploadStatus"></div>
+      </div>
+    </div>
+
+    <!-- CASE STATS TAB -->
+    <div class="tab-pane" id="tab-caseStats">
+      <div class="panel">
+        <div class="admin-toolbar">
+          <h3>📋 Case Yönetim İstatistikleri</h3>
+          <button class="btn btn-ghost" onclick="loadCaseStats()">↺ Yenile</button>
+        </div>
+        <div id="caseStatsContainer">
+          <div class="stats-grid" id="caseStatsCards"></div>
+          <div id="caseStatsDetails"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -429,6 +456,10 @@
   </div>
 </div>
 
+<!-- Firebase ve SMTP -->
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script src="smtp.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/common.js"></script>
 <script src="js/admin.js"></script>
