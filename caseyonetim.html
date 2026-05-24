@@ -131,19 +131,20 @@
 
 <div class="main">
   <!-- Giriş Ekranı -->
-  <div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
-    <h3>Admin Girişi</h3>
-    <div class="form-group">
-      <label>E-posta</label>
-      <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
-    </div>
-    <div class="form-group">
-      <label>Şifre</label>
-      <input type="password" id="adminPassword" class="form-input" placeholder="••••">
-    </div>
-    <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
-    <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
+<div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
+  <h3>Admin Girişi</h3>
+  <div class="form-group">
+    <label>E-posta</label>
+    <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
   </div>
+  <div class="form-group">
+    <label>Şifre</label>
+    <input type="password" id="adminPassword" class="form-input" placeholder="••••">
+  </div>
+  <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
+  <button class="btn btn-ghost" id="createAdminBtn" style="margin-top:10px;">➕ İlk Admin Hesabı Oluştur</button>
+  <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
+</div>
 
   <!-- Admin Paneli -->
   <div id="adminPanel" style="display:none">
