@@ -48,7 +48,7 @@
     {
       "id": "bms",
       "name": "BMS Ana Sayfa",
-      "icon": "logos/tp_bms.png",
+      "icon": "tp_bms.png",
       "cat": "bms",
       "isNew": false,
       "isTest": false,
@@ -59,7 +59,7 @@
     {
       "id": "mytp",
       "name": "MYTP",
-      "icon": "logos/mytp.png",
+      "icon": "mytp.png",
       "cat": "tp",
       "isNew": false,
       "isTest": false,
@@ -70,7 +70,7 @@
     {
       "id": "ikon",
       "name": "İKON (Yıllık İzin)",
-      "icon": "logos/ikon.png",
+      "icon": "ikon.png",
       "cat": "tp",
       "isNew": false,
       "isTest": false,
@@ -81,7 +81,7 @@
     {
       "id": "srvdesk",
       "name": "Service Desk (Case)",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "tp",
       "isNew": false,
       "isTest": false,
@@ -92,7 +92,7 @@
     {
       "id": "peyk",
       "name": "PEYK - Bordro Görüntüleme",
-      "icon": "logos/peyk.png",
+      "icon": "peyk.png",
       "cat": "tp",
       "isNew": false,
       "isTest": false,
@@ -103,7 +103,7 @@
     {
       "id": "random",
       "name": "Randomizer",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
       "isTest": false,
@@ -114,7 +114,7 @@
     {
       "id": "corel",
       "name": "Correlation",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
       "isTest": false,
@@ -125,7 +125,7 @@
     {
       "id": "csv",
       "name": "Data CSV Converter",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
       "isTest": false,
@@ -136,7 +136,7 @@
     {
       "id": "sampling",
       "name": "BSH Dağıtım",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isNew": false,
       "isTest": false,
@@ -147,7 +147,7 @@
     {
       "id": "trceviri",
       "name": "Trendyol CSV Converter",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
       "isTest": false,
@@ -158,7 +158,7 @@
     {
       "id": "powerbifb",
       "name": "Feedback Raporu",
-      "icon": "logos/powerbi.png",
+      "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -169,7 +169,7 @@
     {
       "id": "powerbidm",
       "name": "Domestic - Kalite Raporu",
-      "icon": "logos/powerbi.png",
+      "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -191,7 +191,7 @@
     {
       "id": "powerpharos",
       "name": "Pharos",
-      "icon": "logos/pharos.png",
+      "icon": "pharos.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -202,7 +202,7 @@
     {
       "id": "powerbitops",
       "name": "TOPS Report",
-      "icon": "logos/powerbi.png",
+      "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -213,7 +213,7 @@
     {
       "id": "powerbimgm",
       "name": "Domestic - Management Report",
-      "icon": "logos/powerbi.png",
+      "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -224,7 +224,7 @@
     {
       "id": "excel",
       "name": "Excel",
-      "icon": "logos/excel.png",
+      "icon": "excel.png",
       "cat": "office",
       "isNew": false,
       "isTest": false,
@@ -235,7 +235,7 @@
     {
       "id": "ppt",
       "name": "PowerPoint",
-      "icon": "logos/powerpoint.png",
+      "icon": "powerpoint.png",
       "cat": "office",
       "isNew": false,
       "isTest": false,
@@ -246,7 +246,7 @@
     {
       "id": "word",
       "name": "Word",
-      "icon": "logos/word.png",
+      "icon": "word.png",
       "cat": "office",
       "isNew": false,
       "isTest": false,
@@ -257,7 +257,7 @@
     {
       "id": "kaliterapor",
       "name": "Kalite Raporu Hazırla & Güncelle",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "qa",
       "isEnabled": true,
       "isNew": false,
@@ -268,7 +268,7 @@
     {
       "id": "bmsform",
       "name": "BMS Form Oluşturma",
-      "icon": "logos/tp_bms.png",
+      "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
       "isNew": false,
@@ -279,7 +279,7 @@
     {
       "id": "bmsraw",
       "name": "BMS Raw Data",
-      "icon": "logos/tp_bms.png",
+      "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
       "isNew": false,
@@ -290,7 +290,7 @@
     {
       "id": "bsmcreatedcalib",
       "name": "BMS Kalibrasyon Oluşturma",
-      "icon": "logos/tp_bms.png",
+      "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
       "isNew": false,
@@ -301,7 +301,7 @@
     {
       "id": "bmstops",
       "name": "BMS TOPS Report",
-      "icon": "logos/tp_bms.png",
+      "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
       "isNew": false,
@@ -345,7 +345,7 @@
     {
       "id": "casecoz",
       "name": "Case Çözümle",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "portal",
       "isEnabled": true,
       "isNew": false,
@@ -356,7 +356,7 @@
     {
       "id": "gemini",
       "name": "Gemini",
-      "icon": "logos/gemini.png",
+      "icon": "gemini.png",
       "cat": "google",
       "isEnabled": true,
       "isNew": false,
@@ -367,7 +367,7 @@
     {
       "id": "gmail",
       "name": "Gmail",
-      "icon": "logos/ggmail.png",
+      "icon": "ggmail.png",
       "cat": "google",
       "isEnabled": true,
       "isNew": false,
@@ -378,7 +378,7 @@
     {
       "id": "spr",
       "name": "Spread Sheet (Excel)",
-      "icon": "logos/gspread.png",
+      "icon": "gspread.png",
       "cat": "google",
       "isEnabled": true,
       "isNew": false,
