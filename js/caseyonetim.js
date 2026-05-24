@@ -20,10 +20,8 @@ document.getElementById('adminLoginBtn').onclick = async () => {
   const email = document.getElementById('adminEmail').value;
   const pass = document.getElementById('adminPassword').value;
   const errorEl = document.getElementById('adminLoginError');
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-    errorEl.textContent = '';
-  } catch(e) { errorEl.textContent = e.message; }
+  try { await auth.signInWithEmailAndPassword(email, pass); errorEl.textContent = ''; }
+  catch(e) { errorEl.textContent = e.message; }
 };
 document.getElementById('logoutBtn').onclick = async () => await auth.signOut();
 auth.onAuthStateChanged(async (user) => {
@@ -44,9 +42,8 @@ auth.onAuthStateChanged(async (user) => {
 
 // ==================== DASHBOARD ====================
 async function refreshDashboard() {
-  try {
-    await Promise.all([loadStats(), renderCasesTable(), populateTopicFilter(), checkNewCases()]);
-  } catch(e) { console.error(e); }
+  try { await Promise.all([loadStats(), renderCasesTable(), populateTopicFilter(), checkNewCases()]); }
+  catch(e) { console.error(e); }
 }
 async function loadStats() {
   const cases = await loadCases();
@@ -56,21 +53,15 @@ async function loadStats() {
   let avgTime = 0;
   const times = cases.filter(c => c.resolutionMinutes).map(c => c.resolutionMinutes);
   if (times.length) avgTime = (times.reduce((a,b)=>a+b,0)/times.length).toFixed(1);
-  document.getElementById('statsContainer').innerHTML = `
-    <div class="stat-card"><div class="stat-number">${total}</div><div>Toplam Case</div></div>
-    <div class="stat-card"><div class="stat-number">${resolved}</div><div>Çözülen</div></div>
-    <div class="stat-card"><div class="stat-number">${avgTime}</div><div>Ort. Çözüm (dk)</div></div>
-    <div class="stat-card"><div class="stat-number">${open}</div><div>Aktif Case</div></div>
-  `;
+  document.getElementById('statsContainer').innerHTML = `<div class="stat-card"><div class="stat-number">${total}</div><div>Toplam Case</div></div><div class="stat-card"><div class="stat-number">${resolved}</div><div>Çözülen</div></div><div class="stat-card"><div class="stat-number">${avgTime}</div><div>Ort. Çözüm (dk)</div></div><div class="stat-card"><div class="stat-number">${open}</div><div>Aktif Case</div></div>`;
 }
 async function checkNewCases() {
   const current = (await loadCases()).length;
   if (current > lastCaseCount) {
     const diff = current - lastCaseCount;
     showToast(`✨ ${diff} yeni case eklendi!`);
-    const alertDiv = document.getElementById('newCaseAlert');
-    alertDiv.innerHTML = `<span class="notification-badge">+${diff}</span>`;
-    setTimeout(() => alertDiv.innerHTML = '', 8000);
+    document.getElementById('newCaseAlert').innerHTML = `<span class="notification-badge">+${diff}</span>`;
+    setTimeout(() => document.getElementById('newCaseAlert').innerHTML = '', 8000);
   }
   lastCaseCount = current;
 }
@@ -127,34 +118,17 @@ window.openCaseDetail = async function(caseId) {
     <div><strong>Konu:</strong> ${topic ? escapeHtml(topic.title) : '-'}</div>
     <div><strong>Başlık:</strong> ${escapeHtml(c.title)}</div>
     <div><strong>Açıklama:</strong> ${escapeHtml(c.description)}</div>
-    <div><strong>Durum:</strong> <select id="detailStatus">
-      <option value="beklemede" ${c.status==='beklemede'?'selected':''}>Beklemede</option>
-      <option value="sürüyor" ${c.status==='sürüyor'?'selected':''}>Sürüyor</option>
-      <option value="çözüldü" ${c.status==='çözüldü'?'selected':''}>Çözüldü</option>
-      <option value="reddedildi" ${c.status==='reddedildi'?'selected':''}>Reddedildi</option>
-    </select></div>
-    <div><strong>Öncelik:</strong> <select id="detailPriority">
-      <option value="düşük" ${c.priority==='düşük'?'selected':''}>Düşük</option>
-      <option value="orta" ${c.priority==='orta'?'selected':''}>Orta</option>
-      <option value="yüksek" ${c.priority==='yüksek'?'selected':''}>Yüksek</option>
-    </select></div>
-    <div><strong>Çözen Kişi:</strong> <select id="detailResolvedBy">
-      <option value="">Seçiniz</option>${users.map(u => `<option value="${u.id}" ${c.resolvedBy===u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.email})</option>`).join('')}
-    </select></div>
+    <div><strong>Durum:</strong> <select id="detailStatus"><option value="beklemede" ${c.status==='beklemede'?'selected':''}>Beklemede</option><option value="sürüyor" ${c.status==='sürüyor'?'selected':''}>Sürüyor</option><option value="çözüldü" ${c.status==='çözüldü'?'selected':''}>Çözüldü</option><option value="reddedildi" ${c.status==='reddedildi'?'selected':''}>Reddedildi</option></select></div>
+    <div><strong>Öncelik:</strong> <select id="detailPriority"><option value="düşük" ${c.priority==='düşük'?'selected':''}>Düşük</option><option value="orta" ${c.priority==='orta'?'selected':''}>Orta</option><option value="yüksek" ${c.priority==='yüksek'?'selected':''}>Yüksek</option></select></div>
+    <div><strong>Çözen Kişi:</strong> <select id="detailResolvedBy"><option value="">Seçiniz</option>${users.map(u => `<option value="${u.id}" ${c.resolvedBy===u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.email})</option>`).join('')}</select></div>
     <div><strong>Çözülme Tarihi:</strong> <input type="date" id="detailResolvedAt" value="${resolvedAtValue}" class="form-input"></div>
-    <div><strong>Çözüm Süresi (Dakika):</strong> 
-      <input type="number" id="detailResolutionMinutes" value="${resolutionMinutes}" class="form-input" placeholder="Manuel süre (dk)" step="1" min="0">
-      <small class="muted">Not: Doldurulursa otomatik hesaplamayı geçersiz kılar.</small>
-    </div>
-    <div><strong>Yeni Not:</strong> <textarea id="newNote" rows="2" class="form-input"></textarea>
-      <button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button>
-    </div>
+    <div><strong>Çözüm Süresi (Dakika):</strong> <input type="number" id="detailResolutionMinutes" value="${resolutionMinutes}" class="form-input" placeholder="Manuel süre (dk)" step="1" min="0"><small class="muted">Not: Doldurulursa otomatik hesaplamayı geçersiz kılar.</small></div>
+    <div><strong>Yeni Not:</strong> <textarea id="newNote" rows="2" class="form-input"></textarea><button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button></div>
     <div><strong>Notlar:</strong><div id="notesArea">${notesHtml}</div></div>
     <div class="btn-row" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveCaseDetail('${caseId}')">Kaydet</button></div>
   `;
   openModal('caseDetailModal');
 };
-
 window.addNote = async function(caseId) {
   const text = document.getElementById('newNote').value.trim();
   if (!text) return;
@@ -167,7 +141,6 @@ window.addNote = async function(caseId) {
   closeModal('caseDetailModal');
   openCaseDetail(caseId);
 };
-
 window.saveCaseDetail = async function(caseId) {
   const newStatus = document.getElementById('detailStatus').value;
   const newPriority = document.getElementById('detailPriority').value;
@@ -176,43 +149,20 @@ window.saveCaseDetail = async function(caseId) {
   let resolvedAtTimestamp = resolvedAtRaw ? new Date(resolvedAtRaw) : null;
   let manualMinutes = parseInt(document.getElementById('detailResolutionMinutes').value);
   let resolutionMinutes = null;
-  
   const ref = db.collection('cases').doc(caseId);
   const doc = await ref.get();
   const created = doc.data().createdAt.toDate();
-  
   if (newStatus === 'çözüldü') {
-    if (!isNaN(manualMinutes) && manualMinutes > 0) {
-      resolutionMinutes = manualMinutes;
-    } else if (resolvedAtTimestamp) {
-      // Otomatik hesaplama (dakika cinsinden)
-      const diffMs = resolvedAtTimestamp - created;
-      resolutionMinutes = Math.round(diffMs / (1000 * 60));
-      if (resolutionMinutes < 0) resolutionMinutes = 0;
-    } else {
-      // Hiçbiri yoksa varsayılan 0
-      resolutionMinutes = 0;
-    }
+    if (!isNaN(manualMinutes) && manualMinutes > 0) resolutionMinutes = manualMinutes;
+    else if (resolvedAtTimestamp) resolutionMinutes = Math.round((resolvedAtTimestamp - created) / (1000 * 60));
+    else resolutionMinutes = 0;
   }
-  
-  const update = {
-    status: newStatus,
-    priority: newPriority,
-    updatedAt: new Date(),
-    resolvedBy: resolvedBy,
-    resolvedAt: resolvedAtTimestamp,
-    resolutionMinutes: resolutionMinutes
-  };
-  
-  await ref.update(update);
+  await ref.update({ status: newStatus, priority: newPriority, updatedAt: new Date(), resolvedBy, resolvedAt: resolvedAtTimestamp, resolutionMinutes });
   closeModal('caseDetailModal');
   refreshDashboard();
   if (document.getElementById('statsTab').style.display !== 'none') renderStats();
 };
-
-window.deleteCase = async function(caseId) {
-  if (confirm('Silinsin mi?')) { await db.collection('cases').doc(caseId).delete(); refreshDashboard(); }
-};
+window.deleteCase = async function(caseId) { if (confirm('Silinsin mi?')) { await db.collection('cases').doc(caseId).delete(); refreshDashboard(); } };
 
 // ==================== TOPIC MANAGEMENT ====================
 async function renderTopicsList() {
@@ -222,9 +172,8 @@ async function renderTopicsList() {
 window.openTopicModal = function(id=null) {
   editTopicId = id;
   document.getElementById('topicModalTitle').textContent = id ? 'Düzenle' : 'Yeni Konu';
-  if (id) {
-    db.collection('topics').doc(id).get().then(doc => { if(doc.exists){ document.getElementById('topicTitle').value=doc.data().title; document.getElementById('topicDesc').value=doc.data().description||''; document.getElementById('topicResponsibleEmail').value=doc.data().responsibleEmail||''; document.getElementById('topicActive').checked=doc.data().active; } });
-  } else { document.getElementById('topicTitle').value=''; document.getElementById('topicDesc').value=''; document.getElementById('topicResponsibleEmail').value=''; document.getElementById('topicActive').checked=true; }
+  if (id) db.collection('topics').doc(id).get().then(doc => { if(doc.exists){ document.getElementById('topicTitle').value=doc.data().title; document.getElementById('topicDesc').value=doc.data().description||''; document.getElementById('topicResponsibleEmail').value=doc.data().responsibleEmail||''; document.getElementById('topicActive').checked=doc.data().active; } });
+  else { document.getElementById('topicTitle').value=''; document.getElementById('topicDesc').value=''; document.getElementById('topicResponsibleEmail').value=''; document.getElementById('topicActive').checked=true; }
   openModal('topicModal');
 };
 document.getElementById('saveTopicBtn').onclick = async () => {
@@ -254,9 +203,8 @@ async function renderUsersTable() {
 window.openUserModal = function(id=null) {
   editUserId = id;
   document.getElementById('userEditModalTitle').textContent = id ? 'Düzenle' : 'Yeni Kullanıcı';
-  if(id){
-    db.collection('users').doc(id).get().then(doc=>{ if(doc.exists){ document.getElementById('editUsername').value=doc.data().username; document.getElementById('editUserEmail').value=doc.data().email; document.getElementById('editUserRole').value=doc.data().role; document.getElementById('editPassword').value=''; } });
-  } else { document.getElementById('editUsername').value=''; document.getElementById('editUserEmail').value=''; document.getElementById('editUserRole').value='user'; document.getElementById('editPassword').value=''; }
+  if(id) db.collection('users').doc(id).get().then(doc=>{ if(doc.exists){ document.getElementById('editUsername').value=doc.data().username; document.getElementById('editUserEmail').value=doc.data().email; document.getElementById('editUserRole').value=doc.data().role; document.getElementById('editPassword').value=''; } });
+  else { document.getElementById('editUsername').value=''; document.getElementById('editUserEmail').value=''; document.getElementById('editUserRole').value='user'; document.getElementById('editPassword').value=''; }
   openModal('userEditModal');
 };
 document.getElementById('saveUserEditBtn').onclick = async () => {
@@ -278,10 +226,17 @@ document.getElementById('saveUserEditBtn').onclick = async () => {
 window.editUser = (id) => openUserModal(id);
 window.deleteUser = async (id) => { if(confirm('Silinsin mi?')){ await db.collection('users').doc(id).delete(); renderUsersTable(); } };
 
-// ==================== MAIL SETTINGS (EmailJS) ====================
+// ==================== MAIL SETTINGS (EmailJS - 2 Template) ====================
 function loadMailSettings() { return JSON.parse(localStorage.getItem('case_mail_settings_emailjs') || '{}'); }
 function saveMailSettings() {
-  const settings = { publicKey: document.getElementById('emailjsPublicKey').value, serviceId: document.getElementById('emailjsServiceId').value, templateId: document.getElementById('emailjsTemplateId').value, adminEmail: document.getElementById('adminNotifyEmail').value, ccEmail: document.getElementById('ccEmail').value };
+  const settings = {
+    publicKey: document.getElementById('emailjsPublicKey').value,
+    serviceId: document.getElementById('emailjsServiceId').value,
+    adminTemplateId: document.getElementById('emailjsAdminTemplateId').value,
+    responsibleTemplateId: document.getElementById('emailjsResponsibleTemplateId').value,
+    adminEmail: document.getElementById('adminNotifyEmail').value,
+    ccEmail: document.getElementById('ccEmail').value
+  };
   localStorage.setItem('case_mail_settings_emailjs', JSON.stringify(settings));
   if(settings.publicKey && typeof emailjs !== 'undefined') { emailjs.init(settings.publicKey); emailjsInitialized = true; }
   document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Kaydedildi</span>';
@@ -290,18 +245,19 @@ function loadMailSettingsToForm() {
   const s = loadMailSettings();
   document.getElementById('emailjsPublicKey').value = s.publicKey || '';
   document.getElementById('emailjsServiceId').value = s.serviceId || '';
-  document.getElementById('emailjsTemplateId').value = s.templateId || '';
+  document.getElementById('emailjsAdminTemplateId').value = s.adminTemplateId || '';
+  document.getElementById('emailjsResponsibleTemplateId').value = s.responsibleTemplateId || '';
   document.getElementById('adminNotifyEmail').value = s.adminEmail || '';
   document.getElementById('ccEmail').value = s.ccEmail || '';
   if(s.publicKey && typeof emailjs !== 'undefined' && !emailjsInitialized) { emailjs.init(s.publicKey); emailjsInitialized = true; }
 }
 async function testEmail() {
   const s = loadMailSettings();
-  if(!s.publicKey || !s.serviceId || !s.templateId) { document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ Eksik ayar</span>'; return; }
+  if(!s.publicKey || !s.serviceId || !s.adminTemplateId) { document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ Eksik ayar (Admin Template ID gerekli)</span>'; return; }
   if(typeof emailjs === 'undefined') { document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS yüklenmedi</span>'; return; }
   if(!emailjsInitialized) { emailjs.init(s.publicKey); emailjsInitialized = true; }
   try {
-    await emailjs.send(s.serviceId, s.templateId, { to_email: s.adminEmail || currentUser?.email, message: "Test maili başarılı" });
+    await emailjs.send(s.serviceId, s.adminTemplateId, { to_email: s.adminEmail || currentUser?.email, message: "Test maili başarılı", caseId: "TEST-001", caseTitle: "Test", caseDescription: "Test", topicTitle: "Test", casePriorityText: "Orta", caseStatusText: "Beklemede", createdAt: new Date().toLocaleString('tr') });
     document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili gönderildi</span>';
   } catch(err) { document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${err.text || err.message}</span>`; }
 }
@@ -311,13 +267,12 @@ async function renderStats() {
   const cases = await loadCases();
   const users = await loadUsers();
   const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
-  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy && c.resolutionMinutes !== null && c.resolutionMinutes !== undefined);
+  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy && c.resolutionMinutes !== null);
   const stats = {};
   for (const c of resolvedCases) {
-    const userId = c.resolvedBy;
-    if (!stats[userId]) stats[userId] = { count: 0, totalMinutes: 0 };
-    stats[userId].count++;
-    stats[userId].totalMinutes += c.resolutionMinutes;
+    if (!stats[c.resolvedBy]) stats[c.resolvedBy] = { count: 0, totalMinutes: 0 };
+    stats[c.resolvedBy].count++;
+    stats[c.resolvedBy].totalMinutes += c.resolutionMinutes;
   }
   const labels = [], counts = [], avgMinutes = [];
   for (const [userId, data] of Object.entries(stats)) {
@@ -326,30 +281,15 @@ async function renderStats() {
     counts.push(data.count);
     avgMinutes.push((data.totalMinutes / data.count).toFixed(1));
   }
-  const tableBody = document.getElementById('statsTableBody');
-  tableBody.innerHTML = labels.map((name, i) => `<tr><td>${escapeHtml(name)}</td><td>${counts[i]}</td><td>${avgMinutes[i]}</td><td>${(avgMinutes[i]/60).toFixed(1)} saat</td></tr>`).join('');
+  document.getElementById('statsTableBody').innerHTML = labels.map((name, i) => `<tr><td>${escapeHtml(name)}</td><td>${counts[i]}</td><td>${avgMinutes[i]}</td><td>${(avgMinutes[i]/60).toFixed(1)} saat</td></tr>`).join('');
   if (window.statsChart) window.statsChart.destroy();
   const ctx = document.getElementById('statsChart').getContext('2d');
   window.statsChart = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        { label: 'Çözülen Case Sayısı', data: counts, backgroundColor: '#7c3aed', yAxisID: 'y' },
-        { label: 'Ortalama Çözüm Süresi (dk)', data: avgMinutes, backgroundColor: '#f97316', yAxisID: 'y1' }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true, title: { display: true, text: 'Case Sayısı' } },
-        y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Dakika' } }
-      }
-    }
+    data: { labels, datasets: [{ label: 'Çözülen Case Sayısı', data: counts, backgroundColor: '#7c3aed', yAxisID: 'y' }, { label: 'Ortalama Çözüm Süresi (dk)', data: avgMinutes, backgroundColor: '#f97316', yAxisID: 'y1' }] },
+    options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: 'Case Sayısı' } }, y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Dakika' } } } }
   });
 }
-
-// Excel export: her çözülmüş case için ayrı satır, süreler dakika cinsinden
 async function exportToExcel() {
   const cases = await loadCases();
   const users = await loadUsers();
@@ -357,19 +297,7 @@ async function exportToExcel() {
   const topics = await loadTopics();
   const topicMap = Object.fromEntries(topics.map(t => [t.id, t.title]));
   const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy);
-  const data = resolvedCases.map(c => ({
-    'Case ID': c.id,
-    'Başlık': c.title,
-    'Açıklama': c.description,
-    'Konu': topicMap[c.topicId] || 'Belirtilmemiş',
-    'Öncelik': c.priority,
-    'Oluşturan Kullanıcı': c.fullname,
-    'Oluşturan E-posta': c.email,
-    'Çözen Kişi': userMap[c.resolvedBy] || c.resolvedBy,
-    'Çözülme Tarihi': c.resolvedAt ? new Date(c.resolvedAt.toDate()).toLocaleString('tr') : '',
-    'Çözüm Süresi (dk)': c.resolutionMinutes !== undefined ? c.resolutionMinutes : '',
-    'Oluşturulma Tarihi': new Date(c.createdAt.toDate()).toLocaleString('tr')
-  }));
+  const data = resolvedCases.map(c => ({ 'Case ID': c.id, 'Başlık': c.title, 'Açıklama': c.description, 'Konu': topicMap[c.topicId] || 'Belirtilmemiş', 'Öncelik': c.priority, 'Oluşturan Kullanıcı': c.fullname, 'Oluşturan E-posta': c.email, 'Çözen Kişi': userMap[c.resolvedBy] || c.resolvedBy, 'Çözülme Tarihi': c.resolvedAt ? new Date(c.resolvedAt.toDate()).toLocaleString('tr') : '', 'Çözüm Süresi (dk)': c.resolutionMinutes !== undefined ? c.resolutionMinutes : '', 'Oluşturulma Tarihi': new Date(c.createdAt.toDate()).toLocaleString('tr') }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Çözülen Case\'ler');
@@ -387,9 +315,29 @@ function showTab(tab) {
 }
 window.filterCases = () => renderCasesTable();
 
+// ==================== URL'DEN CASE ID YAKALA VE DETAYI AÇ ====================
+async function openCaseDetailFromUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const caseId = urlParams.get('caseId');
+  const openDetail = urlParams.get('openDetail');
+  if (caseId && openDetail === 'true') {
+    const waitForAuth = setInterval(() => {
+      if (currentUser) {
+        clearInterval(waitForAuth);
+        openCaseDetail(caseId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }, 500);
+    setTimeout(() => clearInterval(waitForAuth), 10000);
+  }
+}
+
 // ==================== UTILITIES ====================
 function escapeHtml(s) { if(!s) return ''; return String(s).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 function showToast(msg) { const toast = document.createElement('div'); toast.textContent = msg; toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:var(--accent2); color:#fff; padding:8px 16px; border-radius:20px; font-size:12px; z-index:9999;'; document.body.appendChild(toast); setTimeout(() => toast.remove(), 4000); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.getElementById('refreshBtn').onclick = async () => { await refreshDashboard(); showToast('Yenilendi'); };
+
+// Sayfa yüklendiğinde URL'yi kontrol et
+document.addEventListener('DOMContentLoaded', openCaseDetailFromUrl);
