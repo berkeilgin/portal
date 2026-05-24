@@ -7,7 +7,11 @@ const firebaseConfig = {
   messagingSenderId: "381220130397",
   appId: "1:381220130397:web:97124d8836681bc62c07b4"
 };
-const app = firebase.initializeApp(firebaseConfig);
+
+// Firebase başlatma (zaten başlatılmışsa tekrar başlatma)
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
 const auth = firebase.auth();
 
@@ -16,6 +20,7 @@ let currentUser = null;
 let lastCaseCount = 0;
 let editTopicId = null;
 let editUserId = null;
+let emailjsInitialized = false;
 
 // ==================== AUTH ====================
 document.getElementById('adminLoginBtn').onclick = async () => {
@@ -131,7 +136,7 @@ async function renderCasesTable() {
         <td>${escapeHtml(c.fullname)}</td>
         <td>${c.email}</td>
         <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-        <td><span class="status-badge status-${c.priority === 'yüksek' ? 'beklemede' : 'sürüyor'}">${c.priority}</span></td>
+        <td><span class="status-badge">${c.priority}</span></td>
         <td>${new Date(c.createdAt.toDate()).toLocaleDateString('tr')}</td>
         <td class="row-actions">
           <button class="btn btn-ghost btn-sm" onclick="openCaseDetail('${c.id}')">Detay</button>
@@ -371,60 +376,78 @@ window.deleteUser = async (id) => {
   }
 };
 
-// ==================== MAIL SETTINGS ====================
+// ==================== MAIL SETTINGS (EmailJS) ====================
 function loadMailSettings() {
-  return JSON.parse(localStorage.getItem('case_mail_settings') || '{}');
+  return JSON.parse(localStorage.getItem('case_mail_settings_emailjs') || '{}');
 }
 
 function saveMailSettings() {
   const settings = {
-    smtpEmail: document.getElementById('smtpEmail').value,
-    smtpPassword: document.getElementById('smtpPassword').value,
+    publicKey: document.getElementById('emailjsPublicKey').value,
+    serviceId: document.getElementById('emailjsServiceId').value,
+    templateId: document.getElementById('emailjsTemplateId').value,
     adminEmail: document.getElementById('adminNotifyEmail').value,
     ccEmail: document.getElementById('ccEmail').value
   };
-  localStorage.setItem('case_mail_settings', JSON.stringify(settings));
-  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Kaydedildi</span>';
+  localStorage.setItem('case_mail_settings_emailjs', JSON.stringify(settings));
+  
+  // EmailJS'i başlat
+  if (settings.publicKey && typeof emailjs !== 'undefined') {
+    emailjs.init(settings.publicKey);
+    emailjsInitialized = true;
+  }
+  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Ayarlar kaydedildi</span>';
 }
 
 function loadMailSettingsToForm() {
   const s = loadMailSettings();
-  document.getElementById('smtpEmail').value = s.smtpEmail || '';
-  document.getElementById('smtpPassword').value = s.smtpPassword || '';
+  document.getElementById('emailjsPublicKey').value = s.publicKey || '';
+  document.getElementById('emailjsServiceId').value = s.serviceId || '';
+  document.getElementById('emailjsTemplateId').value = s.templateId || '';
   document.getElementById('adminNotifyEmail').value = s.adminEmail || '';
   document.getElementById('ccEmail').value = s.ccEmail || '';
+  
+  // Eğer public key varsa EmailJS'i başlat
+  if (s.publicKey && typeof emailjs !== 'undefined' && !emailjsInitialized) {
+    emailjs.init(s.publicKey);
+    emailjsInitialized = true;
+  }
 }
 
 async function testEmail() {
-  const s = loadMailSettings();
-  if (!s.smtpEmail || !s.smtpPassword) {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ SMTP ayarları eksik (e-posta veya şifre)</span>';
+  const settings = loadMailSettings();
+  if (!settings.publicKey || !settings.serviceId || !settings.templateId) {
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS ayarları eksik (Public Key, Service ID, Template ID)</span>';
     return;
   }
-  if (typeof window.Email === 'undefined') {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ SMTP.js kütüphanesi yüklenemedi</span>';
+  if (typeof emailjs === 'undefined') {
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS kütüphanesi yüklenemedi</span>';
     return;
   }
+  
+  // EmailJS'i başlat (eğer daha önce başlatılmadıysa)
+  if (!emailjsInitialized) {
+    emailjs.init(settings.publicKey);
+    emailjsInitialized = true;
+  }
+  
+  const toEmail = settings.adminEmail || (currentUser?.email) || 'test@example.com';
+  
   try {
-    const response = await window.Email.send({
-      Host: "smtp.gmail.com",
-      Port: 587,
-      Username: s.smtpEmail,
-      Password: s.smtpPassword,
-      To: s.adminEmail || s.smtpEmail,
-      From: s.smtpEmail,
-      Subject: "Test Maili - QA Case Yönetim",
-      Body: "Bu bir test mailidir. SMTP ayarlarınız doğru çalışıyor."
-    });
-    if (response && response.includes("OK")) {
-      document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili başarıyla gönderildi</span>';
-    } else {
-      throw new Error(response || "SMTP servisi 'OK' dönmedi");
-    }
-  } catch(e) {
-    let errMsg = e.message || e;
-    if (errMsg === undefined) errMsg = "Bilinmeyen hata (muhtemelen ağ veya CORS)";
-    document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${errMsg}</span>`;
+    const templateParams = {
+      to_email: toEmail,
+      from_name: "QA Case Admin",
+      message: "Bu bir test mailidir. EmailJS entegrasyonu başarıyla çalışıyor.",
+      reply_to: toEmail,
+      cc: settings.ccEmail || ''
+    };
+    
+    const response = await emailjs.send(settings.serviceId, settings.templateId, templateParams);
+    console.log("EmailJS başarılı:", response);
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili başarıyla gönderildi!</span>';
+  } catch (err) {
+    console.error("EmailJS hatası:", err);
+    document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${err.text || err.message || 'Bilinmeyen hata'}</span>`;
   }
 }
 
