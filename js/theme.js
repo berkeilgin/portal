@@ -1,5 +1,4 @@
 const DEFAULT_THEME = 'grey';
-let themeRendered = false;
 
 function setTheme(theme, save = true) {
   document.body.classList.remove('dark', 'light', 'tp', 'grey');
@@ -23,14 +22,16 @@ function updateThemeButtons(activeTheme) {
 }
 
 function renderThemeButtons(containerSelector = '.theme-switch') {
-  if (themeRendered) return; // Sadece bir kez çalıştır
+  // Daha önce render edilmiş mi kontrol et (global değişken)
+  if (window.__themeButtonsRendered) return;
   
   const container = document.querySelector(containerSelector);
   if (!container) return;
   
-  // Eğer container'da zaten buton varsa sadece aktiflikleri güncelle
+  // Container'da zaten buton var mı?
   if (container.children.length > 0) {
-    themeRendered = true;
+    // Zaten butonlar varsa sadece aktiflikleri güncelle
+    window.__themeButtonsRendered = true;
     updateThemeButtons(getCurrentTheme());
     return;
   }
@@ -41,6 +42,7 @@ function renderThemeButtons(containerSelector = '.theme-switch') {
     { id: 'light', label: '☀️ Beyaz', icon: '☀️' },
     { id: 'tp', label: '✦ TP', icon: '✦' }
   ];
+  
   container.innerHTML = themes.map(t => `
     <button class="theme-btn ${getCurrentTheme() === t.id ? 'active' : ''}" data-theme="${t.id}">
       ${t.icon} ${t.label}
@@ -51,10 +53,10 @@ function renderThemeButtons(containerSelector = '.theme-switch') {
     btn.addEventListener('click', () => setTheme(btn.dataset.theme));
   });
   
-  themeRendered = true;
+  window.__themeButtonsRendered = true;
 }
 
-// Sayfa yüklendiğinde tema başlat
+// Sayfa yüklendiğinde tema başlat (sadece bir kez)
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('qa_theme');
   const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
