@@ -226,5 +226,28 @@
 <script src="js/theme.js"></script>
 <script src="js/common.js"></script>
 <script src="js/case.js"></script>
+
+  <script>
+// URL'den caseId parametresini al ve sorgula
+window.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const caseId = urlParams.get('caseId');
+  if (caseId) {
+    const caseInput = document.getElementById('queryCaseId');
+    if (caseInput) {
+      caseInput.value = caseId;
+      // "Case Sorgula" sekmesine geç
+      const queryTabBtn = document.querySelector('.tab-btn[data-tab="query"]');
+      if (queryTabBtn) queryTabBtn.click();
+      // Sorgula butonuna tıkla
+      setTimeout(() => {
+        const queryBtn = document.querySelector('#queryTab .btn-primary');
+        if (queryBtn) queryBtn.click();
+      }, 100);
+    }
+  }
+});
+</script>
+  
 </body>
 </html>
