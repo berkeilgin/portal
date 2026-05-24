@@ -180,7 +180,7 @@
     {
       "id": "powerbiml",
       "name": "Multi Lingual - Kalite Raporu",
-      "icon": "logos/powerbi.png",
+      "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
       "isTest": false,
@@ -312,7 +312,7 @@
     {
       "id": "outlook",
       "name": "Outlook Web",
-      "icon": "logos/out.png",
+      "icon": "out.png",
       "cat": "office",
       "isEnabled": true,
       "isNew": false,
@@ -323,7 +323,7 @@
     {
       "id": "portaladmin",
       "name": "Admin Paneli",
-      "icon": "logos/admin.png",
+      "icon": "admin.png",
       "cat": "portal",
       "isEnabled": true,
       "isNew": false,
@@ -334,7 +334,7 @@
     {
       "id": "portalcase",
       "name": "Kalite Case Aç",
-      "icon": "logos/logo.png",
+      "icon": "logo.png",
       "cat": "portal",
       "isEnabled": true,
       "isNew": true,
