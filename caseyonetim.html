@@ -10,7 +10,30 @@
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/components.css">
 <style>
-/* Case Yönetim özel stiller */
+/* Modal gizleme / gösterme */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal {
+  background: var(--surface);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -92,32 +115,10 @@
   margin-left: 8px;
   cursor: pointer;
 }
-
-  /* Modal gizleme / gösterme */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }
-.modal-overlay.open {
-  display: flex;
-}
-.modal {
-  background: var(--surface);
-  border-radius: 16px;
-  max-width: 500px;
-  width: 90%;
-  padding: 20px;
-  border: 1px solid var(--border);
-}
-  
 </style>
 </head>
 <body class="grey">
@@ -131,20 +132,19 @@
 
 <div class="main">
   <!-- Giriş Ekranı -->
-<div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
-  <h3>Admin Girişi</h3>
-  <div class="form-group">
-    <label>E-posta</label>
-    <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
+  <div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
+    <h3>Admin Girişi</h3>
+    <div class="form-group">
+      <label>E-posta</label>
+      <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
+    </div>
+    <div class="form-group">
+      <label>Şifre</label>
+      <input type="password" id="adminPassword" class="form-input" placeholder="••••">
+    </div>
+    <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
+    <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
   </div>
-  <div class="form-group">
-    <label>Şifre</label>
-    <input type="password" id="adminPassword" class="form-input" placeholder="••••">
-  </div>
-  <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
-  <button class="btn btn-ghost" id="createAdminBtn" style="margin-top:10px;">➕ İlk Admin Hesabı Oluştur</button>
-  <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
-</div>
 
   <!-- Admin Paneli -->
   <div id="adminPanel" style="display:none">
@@ -213,9 +213,10 @@
 
     <!-- Mail Ayarları Tab -->
     <div id="mailTab" class="panel" style="display:none">
-      <div class="form-group"><label>SMTP E-posta Adresi (Gmail)</label><input type="email" id="smtpEmail" class="form-input" placeholder="ornek@gmail.com"></div>
-      <div class="form-group"><label>SMTP Şifresi (Uygulama Şifresi)</label><input type="password" id="smtpPassword" class="form-input" placeholder="16 haneli uygulama şifresi"></div>
-      <div class="form-group"><label>Admin Bildirim E-posta</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
+      <div class="form-group"><label>EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input" placeholder="örnek: 5Q-xyzABC..."></div>
+      <div class="form-group"><label>EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input" placeholder="service_xxxx"></div>
+      <div class="form-group"><label>EmailJS Template ID</label><input type="text" id="emailjsTemplateId" class="form-input" placeholder="template_xxxx"></div>
+      <div class="form-group"><label>Admin Bildirim E-posta (alıcı)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
       <div class="form-group"><label>CC E-posta (opsiyonel)</label><input type="email" id="ccEmail" class="form-input" placeholder="cc@example.com"></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="saveMailSettings()">Kaydet</button>
@@ -227,7 +228,7 @@
 </div>
 
 <footer class="footer">
-  <div class="copyright-text"></div>
+  <div class="copyright-text">© 2026 QA Portal</div>
 </footer>
 
 <!-- Modal: Case Detay -->
@@ -276,12 +277,14 @@
   </div>
 </div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
-<script src="smtp.js"></script>
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Diğer scriptler -->
 <script src="js/theme.js"></script>
-<script src="js/common.js"></script>
 <script src="js/caseyonetim.js"></script>
 </body>
 </html>
