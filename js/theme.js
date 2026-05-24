@@ -1,5 +1,5 @@
 const DEFAULT_THEME = 'grey';
-let themeButtonsRendered = false;
+let themeRendered = false;
 
 function setTheme(theme, save = true) {
   document.body.classList.remove('dark', 'light', 'tp', 'grey');
@@ -22,22 +22,16 @@ function updateThemeButtons(activeTheme) {
   });
 }
 
-function initTheme() {
-  const saved = localStorage.getItem('qa_theme');
-  const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
-  setTheme(theme, false);
-}
-
 function renderThemeButtons(containerSelector = '.theme-switch') {
-  // Eğer butonlar zaten render edilmişse tekrar yapma
-  if (themeButtonsRendered) return;
+  if (themeRendered) return; // Sadece bir kez çalıştır
   
   const container = document.querySelector(containerSelector);
   if (!container) return;
   
-  // Container'da zaten buton var mı kontrol et
+  // Eğer container'da zaten buton varsa sadece aktiflikleri güncelle
   if (container.children.length > 0) {
-    themeButtonsRendered = true;
+    themeRendered = true;
+    updateThemeButtons(getCurrentTheme());
     return;
   }
   
@@ -57,11 +51,13 @@ function renderThemeButtons(containerSelector = '.theme-switch') {
     btn.addEventListener('click', () => setTheme(btn.dataset.theme));
   });
   
-  themeButtonsRendered = true;
+  themeRendered = true;
 }
 
 // Sayfa yüklendiğinde tema başlat
 document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
+  const saved = localStorage.getItem('qa_theme');
+  const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
+  document.body.classList.add(theme);
   renderThemeButtons();
 });
