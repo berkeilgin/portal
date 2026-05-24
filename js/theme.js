@@ -1,8 +1,7 @@
 const DEFAULT_THEME = 'grey';
 
-if (typeof window.__themeRendered === 'undefined') {
-  window.__themeRendered = false;
-}
+// Global flag - sadece bir kez render etmek için
+window.__themeRendered = window.__themeRendered || false;
 
 function setTheme(theme, save = true) {
   document.body.classList.remove('dark', 'light', 'tp', 'grey');
@@ -27,12 +26,10 @@ function updateActiveButtons(activeTheme) {
 function renderThemeButtons() {
   if (window.__themeRendered) return;
   
-  // Önce ID'li konteynırı dene, yoksa class'lıyı kullan
-  let container = document.querySelector('#themeSwitchContainer');
-  if (!container) container = document.querySelector('.theme-switch');
+  const container = document.querySelector('.theme-switch');
   if (!container) return;
   
-  // Zaten buton varsa sadece aktiflik güncelle
+  // Zaten buton varsa sadece aktiflik güncellemesi yap
   if (container.children.length > 0) {
     window.__themeRendered = true;
     updateActiveButtons(getCurrentTheme());
@@ -59,6 +56,7 @@ function renderThemeButtons() {
   window.__themeRendered = true;
 }
 
+// Sayfa yüklendiğinde tema başlat
 document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('qa_theme');
   const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
