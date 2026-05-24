@@ -15,10 +15,9 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const caseDb = firebase.firestore();
 
-// ==================== STATE ====================
+// ==================== GLOBAL STATE ====================
 let data = null, fileSha = null, currentUser = null;
 let editToolId = null, editCatId = null, editUsername = null;
-let catFilter = 'all', uploadQueue = [];
 
 // ==================== GITHUB HELPERS ====================
 function getToken() { return sessionStorage.getItem('gh_token') || ''; }
@@ -50,22 +49,25 @@ function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 // ==================== LOAD DATA ====================
 async function loadData() {
   try {
-    setStatus('warn', 'Yükleniyor...');
     const result = await ghGet('tools.json');
     fileSha = result.sha;
     data = JSON.parse(b64Decode(result.content));
     if (!data.categories) data.categories = [];
     if (!data.tools) data.tools = [];
     if (!data.users) data.users = [];
-    if (!data.maintenanceMessage) data.maintenanceMessage = '';
-    if (!data.announcement) data.announcement = { active: false, text: '', type: 'info' };
-    if (!data.copyrightText) data.copyrightText = '© 2025 QA Portal. Tüm hakları saklıdır.';
-    setStatus('ok', `Yüklendi · ${data.tools.length} araç, ${data.categories.length} kategori`);
+    if (!data.copyrightText) data.copyrightText = '© 2025 QA Portal';
+    // Settings formuna mevcut değerleri yükle
+    document.getElementById('maintToggle').classList.toggle('on', !!data.maintenance);
+    document.getElementById('maintMsg').value = data.maintenanceMessage || '';
+    document.getElementById('annToggle').classList.toggle('on', !!data.announcement?.active);
+    document.getElementById('annText').value = data.announcement?.text || '';
+    document.getElementById('annType').value = data.announcement?.type || 'info';
+    document.getElementById('copyrightInput').value = data.copyrightText;
     document.getElementById('saveBtn').disabled = false;
     renderAll();
   } catch(e) {
-    setStatus('err', 'Veri yüklenemedi: ' + e.message);
     console.error(e);
+    document.getElementById('statusMsg').textContent = 'Veri yüklenemedi: ' + e.message;
   }
 }
 
@@ -73,7 +75,6 @@ async function loadData() {
 function renderAll() {
   renderToolsTable();
   renderCategoriesTable();
-  renderSettingsForm();
   renderUsersTable();
   renderCatFilterChips();
   loadStats();
@@ -81,81 +82,76 @@ function renderAll() {
 
 function renderToolsTable() {
   const search = document.getElementById('searchTools')?.value.toLowerCase() || '';
-  const filtered = data.tools.filter(t => {
-    if (catFilter !== 'all' && t.cat !== catFilter) return false;
-    if (search && !t.name.toLowerCase().includes(search) && !t.id.toLowerCase().includes(search)) return false;
-    return true;
-  });
+  const filtered = data.tools.filter(t => t.name.toLowerCase().includes(search) || t.id.toLowerCase().includes(search));
   const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   const tbody = document.getElementById('toolsTableBody');
   tbody.innerHTML = filtered.map(t => `
     <tr>
       <td><img src="logos/${t.icon}" style="width:24px;height:24px;object-fit:contain;" onerror="this.src='logos/logo.png'"></td>
-      <td><strong>${escapeHtml(t.name)}</strong><br><span style="font-size:10px;color:var(--muted)">${t.id}</span></td>
+      <td><strong>${escapeHtml(t.name)}</strong><br><span style="font-size:10px">${t.id}</span></td>
       <td>${catMap[t.cat]?.icon || ''} ${escapeHtml(catMap[t.cat]?.label || t.cat)}</td>
-      <td class="url-cell" title="${t.url}">${t.url}</td>
+      <td class="url-cell">${t.url}</td>
       <td><button class="toggle-switch ${t.isEnabled !== false ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isEnabled',this)"></button></td>
       <td><button class="toggle-switch ${t.isNew ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isNew',this)"></button></td>
       <td><button class="toggle-switch ${t.isTest ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isTest',this)"></button></td>
       <td><button class="toggle-switch ${t.isBest ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isBest',this)"></button></td>
-      <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openToolModal('${t.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteTool('${t.id}')">🗑</button>
-      </td>
+      <td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="openToolModal('${t.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteTool('${t.id}')">🗑</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="9">Araç bulunamadı</td></tr>';
+  `).join('');
 }
 
 function renderCategoriesTable() {
   const tbody = document.getElementById('categoriesTableBody');
-  const toolCount = id => data.tools.filter(t => t.cat === id).length;
-  tbody.innerHTML = data.categories.map((c, idx) => `
+  tbody.innerHTML = data.categories.map((c, i) => `
     <tr>
-      <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${idx},-1)">▲</button> ${idx+1}</td>
-      <td><code>${c.id}</code></td>
-      <td>${c.icon || ''} ${escapeHtml(c.label)}</td>
-      <td style="font-size:20px">${c.icon || ''}</td>
-      <td>${toolCount(c.id)}</td>
-      <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openCategoryModal('${c.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑</button>
-      </td>
+      <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${i},-1)">▲</button> ${i+1}</td>
+      <td>${c.id}</td><td>${c.icon || ''} ${escapeHtml(c.label)}</td><td>${c.icon || ''}</td>
+      <td>${data.tools.filter(t => t.cat === c.id).length}</td>
+      <td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="openCategoryModal('${c.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="6">Kategori yok</td></tr>';
-}
-
-function renderSettingsForm() {
-  document.getElementById('maintToggle').classList.toggle('on', !!data.maintenance);
-  document.getElementById('maintMsg').value = data.maintenanceMessage || '';
-  document.getElementById('annToggle').classList.toggle('on', !!data.announcement?.active);
-  document.getElementById('annText').value = data.announcement?.text || '';
-  document.getElementById('annType').value = data.announcement?.type || 'info';
-  document.getElementById('copyrightInput').value = data.copyrightText || '';
+  `).join('');
 }
 
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
   tbody.innerHTML = data.users.map(u => `
     <tr>
-      <td><strong>${escapeHtml(u.username)}</strong></td>
-      <td><span class="badge ${u.role === 'admin' ? 'badge-new' : 'badge-test'}">${u.role}</span></td>
-      <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.username}')">✏️</button>
-        ${u.username !== currentUser?.username ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">🗑</button>` : ''}
-      </td>
+      <td>${escapeHtml(u.username)}</td><td>${u.role}</td>
+      <td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="openUserModal('${u.username}')">✏️</button>${u.username !== currentUser?.username ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">🗑</button>` : ''}</td>
     </tr>
-  `).join('') || '<tr><td colspan="3">Kullanıcı yok</td></tr>';
+  `).join('');
 }
 
 function renderCatFilterChips() {
   const container = document.getElementById('catFilterChips');
-  container.innerHTML = `<button class="chip ${catFilter === 'all' ? 'active' : ''}" onclick="setCatFilter('all')">Tümü</button>` +
-    data.categories.map(c => `<button class="chip ${catFilter === c.id ? 'active' : ''}" onclick="setCatFilter('${c.id}')">${c.icon || ''} ${c.label}</button>`).join('');
+  container.innerHTML = '<button class="chip active" onclick="setCatFilter(\'all\',this)">Tümü</button>' +
+    data.categories.map(c => `<button class="chip" onclick="setCatFilter('${c.id}',this)">${c.icon || ''} ${c.label}</button>`).join('');
 }
 
-function setCatFilter(id) { catFilter = id; renderCatFilterChips(); renderToolsTable(); }
-function toggleToolFlag(id, field, btn) { const tool = data.tools.find(t => t.id === id); if (tool) { tool[field] = !tool[field]; btn.classList.toggle('on'); } }
-function moveCategory(idx, dir) { const newIdx = idx + dir; if (newIdx < 0 || newIdx >= data.categories.length) return; [data.categories[idx], data.categories[newIdx]] = [data.categories[newIdx], data.categories[idx]]; renderCategoriesTable(); renderCatFilterChips(); renderToolsTable(); }
+function setCatFilter(id, btn) {
+  document.querySelectorAll('#catFilterChips .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  const search = document.getElementById('searchTools')?.value.toLowerCase() || '';
+  const filtered = data.tools.filter(t => (id === 'all' || t.cat === id) && (t.name.toLowerCase().includes(search) || t.id.toLowerCase().includes(search)));
+  const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
+  const tbody = document.getElementById('toolsTableBody');
+  tbody.innerHTML = filtered.map(t => `...`).join('');
+  // Yeniden render tools table
+  renderToolsTable();
+}
+
+function toggleToolFlag(id, field, btn) {
+  const tool = data.tools.find(t => t.id === id);
+  if (tool) { tool[field] = !tool[field]; btn.classList.toggle('on'); }
+}
+
+function moveCategory(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= data.categories.length) return;
+  [data.categories[idx], data.categories[newIdx]] = [data.categories[newIdx], data.categories[idx]];
+  renderCategoriesTable();
+  renderCatFilterChips();
+}
 
 // ==================== TOOL CRUD ====================
 function openToolModal(id = null) {
@@ -181,8 +177,9 @@ function openToolModal(id = null) {
     document.getElementById('toolIsTest').classList.remove('on');
     document.getElementById('toolIsBest').classList.remove('on');
   }
-  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
+
 function saveTool() {
   const id = document.getElementById('toolId').value.trim().toLowerCase().replace(/\s+/g, '-');
   const name = document.getElementById('toolName').value.trim();
@@ -201,9 +198,13 @@ function saveTool() {
     if (data.tools.find(t => t.id === id)) { alert('Bu ID zaten var'); return; }
     data.tools.push({ id, name, icon, cat, isEnabled, isNew, isTest, isBest, url });
   }
-  closeModal('toolModal'); renderToolsTable();
+  closeModal('toolModal');
+  renderToolsTable();
 }
-function deleteTool(id) { if (confirm(`"${id}" silinsin mi?`)) { data.tools = data.tools.filter(t => t.id !== id); renderToolsTable(); } }
+
+function deleteTool(id) {
+  if (confirm(`"${id}" silinsin mi?`)) { data.tools = data.tools.filter(t => t.id !== id); renderToolsTable(); }
+}
 
 // ==================== CATEGORY CRUD ====================
 function openCategoryModal(id = null) {
@@ -218,8 +219,9 @@ function openCategoryModal(id = null) {
     document.getElementById('catId').disabled = false;
     ['catId','catLabel','catIcon'].forEach(i => document.getElementById(i).value = '');
   }
-  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
+
 function saveCategory() {
   const id = document.getElementById('catId').value.trim().toLowerCase().replace(/\s+/g, '-');
   const label = document.getElementById('catLabel').value.trim();
@@ -232,19 +234,27 @@ function saveCategory() {
     if (data.categories.find(c => c.id === id)) { alert('Bu ID zaten var'); return; }
     data.categories.push({ id, label, icon });
   }
-  closeModal('categoryModal'); renderCategoriesTable(); renderCatFilterChips(); renderToolsTable();
+  closeModal('categoryModal');
+  renderCategoriesTable();
+  renderCatFilterChips();
 }
+
 function deleteCategory(id) {
   const cnt = data.tools.filter(t => t.cat === id).length;
   if (confirm(`"${id}" kategorisini sil? ${cnt} araç da silinecek!`)) {
     data.categories = data.categories.filter(c => c.id !== id);
     data.tools = data.tools.filter(t => t.cat !== id);
-    renderCategoriesTable(); renderCatFilterChips(); renderToolsTable();
+    renderCategoriesTable();
+    renderCatFilterChips();
+    renderToolsTable();
   }
 }
 
 // ==================== USER CRUD ====================
-async function sha256(s) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join(''); }
+async function sha256(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 function genSalt() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 function openUserModal(username = null) {
@@ -261,8 +271,9 @@ function openUserModal(username = null) {
     ['userUsername','userPassword','userPassword2'].forEach(i => document.getElementById(i).value = '');
     document.getElementById('userRole').value = 'editor';
   }
-  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
+
 async function saveUser() {
   const username = document.getElementById('userUsername').value.trim();
   const role = document.getElementById('userRole').value;
@@ -279,68 +290,51 @@ async function saveUser() {
     }
   } else {
     if (!pass || pass !== pass2 || pass.length < 6) { alert('Şifre zorunlu, eşleşmeli ve min 6 karakter'); return; }
-    const salt = genSalt(); data.users.push({ username, salt, hash: await sha256(salt + pass), role });
+    const salt = genSalt();
+    data.users.push({ username, salt, hash: await sha256(salt + pass), role });
   }
-  closeModal('userModal'); renderUsersTable();
+  closeModal('userModal');
+  renderUsersTable();
 }
-function deleteUser(username) { if (confirm(`${username} silinsin mi?`)) { data.users = data.users.filter(u => u.username !== username); renderUsersTable(); } }
+
+function deleteUser(username) {
+  if (confirm(`${username} silinsin mi?`)) { data.users = data.users.filter(u => u.username !== username); renderUsersTable(); }
+}
 
 // ==================== STATS ====================
 function loadStats() {
   const stats = JSON.parse(localStorage.getItem('qa_stats') || '{}');
   const total = Object.values(stats).reduce((a,b)=>a+b,0);
   const unique = Object.keys(stats).length;
-  const topToolId = Object.keys(stats).sort((a,b)=>stats[b]-stats[a])[0];
-  const topTool = data.tools.find(t => t.id === topToolId);
-  document.getElementById('statsCards').innerHTML = `
-    <div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div>
-    <div class="stat-card"><div class="number">${unique}</div><div>Farklı Araç</div></div>
-    <div class="stat-card"><div class="number">${topTool ? topTool.name.slice(0,15) : '—'}</div><div>En Çok Kullanılan</div></div>
-    <div class="stat-card"><div class="number">${data.tools.filter(t=>t.isEnabled!==false).length}</div><div>Aktif Araç</div></div>
-  `;
+  document.getElementById('statsCards').innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div><div class="stat-card"><div class="number">${unique}</div><div>Farklı Araç</div></div>`;
   const sorted = data.tools.map(t => ({ name: t.name, count: stats[t.id] || 0 })).filter(s => s.count > 0).sort((a,b)=>b.count-a.count);
-  const max = sorted[0]?.count || 1;
-  document.getElementById('statsDetails').innerHTML = sorted.length ? `
-    <div class="panel"><h3>🔝 En Çok Kullanılan Araçlar</h3>
-    ${sorted.map(s => `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <div style="width:150px">${escapeHtml(s.name)}</div>
-        <div style="flex:1;background:var(--border);height:8px;border-radius:4px">
-          <div style="width:${(s.count/max)*100}%;height:100%;background:var(--accent2);border-radius:4px"></div>
-        </div>
-        <div style="width:40px">${s.count}</div>
-      </div>
-    `).join('')}</div>
-  ` : '<div class="panel">Henüz istatistik yok</div>';
+  document.getElementById('statsDetails').innerHTML = sorted.length ? `<div class="panel"><h3>🔝 En Çok Kullanılan Araçlar</h3>${sorted.map(s => `<div>${escapeHtml(s.name)}: ${s.count}</div>`).join('')}</div>` : '';
 }
-function clearStats() { if (confirm('İstatistikler sıfırlansın mı?')) { localStorage.removeItem('qa_stats'); loadStats(); toast('İstatistikler sıfırlandı'); } }
+function clearStats() { localStorage.removeItem('qa_stats'); loadStats(); }
 
-// ==================== CASE STATS (MODERN) ====================
+// ==================== CASE STATS ====================
 async function loadCaseStats() {
-  const cardsContainer = document.getElementById('caseStatsCards');
-  const detailsContainer = document.getElementById('caseStatsDetails');
-  if (!cardsContainer) return;
-  cardsContainer.innerHTML = '<div class="loading-spinner" style="margin:20px auto;"></div>';
-  detailsContainer.innerHTML = '';
+  const cards = document.getElementById('caseStatsCards');
+  const details = document.getElementById('caseStatsDetails');
+  cards.innerHTML = '<div class="loading-spinner" style="margin:20px auto;"></div>';
+  details.innerHTML = '';
   try {
-    const snapshot = await caseDb.collection('cases').get();
-    const cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const snap = await caseDb.collection('cases').get();
+    const cases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const total = cases.length;
     const open = cases.filter(c => c.status !== 'çözüldü' && c.status !== 'reddedildi').length;
     const resolved = cases.filter(c => c.status === 'çözüldü').length;
-    const rejected = cases.filter(c => c.status === 'reddedildi').length;
-    const inProgress = cases.filter(c => c.status === 'sürüyor').length;
     const pending = cases.filter(c => c.status === 'beklemede').length;
+    const inProgress = cases.filter(c => c.status === 'sürüyor').length;
+    const rejected = cases.filter(c => c.status === 'reddedildi').length;
     let avgTime = 0;
     const times = cases.filter(c => c.resolutionTime).map(c => c.resolutionTime);
     if (times.length) avgTime = (times.reduce((a,b)=>a+b,0) / times.length).toFixed(1);
-    cardsContainer.innerHTML = `
-      <div class="stat-card"><div class="number">${total}</div><div>Toplam Case</div></div>
-      <div class="stat-card"><div class="number">${open}</div><div>Açık Case</div></div>
-      <div class="stat-card"><div class="number">${resolved}</div><div>Çözülen</div></div>
-      <div class="stat-card"><div class="number">${avgTime}</div><div>Ort. Çözüm (gün)</div></div>
-    `;
-    // Son 7 gün trendi (bar chart)
+    cards.innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Case</div></div>
+                       <div class="stat-card"><div class="number">${open}</div><div>Açık Case</div></div>
+                       <div class="stat-card"><div class="number">${resolved}</div><div>Çözülen</div></div>
+                       <div class="stat-card"><div class="number">${avgTime}</div><div>Ort. Çözüm (gün)</div></div>`;
+    // Son 7 gün trendi
     const last7Days = [];
     for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0); last7Days.push(d); }
     const trend = last7Days.map(day => {
@@ -348,26 +342,14 @@ async function loadCaseStats() {
       return { date: day.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' }), count };
     });
     const maxCount = Math.max(...trend.map(t => t.count), 1);
-    const trendHtml = `<div style="display: flex; gap: 12px; align-items: flex-end; justify-content: center; height: 180px; padding: 16px 0;">
-      ${trend.map(t => `<div style="flex:1; text-align:center; display:flex; flex-direction:column; align-items:center;">
-        <div style="flex:1; display:flex; align-items:flex-end; width:100%;">
-          <div style="width:100%; background:linear-gradient(180deg, var(--accent2), var(--accent)); border-radius:8px 8px 0 0; height:${(t.count / maxCount) * 140}px; min-height:4px;"></div>
-        </div>
-        <div style="margin-top:8px; font-size:11px; color:var(--muted);">${t.date}</div>
-        <div style="font-size:13px; font-weight:bold; color:var(--accent2);">${t.count}</div>
-      </div>`).join('')}
-    </div>`;
-    const statusDistribution = `<div class="stats-grid" style="grid-template-columns: repeat(4,1fr); margin-top: 16px;">
-      <div class="stat-card" style="background: rgba(156,39,176,0.1);"><div class="number" style="color:#ce93d8;">${pending}</div><div>Beklemede</div></div>
-      <div class="stat-card" style="background: rgba(255,152,0,0.1);"><div class="number" style="color:#ffb74d;">${inProgress}</div><div>Sürüyor</div></div>
-      <div class="stat-card" style="background: rgba(76,175,80,0.1);"><div class="number" style="color:#81c784;">${resolved}</div><div>Çözüldü</div></div>
-      <div class="stat-card" style="background: rgba(158,158,158,0.1);"><div class="number" style="color:#bdbdbd;">${rejected}</div><div>Reddedildi</div></div>
-    </div>`;
-    detailsContainer.innerHTML = `<div class="panel"><h3>📈 Son 7 Günlük Case Trendi</h3>${trendHtml}</div><div class="panel"><h3>📊 Durum Dağılımı</h3>${statusDistribution}</div>`;
-  } catch (err) { console.error(err); cardsContainer.innerHTML = '<div class="status-bar err">Case verileri yüklenemedi: ' + err.message + '</div>'; }
+    const trendHtml = `<div style="display:flex; gap:12px; align-items:flex-end; justify-content:center; height:150px;">${trend.map(t => `<div style="flex:1; text-align:center;"><div style="height:${(t.count / maxCount) * 120}px; background:var(--accent2); border-radius:4px 4px 0 0;"></div><div style="margin-top:4px; font-size:11px;">${t.date}</div><div style="font-size:12px; font-weight:bold;">${t.count}</div></div>`).join('')}</div>`;
+    details.innerHTML = `<div class="panel"><h3>📈 Son 7 Günlük Case Trendi</h3>${trendHtml}</div>
+                        <div class="panel"><h3>📊 Durum Dağılımı</h3><div style="display:flex; gap:16px;"><div>Beklemede: ${pending}</div><div>Sürüyor: ${inProgress}</div><div>Çözüldü: ${resolved}</div><div>Reddedildi: ${rejected}</div></div></div>`;
+  } catch(e) { cards.innerHTML = '<div class="status-bar err">Yüklenemedi</div>'; }
 }
 
 // ==================== UPLOAD ====================
+let uploadQueue = [];
 function setupUpload() {
   const drop = document.getElementById('dropZone');
   const input = document.getElementById('fileInput');
@@ -381,45 +363,37 @@ function setupUpload() {
 function handleFiles(files) { for (let f of files) { const reader = new FileReader(); reader.onload = e => { uploadQueue.push({ name: f.name, b64: e.target.result.split(',')[1], type: f.type }); renderUploadPreview(); }; reader.readAsDataURL(f); } }
 function renderUploadPreview() { const container = document.getElementById('uploadPreview'); if (!container) return; container.innerHTML = uploadQueue.map((f, i) => `<div class="upload-thumb"><img src="data:${f.type};base64,${f.b64}"><span>${f.name}</span><button class="btn btn-ghost btn-sm" onclick="removeUpload(${i})">✕</button></div>`).join(''); document.getElementById('uploadBtn').disabled = uploadQueue.length === 0; }
 function removeUpload(i) { uploadQueue.splice(i, 1); renderUploadPreview(); }
-async function uploadFiles() {
-  if (!uploadQueue.length) return;
-  const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.innerHTML = '⏳ Yükleniyor...';
-  const statusDiv = document.getElementById('uploadStatus'); statusDiv.innerHTML = '';
-  for (const f of uploadQueue) {
-    try { let sha = null; try { const exist = await ghGet(`logos/${f.name}`); sha = exist.sha; } catch(e) {} await ghPut(`logos/${f.name}`, f.b64, sha, `Yeni ikon: ${f.name}`); statusDiv.innerHTML += `<p style="color:var(--accent)">✓ ${f.name} yüklendi</p>`; } catch(e) { statusDiv.innerHTML += `<p style="color:var(--accent3)">✕ ${f.name}: ${e.message}</p>`; }
-  }
-  uploadQueue = []; renderUploadPreview(); btn.disabled = false; btn.innerHTML = '⬆️ GitHub\'a Yükle'; toast('Yükleme tamamlandı');
-}
+async function uploadFiles() { if (!uploadQueue.length) return; const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.innerHTML = '⏳ Yükleniyor...'; for (const f of uploadQueue) { try { let sha = null; try { const exist = await ghGet(`logos/${f.name}`); sha = exist.sha; } catch(e) {} await ghPut(`logos/${f.name}`, f.b64, sha, `Yeni ikon: ${f.name}`); document.getElementById('uploadStatus').innerHTML += `<p style="color:var(--accent)">✓ ${f.name} yüklendi</p>`; } catch(e) { document.getElementById('uploadStatus').innerHTML += `<p style="color:var(--accent3)">✕ ${f.name}: ${e.message}</p>`; } } uploadQueue = []; renderUploadPreview(); btn.disabled = false; btn.innerHTML = '⬆️ GitHub\'a Yükle'; }
 
 // ==================== SAVE TO GITHUB ====================
 async function saveToGitHub() {
   if (!data || !fileSha) { alert('Önce veri yükleyin'); return; }
   data.maintenance = document.getElementById('maintToggle').classList.contains('on');
   data.maintenanceMessage = document.getElementById('maintMsg').value;
-  data.announcement = { active: document.getElementById('annToggle').classList.contains('on'), text: document.getElementById('annText').value, type: document.getElementById('annType').value };
+  data.announcement = {
+    active: document.getElementById('annToggle').classList.contains('on'),
+    text: document.getElementById('annText').value,
+    type: document.getElementById('annType').value
+  };
   data.copyrightText = document.getElementById('copyrightInput').value;
-  const btn = document.getElementById('saveBtn'); btn.disabled = true; btn.innerHTML = '⏳ Kaydediliyor...';
-  try { const res = await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, `Admin güncelleme ${new Date().toLocaleString('tr')}`); fileSha = res.content.sha; setStatus('ok', 'Kaydedildi!'); toast('✅ GitHub\'a kaydedildi.'); } catch(e) { setStatus('err', 'Hata: ' + e.message); toast('Kayıt başarısız: ' + e.message, 'error'); } finally { btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla'; }
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
+  try {
+    await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, 'Admin güncelleme');
+    alert('✅ Kaydedildi! 1-2 dk içinde yayınlanır.');
+  } catch(e) { alert('Hata: ' + e.message); }
+  btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
 }
 
 // ==================== UI HELPERS ====================
-function setStatus(type, msg) { const el = document.getElementById('statusMsg'); const dot = document.querySelector('#statusBar .dot'); el.textContent = msg; dot.style.background = type === 'ok' ? 'var(--accent2)' : type === 'err' ? 'var(--accent3)' : 'var(--accent4)'; }
-function toast(msg, type = 'info') { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = msg; document.body.appendChild(toast); setTimeout(() => toast.remove(), 4000); }
 function escapeHtml(s) { return String(s).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function switchTab(tabId, btn) {
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(`tab-${tabId}`).classList.add('active');
-  btn.classList.add('active');
-  if (tabId === 'caseStats') loadCaseStats();
-}
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 // ==================== LOGIN ====================
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const token = document.getElementById('githubToken').value.trim();
   const errorDiv = document.getElementById('loginError');
-  if (!token) { errorDiv.textContent = 'Lütfen bir GitHub token girin.'; return; }
+  if (!token) { errorDiv.textContent = 'Token girin'; return; }
   errorDiv.textContent = '';
   sessionStorage.setItem('gh_token', token);
   try {
@@ -433,11 +407,22 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
     setupUpload();
     await loadData();
-    document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn)); });
+    // Tab event listeners
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        btn.classList.add('active');
+        if (tabId === 'caseStats') loadCaseStats();
+      });
+    });
     document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
   } catch (err) { errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
 });
 
+// Sayfa yüklendiğinde token varsa doğrudan paneli göster
 document.addEventListener('DOMContentLoaded', () => {
   const token = sessionStorage.getItem('gh_token');
   if (token) {
@@ -446,11 +431,21 @@ document.addEventListener('DOMContentLoaded', () => {
     currentUser = { username: 'admin', role: 'admin' };
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
     setupUpload();
-    loadData().catch(() => { document.getElementById('loginScreen').style.display = 'block'; document.getElementById('adminPanel').style.display = 'none'; sessionStorage.removeItem('gh_token'); });
-    document.querySelectorAll('.tab-btn').forEach(btn => { btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn)); });
+    loadData().catch(() => {
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('adminPanel').style.display = 'none';
+      sessionStorage.removeItem('gh_token');
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        btn.classList.add('active');
+        if (tabId === 'caseStats') loadCaseStats();
+      });
+    });
     document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
-  } else {
-    document.getElementById('loginScreen').style.display = 'block';
-    document.getElementById('adminPanel').style.display = 'none';
   }
 });
