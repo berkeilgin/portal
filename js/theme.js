@@ -1,4 +1,5 @@
 const DEFAULT_THEME = 'grey';
+let themeButtonsRendered = false;
 
 function setTheme(theme, save = true) {
   document.body.classList.remove('dark', 'light', 'tp', 'grey');
@@ -28,8 +29,18 @@ function initTheme() {
 }
 
 function renderThemeButtons(containerSelector = '.theme-switch') {
+  // Eğer butonlar zaten render edilmişse tekrar yapma
+  if (themeButtonsRendered) return;
+  
   const container = document.querySelector(containerSelector);
   if (!container) return;
+  
+  // Container'da zaten buton var mı kontrol et
+  if (container.children.length > 0) {
+    themeButtonsRendered = true;
+    return;
+  }
+  
   const themes = [
     { id: 'grey', label: '🌓 Gri', icon: '🌓' },
     { id: 'dark', label: '🌑 Siyah', icon: '🌑' },
@@ -41,11 +52,15 @@ function renderThemeButtons(containerSelector = '.theme-switch') {
       ${t.icon} ${t.label}
     </button>
   `).join('');
+  
   container.querySelectorAll('.theme-btn').forEach(btn => {
     btn.addEventListener('click', () => setTheme(btn.dataset.theme));
   });
+  
+  themeButtonsRendered = true;
 }
 
+// Sayfa yüklendiğinde tema başlat
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   renderThemeButtons();
