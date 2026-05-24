@@ -13,138 +13,28 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
-/* Modal ve diğer stiller */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-overlay.open {
-  display: flex;
-}
-.modal {
-  background: var(--surface);
-  border-radius: 16px;
-  max-width: 650px;
-  width: 90%;
-  padding: 20px;
-  border: 1px solid var(--border);
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
-.stat-number {
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--accent2);
-}
-.filter-bar {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-.filter-bar input, .filter-bar select {
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: var(--font);
-}
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
+/* Modal ve diğer stiller (aynı, değişmedi) */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 16px; max-width: 650px; width: 90%; padding: 20px; border: 1px solid var(--border); max-height: 80vh; overflow-y: auto; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.stat-number { font-size: 28px; font-weight: bold; color: var(--accent2); }
+.filter-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.filter-bar input, .filter-bar select { padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font); }
+.status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .status-beklemede { background: rgba(156,39,176,.2); color: #ce93d8; }
 .status-sürüyor { background: rgba(244,162,97,.2); color: var(--accent4); }
 .status-çözüldü { background: rgba(6,214,160,.2); color: var(--accent); }
 .status-reddedildi { background: rgba(158,158,158,.2); color: #bdbdbd; }
-.tab-btn-group {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.topic-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.note-item {
-  background: var(--card2);
-  border-radius: 8px;
-  padding: 8px;
-  margin-top: 6px;
-  font-size: 12px;
-}
-.admin-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.notification-badge {
-  background: var(--accent3);
-  color: #fff;
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: bold;
-  margin-left: 8px;
-  cursor: pointer;
-}
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-.chart-container {
-  max-width: 800px;
-  margin: 20px auto;
-}
-.export-btn {
-  margin: 10px 0;
-  background: #2e7d32;
-}
-.resolution-input-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.resolution-input-group label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
+.tab-btn-group { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.topic-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
+.note-item { background: var(--card2); border-radius: 8px; padding: 8px; margin-top: 6px; font-size: 12px; }
+.admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.notification-badge { background: var(--accent3); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: bold; margin-left: 8px; cursor: pointer; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.chart-container { max-width: 800px; margin: 20px auto; }
+.export-btn { margin: 10px 0; background: #2e7d32; }
 </style>
 </head>
 <body class="grey">
@@ -160,14 +50,8 @@
   <!-- Giriş Ekranı -->
   <div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
     <h3>Admin Girişi</h3>
-    <div class="form-group">
-      <label>E-posta</label>
-      <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
-    </div>
-    <div class="form-group">
-      <label>Şifre</label>
-      <input type="password" id="adminPassword" class="form-input" placeholder="••••">
-    </div>
+    <div class="form-group"><label>E-posta</label><input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com"></div>
+    <div class="form-group"><label>Şifre</label><input type="password" id="adminPassword" class="form-input" placeholder="••••"></div>
     <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
     <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
   </div>
@@ -180,9 +64,7 @@
         <button class="btn btn-ghost" onclick="window.location.href='case.html'">🏠 Portal'a Dön</button>
         <div id="newCaseAlert" style="display:inline-block"></div>
       </div>
-      <div>
-        <span id="adminRoleBadge" class="badge badge-new">ADMIN</span>
-      </div>
+      <div><span id="adminRoleBadge" class="badge badge-new">ADMIN</span></div>
     </div>
 
     <div class="stats-grid" id="statsContainer"></div>
@@ -199,69 +81,36 @@
     <div id="casesTab" class="panel">
       <div class="filter-bar">
         <input type="text" id="searchCase" placeholder="Ara (ID/başlık/e-posta)" class="form-input">
-        <select id="statusFilter" class="form-input">
-          <option value="">Tüm Durumlar</option>
-          <option value="beklemede">Beklemede</option>
-          <option value="sürüyor">Sürüyor</option>
-          <option value="çözüldü">Çözüldü</option>
-          <option value="reddedildi">Reddedildi</option>
-        </select>
-        <select id="topicFilter" class="form-input">
-          <option value="">Tüm Konular</option>
-        </select>
+        <select id="statusFilter" class="form-input"><option value="">Tüm Durumlar</option><option value="beklemede">Beklemede</option><option value="sürüyor">Sürüyor</option><option value="çözüldü">Çözüldü</option><option value="reddedildi">Reddedildi</option></select>
+        <select id="topicFilter" class="form-input"><option value="">Tüm Konular</option></select>
         <button class="btn btn-primary" onclick="filterCases()">Filtrele</button>
       </div>
-      <div class="table-wrapper">
-        <table id="casesTable">
-          <thead>
-            <tr><th>ID</th><th>Konu</th><th>Başlık</th><th>Kullanıcı</th><th>E-posta</th><th>Durum</th><th>Öncelik</th><th>Oluşturma</th><th>İşlem</th></tr>
-          </thead>
-          <tbody id="casesTableBody"></tbody>
-        </table>
-      </div>
+      <div class="table-wrapper"><table id="casesTable"><thead><tr><th>ID</th><th>Konu</th><th>Başlık</th><th>Kullanıcı</th><th>E-posta</th><th>Durum</th><th>Öncelik</th><th>Oluşturma</th><th>İşlem</th></tr></thead><tbody id="casesTableBody"></tbody></table></div>
     </div>
 
     <!-- Konular Tab -->
-    <div id="topicsTab" class="panel" style="display:none">
-      <button class="btn btn-primary" onclick="openTopicModal()">+ Yeni Konu Ekle</button>
-      <div id="topicsList" style="margin-top:16px"></div>
-    </div>
+    <div id="topicsTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openTopicModal()">+ Yeni Konu Ekle</button><div id="topicsList" style="margin-top:16px"></div></div>
 
     <!-- Kullanıcılar Tab -->
-    <div id="usersTab" class="panel" style="display:none">
-      <button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button>
-      <div class="table-wrapper" style="margin-top:16px">
-        <table><thead><tr><th>ID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead>
-        <tbody id="usersTableBody"></tbody></table>
-      </div>
-    </div>
+    <div id="usersTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button><div class="table-wrapper" style="margin-top:16px"><table><thead><tr><th>ID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
 
-    <!-- Mail Ayarları Tab -->
+    <!-- Mail Ayarları Tab (2 template ID) -->
     <div id="mailTab" class="panel" style="display:none">
-      <div class="form-group"><label>EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input"></div>
-      <div class="form-group"><label>EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input"></div>
-      <div class="form-group"><label>EmailJS Template ID</label><input type="text" id="emailjsTemplateId" class="form-input"></div>
-      <div class="form-group"><label>Alıcı E-posta</label><input type="email" id="adminNotifyEmail" class="form-input"></div>
-      <div class="form-group"><label>CC E-posta</label><input type="email" id="ccEmail" class="form-input"></div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">Kaydet</button><button class="btn btn-ghost" onclick="testEmail()">Test Maili Gönder</button></div>
+      <div class="form-group"><label>🔑 EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input" placeholder="Public Key"></div>
+      <div class="form-group"><label>🛠️ EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input" placeholder="service_xxx"></div>
+      <div class="form-group"><label>📨 Admin/CC Template ID</label><input type="text" id="emailjsAdminTemplateId" class="form-input" placeholder="template_xxx (genel bildirim)"></div>
+      <div class="form-group"><label>👤 Sorumlu Kişi Template ID</label><input type="text" id="emailjsResponsibleTemplateId" class="form-input" placeholder="template_xxx (sorumluya özel)"></div>
+      <div class="form-group"><label>📬 Alıcı E-posta (Admin)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
+      <div class="form-group"><label>📎 CC E-posta (birden fazla için virgül kullanın)</label><input type="text" id="ccEmail" class="form-input" placeholder="cc1@mail.com, cc2@mail.com"></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">💾 Kaydet</button><button class="btn btn-ghost" onclick="testEmail()">✉️ Test Maili Gönder</button></div>
       <div id="mailStatus" style="margin-top:12px"></div>
     </div>
 
     <!-- İstatistikler Tab -->
     <div id="statsTab" class="panel" style="display:none">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-        <h3>Çözüm Performansı</h3>
-        <button class="btn btn-primary export-btn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button>
-      </div>
-      <div class="chart-container">
-        <canvas id="statsChart"></canvas>
-      </div>
-      <div id="statsTable" style="margin-top:20px; overflow-x:auto">
-        <table style="width:100%; border-collapse:collapse">
-          <thead><tr><th>Çözen Kişi</th><th>Çözülen Case Sayısı</th><th>Toplam Süre (dk)</th><th>Ortalama Süre (dk)</th></tr></thead>
-          <tbody id="statsTableBody"></tbody>
-        </table>
-      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><h3>Çözüm Performansı</h3><button class="btn btn-primary export-btn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button></div>
+      <div class="chart-container"><canvas id="statsChart"></canvas></div>
+      <div id="statsTable" style="margin-top:20px; overflow-x:auto"><table style="width:100%"><thead><tr><th>Çözen Kişi</th><th>Çözülen Case Sayısı</th><th>Toplam Süre (dk)</th><th>Ortalama Süre (dk)</th></tr></thead><tbody id="statsTableBody"></tbody></table></div>
     </div>
   </div>
 </div>
