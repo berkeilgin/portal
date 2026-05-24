@@ -7,20 +7,13 @@ const firebaseConfig = {
   messagingSenderId: "381220130397",
   appId: "1:381220130397:web:97124d8836681bc62c07b4"
 };
-
-// Firebase başlatma (zaten başlatılmışsa tekrar başlatma)
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ==================== STATE ====================
-let currentUser = null;
-let lastCaseCount = 0;
-let editTopicId = null;
-let editUserId = null;
+let currentUser = null, lastCaseCount = 0, editTopicId = null, editUserId = null;
 let emailjsInitialized = false;
+let statsChart = null;
 
 // ==================== AUTH ====================
 document.getElementById('adminLoginBtn').onclick = async () => {
@@ -30,15 +23,9 @@ document.getElementById('adminLoginBtn').onclick = async () => {
   try {
     await auth.signInWithEmailAndPassword(email, pass);
     errorEl.textContent = '';
-  } catch(e) {
-    errorEl.textContent = e.message;
-  }
+  } catch(e) { errorEl.textContent = e.message; }
 };
-
-document.getElementById('logoutBtn').onclick = async () => {
-  await auth.signOut();
-};
-
+document.getElementById('logoutBtn').onclick = async () => await auth.signOut();
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUser = user;
@@ -61,7 +48,6 @@ async function refreshDashboard() {
     await Promise.all([loadStats(), renderCasesTable(), populateTopicFilter(), checkNewCases()]);
   } catch(e) { console.error(e); }
 }
-
 async function loadStats() {
   const cases = await loadCases();
   const total = cases.length;
@@ -77,7 +63,6 @@ async function loadStats() {
     <div class="stat-card"><div class="stat-number">${open}</div><div>Aktif Case</div></div>
   `;
 }
-
 async function checkNewCases() {
   const current = (await loadCases()).length;
   if (current > lastCaseCount) {
@@ -89,24 +74,23 @@ async function checkNewCases() {
   }
   lastCaseCount = current;
 }
-
 async function loadCases() {
   const snapshot = await db.collection('cases').orderBy('createdAt', 'desc').get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
 async function loadTopics() {
   const snapshot = await db.collection('topics').get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
-
+async function loadUsers() {
+  const snapshot = await db.collection('users').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
 async function populateTopicFilter() {
   const topics = await loadTopics();
   const filter = document.getElementById('topicFilter');
-  filter.innerHTML = '<option value="">Tüm Konular</option>' + 
-    topics.filter(t=>t.active).map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
+  filter.innerHTML = '<option value="">Tüm Konular</option>' + topics.filter(t=>t.active).map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
 }
-
 async function renderCasesTable() {
   let cases = await loadCases();
   const topics = await loadTopics();
@@ -114,88 +98,42 @@ async function renderCasesTable() {
   const filterStatus = document.getElementById('statusFilter').value;
   const searchText = document.getElementById('searchCase').value.toLowerCase();
   const filterTopic = document.getElementById('topicFilter').value;
-  
   if (filterStatus) cases = cases.filter(c => c.status === filterStatus);
   if (filterTopic) cases = cases.filter(c => c.topicId === filterTopic);
-  if (searchText) cases = cases.filter(c => 
-    c.id.toLowerCase().includes(searchText) || 
-    c.title.toLowerCase().includes(searchText) || 
-    (c.email && c.email.toLowerCase().includes(searchText))
-  );
-  
+  if (searchText) cases = cases.filter(c => c.id.toLowerCase().includes(searchText) || c.title.toLowerCase().includes(searchText) || (c.email && c.email.toLowerCase().includes(searchText)));
   const tbody = document.getElementById('casesTableBody');
   tbody.innerHTML = cases.map(c => {
     const topic = topicMap[c.topicId];
     const topicTitle = topic ? topic.title : 'Konu yok';
     const shortId = c.id.slice(-6);
-    return `
-      <tr>
-        <td>${shortId}</td>
-        <td>${escapeHtml(topicTitle)}</td>
-        <td>${escapeHtml(c.title)}</td>
-        <td>${escapeHtml(c.fullname)}</td>
-        <td>${c.email}</td>
-        <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-        <td><span class="status-badge">${c.priority}</span></td>
-        <td>${new Date(c.createdAt.toDate()).toLocaleDateString('tr')}</td>
-        <td class="row-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openCaseDetail('${c.id}')">Detay</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCase('${c.id}')">Sil</button>
-        </td>
-      </tr>
-    `;
+    return `<tr><td>${shortId}</td><td>${escapeHtml(topicTitle)}</td><td>${escapeHtml(c.title)}</td><td>${escapeHtml(c.fullname)}</td><td>${c.email}</td><td><span class="status-badge status-${c.status}">${c.status}</span></td><td>${c.priority}</td><td>${new Date(c.createdAt.toDate()).toLocaleDateString('tr')}</td><td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="openCaseDetail('${c.id}')">Detay</button><button class="btn btn-danger btn-sm" onclick="deleteCase('${c.id}')">Sil</button></td></tr>`;
   }).join('');
 }
-
 window.openCaseDetail = async function(caseId) {
   const doc = await db.collection('cases').doc(caseId).get();
   if (!doc.exists) return;
   const c = doc.data();
   const topics = await loadTopics();
+  const users = await loadUsers();
   const topic = topics.find(t => t.id === c.topicId);
-  
-  const notesHtml = (c.notes || []).map(n => `
-    <div class="note-item">
-      <strong>${new Date(n.createdAt.toDate()).toLocaleString()}</strong> - ${escapeHtml(n.text)} (${n.createdBy})
-    </div>
-  `).join('') || 'Not yok';
-  
+  const notesHtml = (c.notes || []).map(n => `<div class="note-item"><strong>${new Date(n.createdAt.toDate()).toLocaleString()}</strong> - ${escapeHtml(n.text)} (${n.createdBy})</div>`).join('') || 'Not yok';
+  const resolvedAtValue = c.resolvedAt ? new Date(c.resolvedAt.toDate()).toISOString().slice(0,10) : '';
   document.getElementById('caseDetailContent').innerHTML = `
-    <div class="form-group"><strong>Case ID:</strong> ${c.id}</div>
-    <div class="form-group"><strong>Kullanıcı:</strong> ${escapeHtml(c.fullname)} (${c.email})</div>
-    <div class="form-group"><strong>Konu:</strong> ${topic ? escapeHtml(topic.title) : '-'}</div>
-    <div class="form-group"><strong>Başlık:</strong> ${escapeHtml(c.title)}</div>
-    <div class="form-group"><strong>Açıklama:</strong> ${escapeHtml(c.description)}</div>
-    <div class="form-group">
-      <strong>Durum:</strong>
-      <select id="detailStatus" class="form-input">
-        <option value="beklemede" ${c.status==='beklemede' ? 'selected' : ''}>Beklemede</option>
-        <option value="sürüyor" ${c.status==='sürüyor' ? 'selected' : ''}>Sürüyor</option>
-        <option value="çözüldü" ${c.status==='çözüldü' ? 'selected' : ''}>Çözüldü</option>
-        <option value="reddedildi" ${c.status==='reddedildi' ? 'selected' : ''}>Reddedildi</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <strong>Öncelik:</strong>
-      <select id="detailPriority" class="form-input">
-        <option value="düşük" ${c.priority==='düşük' ? 'selected' : ''}>Düşük</option>
-        <option value="orta" ${c.priority==='orta' ? 'selected' : ''}>Orta</option>
-        <option value="yüksek" ${c.priority==='yüksek' ? 'selected' : ''}>Yüksek</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <strong>Yeni Not:</strong>
-      <textarea id="newNote" rows="2" class="form-input"></textarea>
-      <button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button>
-    </div>
+    <div><strong>Case ID:</strong> ${c.id}</div>
+    <div><strong>Kullanıcı:</strong> ${escapeHtml(c.fullname)} (${c.email})</div>
+    <div><strong>Konu:</strong> ${topic ? escapeHtml(topic.title) : '-'}</div>
+    <div><strong>Başlık:</strong> ${escapeHtml(c.title)}</div>
+    <div><strong>Açıklama:</strong> ${escapeHtml(c.description)}</div>
+    <div><strong>Durum:</strong> <select id="detailStatus"><option value="beklemede" ${c.status==='beklemede'?'selected':''}>Beklemede</option><option value="sürüyor" ${c.status==='sürüyor'?'selected':''}>Sürüyor</option><option value="çözüldü" ${c.status==='çözüldü'?'selected':''}>Çözüldü</option><option value="reddedildi" ${c.status==='reddedildi'?'selected':''}>Reddedildi</option></select></div>
+    <div><strong>Öncelik:</strong> <select id="detailPriority"><option value="düşük" ${c.priority==='düşük'?'selected':''}>Düşük</option><option value="orta" ${c.priority==='orta'?'selected':''}>Orta</option><option value="yüksek" ${c.priority==='yüksek'?'selected':''}>Yüksek</option></select></div>
+    <div><strong>Çözen Kişi:</strong> <select id="detailResolvedBy"><option value="">Seçiniz</option>${users.map(u => `<option value="${u.id}" ${c.resolvedBy===u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.email})</option>`).join('')}</select></div>
+    <div><strong>Çözülme Tarihi:</strong> <input type="date" id="detailResolvedAt" value="${resolvedAtValue}" class="form-input"></div>
+    <div><strong>Yeni Not:</strong> <textarea id="newNote" rows="2" class="form-input"></textarea><button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button></div>
     <div><strong>Notlar:</strong><div id="notesArea">${notesHtml}</div></div>
-    <div class="btn-row" style="margin-top:15px; justify-content:flex-end;">
-      <button class="btn btn-primary" onclick="saveCaseDetail('${caseId}')">Kaydet</button>
-    </div>
+    <div class="btn-row" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveCaseDetail('${caseId}')">Kaydet</button></div>
   `;
   openModal('caseDetailModal');
 };
-
 window.addNote = async function(caseId) {
   const text = document.getElementById('newNote').value.trim();
   if (!text) return;
@@ -208,197 +146,103 @@ window.addNote = async function(caseId) {
   closeModal('caseDetailModal');
   openCaseDetail(caseId);
 };
-
 window.saveCaseDetail = async function(caseId) {
   const newStatus = document.getElementById('detailStatus').value;
   const newPriority = document.getElementById('detailPriority').value;
+  const resolvedBy = document.getElementById('detailResolvedBy').value || null;
+  let resolvedAtRaw = document.getElementById('detailResolvedAt').value;
+  let resolvedAtTimestamp = resolvedAtRaw ? new Date(resolvedAtRaw) : null;
   const ref = db.collection('cases').doc(caseId);
-  const update = { status: newStatus, priority: newPriority, updatedAt: new Date() };
+  const doc = await ref.get();
+  const created = doc.data().createdAt.toDate();
+  let update = { status: newStatus, priority: newPriority, updatedAt: new Date(), resolvedBy, resolvedAt: resolvedAtTimestamp };
   if (newStatus === 'çözüldü') {
-    const doc = await ref.get();
-    const created = doc.data().createdAt.toDate();
-    update.resolutionTime = Math.ceil((new Date() - created) / (86400000));
+    const endDate = resolvedAtTimestamp || new Date();
+    update.resolutionTime = Math.ceil((endDate - created) / (86400000));
+  } else {
+    update.resolutionTime = null;
   }
   await ref.update(update);
   closeModal('caseDetailModal');
   refreshDashboard();
+  if (document.getElementById('statsTab').style.display !== 'none') renderStats();
 };
-
 window.deleteCase = async function(caseId) {
-  if (confirm('Bu case silinsin mi?')) {
-    await db.collection('cases').doc(caseId).delete();
-    refreshDashboard();
-  }
+  if (confirm('Silinsin mi?')) { await db.collection('cases').doc(caseId).delete(); refreshDashboard(); }
 };
 
 // ==================== TOPIC MANAGEMENT ====================
 async function renderTopicsList() {
   const topics = await loadTopics();
-  document.getElementById('topicsList').innerHTML = topics.map(t => `
-    <div class="topic-item">
-      <div>
-        <strong>${escapeHtml(t.title)}</strong> ${t.active ? '✅' : '❌'}<br>
-        <small>${escapeHtml(t.description || '')}</small><br>
-        <small>Sorumlu: ${escapeHtml(t.responsibleEmail || 'Belirtilmemiş')}</small>
-      </div>
-      <div class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="editTopic('${t.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteTopic('${t.id}')">🗑</button>
-      </div>
-    </div>
-  `).join('');
+  document.getElementById('topicsList').innerHTML = topics.map(t => `<div class="topic-item"><div><strong>${escapeHtml(t.title)}</strong> ${t.active?'✅':'❌'}<br><small>${escapeHtml(t.description||'')}</small><br><small>Sorumlu: ${escapeHtml(t.responsibleEmail||'')}</small></div><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editTopic('${t.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteTopic('${t.id}')">🗑</button></div></div>`).join('');
 }
-
-window.openTopicModal = function(id = null) {
+window.openTopicModal = function(id=null) {
   editTopicId = id;
-  const modal = document.getElementById('topicModal');
-  document.getElementById('topicModalTitle').textContent = id ? '✏️ Konu Düzenle' : '+ Yeni Konu';
+  document.getElementById('topicModalTitle').textContent = id ? 'Düzenle' : 'Yeni Konu';
   if (id) {
-    db.collection('topics').doc(id).get().then(doc => {
-      if (doc.exists) {
-        document.getElementById('topicTitle').value = doc.data().title;
-        document.getElementById('topicDesc').value = doc.data().description || '';
-        document.getElementById('topicResponsibleEmail').value = doc.data().responsibleEmail || '';
-        document.getElementById('topicActive').checked = doc.data().active;
-      }
-    });
-  } else {
-    document.getElementById('topicTitle').value = '';
-    document.getElementById('topicDesc').value = '';
-    document.getElementById('topicResponsibleEmail').value = '';
-    document.getElementById('topicActive').checked = true;
-  }
-  modal.classList.add('open');
+    db.collection('topics').doc(id).get().then(doc => { if(doc.exists){ document.getElementById('topicTitle').value=doc.data().title; document.getElementById('topicDesc').value=doc.data().description||''; document.getElementById('topicResponsibleEmail').value=doc.data().responsibleEmail||''; document.getElementById('topicActive').checked=doc.data().active; } });
+  } else { document.getElementById('topicTitle').value=''; document.getElementById('topicDesc').value=''; document.getElementById('topicResponsibleEmail').value=''; document.getElementById('topicActive').checked=true; }
+  openModal('topicModal');
 };
-
 document.getElementById('saveTopicBtn').onclick = async () => {
   const title = document.getElementById('topicTitle').value.trim();
-  if (!title) return alert('Başlık gerekli');
-  const data = {
-    title,
-    description: document.getElementById('topicDesc').value.trim(),
-    responsibleEmail: document.getElementById('topicResponsibleEmail').value.trim(),
-    active: document.getElementById('topicActive').checked
-  };
-  if (editTopicId) {
-    await db.collection('topics').doc(editTopicId).update(data);
-  } else {
-    await db.collection('topics').add({ ...data, createdAt: new Date() });
-  }
-  closeModal('topicModal');
-  renderTopicsList();
-  populateTopicFilter();
+  if(!title) return alert('Başlık gerekli');
+  const data = { title, description: document.getElementById('topicDesc').value.trim(), responsibleEmail: document.getElementById('topicResponsibleEmail').value.trim(), active: document.getElementById('topicActive').checked };
+  if(editTopicId) await db.collection('topics').doc(editTopicId).update(data);
+  else await db.collection('topics').add({ ...data, createdAt: new Date() });
+  closeModal('topicModal'); renderTopicsList(); populateTopicFilter();
 };
-
 window.editTopic = (id) => openTopicModal(id);
-
 window.deleteTopic = async (id) => {
-  if (confirm('Bu konu silinsin mi?')) {
-    await db.collection('topics').doc(id).delete();
-    const cases = await db.collection('cases').where('topicId', '==', id).get();
-    const batch = db.batch();
-    cases.forEach(doc => batch.update(doc.ref, { topicId: null }));
-    await batch.commit();
-    renderTopicsList();
-    populateTopicFilter();
-    refreshDashboard();
-  }
+  if(!confirm('Silinsin mi?')) return;
+  await db.collection('topics').doc(id).delete();
+  const cases = await db.collection('cases').where('topicId','==',id).get();
+  const batch = db.batch();
+  cases.forEach(doc => batch.update(doc.ref, { topicId: null }));
+  await batch.commit();
+  renderTopicsList(); populateTopicFilter(); refreshDashboard();
 };
 
 // ==================== USER MANAGEMENT ====================
-async function loadUsers() {
-  const snapshot = await db.collection('users').get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
 async function renderUsersTable() {
   const users = await loadUsers();
-  document.getElementById('usersTableBody').innerHTML = users.map(u => `
-    <tr>
-      <td>${u.id.slice(-6)}</td>
-      <td>${escapeHtml(u.username)}</td>
-      <td>${escapeHtml(u.email)}</td>
-      <td><span class="status-badge">${u.role}</span></td>
-      <td class="row-actions">
-        <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Düzenle</button>
-        ${u.role !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Sil</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
+  document.getElementById('usersTableBody').innerHTML = users.map(u => `<tr><td>${u.id.slice(-6)}</td><td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.email)}</td><td>${u.role}</td><td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Düzenle</button>${u.role!=='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Sil</button>`:''}</td></tr>`).join('');
 }
-
-window.openUserModal = function(id = null) {
+window.openUserModal = function(id=null) {
   editUserId = id;
-  const modal = document.getElementById('userEditModal');
-  document.getElementById('userEditModalTitle').textContent = id ? '✏️ Kullanıcı Düzenle' : '+ Yeni Kullanıcı';
-  if (id) {
-    db.collection('users').doc(id).get().then(doc => {
-      if (doc.exists) {
-        document.getElementById('editUsername').value = doc.data().username;
-        document.getElementById('editUserEmail').value = doc.data().email;
-        document.getElementById('editUserRole').value = doc.data().role;
-        document.getElementById('editPassword').value = '';
-      }
-    });
-  } else {
-    document.getElementById('editUsername').value = '';
-    document.getElementById('editUserEmail').value = '';
-    document.getElementById('editUserRole').value = 'user';
-    document.getElementById('editPassword').value = '';
-  }
-  modal.classList.add('open');
+  document.getElementById('userEditModalTitle').textContent = id ? 'Düzenle' : 'Yeni Kullanıcı';
+  if(id){
+    db.collection('users').doc(id).get().then(doc=>{ if(doc.exists){ document.getElementById('editUsername').value=doc.data().username; document.getElementById('editUserEmail').value=doc.data().email; document.getElementById('editUserRole').value=doc.data().role; document.getElementById('editPassword').value=''; } });
+  } else { document.getElementById('editUsername').value=''; document.getElementById('editUserEmail').value=''; document.getElementById('editUserRole').value='user'; document.getElementById('editPassword').value=''; }
+  openModal('userEditModal');
 };
-
 document.getElementById('saveUserEditBtn').onclick = async () => {
   const username = document.getElementById('editUsername').value.trim();
   const email = document.getElementById('editUserEmail').value.trim();
   const role = document.getElementById('editUserRole').value;
   const pass = document.getElementById('editPassword').value;
-  if (!username) return alert('Kullanıcı adı gerekli');
-  if (editUserId) {
+  if(!username) return alert('Kullanıcı adı gerekli');
+  if(editUserId){
     const update = { username, email, role };
-    if (pass) update.password = pass;
+    if(pass) update.password = pass;
     await db.collection('users').doc(editUserId).update(update);
   } else {
-    if (!pass) return alert('Şifre gerekli');
+    if(!pass) return alert('Şifre gerekli');
     await db.collection('users').add({ username, email, role, password: pass, createdAt: new Date() });
   }
-  closeModal('userEditModal');
-  renderUsersTable();
+  closeModal('userEditModal'); renderUsersTable();
 };
-
 window.editUser = (id) => openUserModal(id);
-
-window.deleteUser = async (id) => {
-  if (confirm('Bu kullanıcı silinsin mi?')) {
-    await db.collection('users').doc(id).delete();
-    renderUsersTable();
-  }
-};
+window.deleteUser = async (id) => { if(confirm('Silinsin mi?')){ await db.collection('users').doc(id).delete(); renderUsersTable(); } };
 
 // ==================== MAIL SETTINGS (EmailJS) ====================
-function loadMailSettings() {
-  return JSON.parse(localStorage.getItem('case_mail_settings_emailjs') || '{}');
-}
-
+function loadMailSettings() { return JSON.parse(localStorage.getItem('case_mail_settings_emailjs') || '{}'); }
 function saveMailSettings() {
-  const settings = {
-    publicKey: document.getElementById('emailjsPublicKey').value,
-    serviceId: document.getElementById('emailjsServiceId').value,
-    templateId: document.getElementById('emailjsTemplateId').value,
-    adminEmail: document.getElementById('adminNotifyEmail').value,
-    ccEmail: document.getElementById('ccEmail').value
-  };
+  const settings = { publicKey: document.getElementById('emailjsPublicKey').value, serviceId: document.getElementById('emailjsServiceId').value, templateId: document.getElementById('emailjsTemplateId').value, adminEmail: document.getElementById('adminNotifyEmail').value, ccEmail: document.getElementById('ccEmail').value };
   localStorage.setItem('case_mail_settings_emailjs', JSON.stringify(settings));
-  
-  // EmailJS'i başlat
-  if (settings.publicKey && typeof emailjs !== 'undefined') {
-    emailjs.init(settings.publicKey);
-    emailjsInitialized = true;
-  }
-  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Ayarlar kaydedildi</span>';
+  if(settings.publicKey && typeof emailjs !== 'undefined') { emailjs.init(settings.publicKey); emailjsInitialized = true; }
+  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Kaydedildi</span>';
 }
-
 function loadMailSettingsToForm() {
   const s = loadMailSettings();
   document.getElementById('emailjsPublicKey').value = s.publicKey || '';
@@ -406,89 +250,68 @@ function loadMailSettingsToForm() {
   document.getElementById('emailjsTemplateId').value = s.templateId || '';
   document.getElementById('adminNotifyEmail').value = s.adminEmail || '';
   document.getElementById('ccEmail').value = s.ccEmail || '';
-  
-  // Eğer public key varsa EmailJS'i başlat
-  if (s.publicKey && typeof emailjs !== 'undefined' && !emailjsInitialized) {
-    emailjs.init(s.publicKey);
-    emailjsInitialized = true;
-  }
+  if(s.publicKey && typeof emailjs !== 'undefined' && !emailjsInitialized) { emailjs.init(s.publicKey); emailjsInitialized = true; }
+}
+async function testEmail() {
+  const s = loadMailSettings();
+  if(!s.publicKey || !s.serviceId || !s.templateId) { document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ Eksik ayar</span>'; return; }
+  if(typeof emailjs === 'undefined') { document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS yüklenmedi</span>'; return; }
+  if(!emailjsInitialized) { emailjs.init(s.publicKey); emailjsInitialized = true; }
+  try {
+    await emailjs.send(s.serviceId, s.templateId, { to_email: s.adminEmail || currentUser?.email, message: "Test maili başarılı" });
+    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili gönderildi</span>';
+  } catch(err) { document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${err.text || err.message}</span>`; }
 }
 
-async function testEmail() {
-  const settings = loadMailSettings();
-  if (!settings.publicKey || !settings.serviceId || !settings.templateId) {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS ayarları eksik (Public Key, Service ID, Template ID)</span>';
-    return;
+// ==================== İSTATİSTİKLER ====================
+async function renderStats() {
+  const cases = await loadCases();
+  const users = await loadUsers();
+  const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+  // Sadece çözülmüş case'ler ve resolvedBy'si olanlar
+  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy && c.resolvedAt && c.createdAt);
+  const stats = {};
+  for (const c of resolvedCases) {
+    const userId = c.resolvedBy;
+    if (!stats[userId]) stats[userId] = { count: 0, totalHours: 0 };
+    stats[userId].count++;
+    const created = c.createdAt.toDate();
+    const resolved = c.resolvedAt.toDate();
+    const hours = (resolved - created) / (1000 * 60 * 60);
+    stats[userId].totalHours += hours;
   }
-  if (typeof emailjs === 'undefined') {
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent3)">❌ EmailJS kütüphanesi yüklenemedi</span>';
-    return;
+  const labels = [], counts = [], avgHours = [];
+  for (const [userId, data] of Object.entries(stats)) {
+    const name = userMap[userId] || userId.slice(-6);
+    labels.push(name);
+    counts.push(data.count);
+    avgHours.push((data.totalHours / data.count).toFixed(1));
   }
-  
-  // EmailJS'i başlat (eğer daha önce başlatılmadıysa)
-  if (!emailjsInitialized) {
-    emailjs.init(settings.publicKey);
-    emailjsInitialized = true;
-  }
-  
-  const toEmail = settings.adminEmail || (currentUser?.email) || 'test@example.com';
-  
-  try {
-    const templateParams = {
-      to_email: toEmail,
-      from_name: "QA Case Admin",
-      message: "Bu bir test mailidir. EmailJS entegrasyonu başarıyla çalışıyor.",
-      reply_to: toEmail,
-      cc: settings.ccEmail || ''
-    };
-    
-    const response = await emailjs.send(settings.serviceId, settings.templateId, templateParams);
-    console.log("EmailJS başarılı:", response);
-    document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili başarıyla gönderildi!</span>';
-  } catch (err) {
-    console.error("EmailJS hatası:", err);
-    document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${err.text || err.message || 'Bilinmeyen hata'}</span>`;
-  }
+  const tableBody = document.getElementById('statsTableBody');
+  tableBody.innerHTML = labels.map((name, i) => `<tr><td>${escapeHtml(name)}</td><td>${counts[i]}</td><td>${avgHours[i]}</td><td>${(avgHours[i]/24).toFixed(1)} gün</td></tr>`).join('');
+  if (window.statsChart) window.statsChart.destroy();
+  const ctx = document.getElementById('statsChart').getContext('2d');
+  window.statsChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Çözülen Case Sayısı', data: counts, backgroundColor: '#7c3aed' }, { label: 'Ortalama Çözüm Süresi (saat)', data: avgHours, backgroundColor: '#f97316', yAxisID: 'y1' }] },
+    options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: 'Case Sayısı' } }, y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Saat' } } } }
+  });
 }
 
 // ==================== TAB MANAGEMENT ====================
 function showTab(tab) {
-  const tabs = ['cases', 'topics', 'users', 'mail'];
-  tabs.forEach(t => {
-    const el = document.getElementById(t + 'Tab');
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
+  const tabs = ['cases', 'topics', 'users', 'mail', 'stats'];
+  tabs.forEach(t => { const el = document.getElementById(t + 'Tab'); if(el) el.style.display = t === tab ? 'block' : 'none'; });
   if (tab === 'topics') renderTopicsList();
   if (tab === 'users') renderUsersTable();
   if (tab === 'mail') loadMailSettingsToForm();
+  if (tab === 'stats') renderStats();
 }
-
 window.filterCases = () => renderCasesTable();
 
 // ==================== UTILITIES ====================
-function escapeHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-}
-
-function showToast(msg) {
-  const toast = document.createElement('div');
-  toast.textContent = msg;
-  toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:var(--accent2); color:#fff; padding:8px 16px; border-radius:20px; font-size:12px; z-index:9999;';
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
-}
-
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-// Refresh butonu
-document.getElementById('refreshBtn').onclick = async () => {
-  await refreshDashboard();
-  showToast('Yenilendi');
-};
+function escapeHtml(s) { if(!s) return ''; return String(s).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+function showToast(msg) { const toast = document.createElement('div'); toast.textContent = msg; toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:var(--accent2); color:#fff; padding:8px 16px; border-radius:20px; font-size:12px; z-index:9999;'; document.body.appendChild(toast); setTimeout(() => toast.remove(), 4000); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.getElementById('refreshBtn').onclick = async () => { await refreshDashboard(); showToast('Yenilendi'); };
