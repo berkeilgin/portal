@@ -8,7 +8,7 @@ function setTheme(theme, save = true) {
   document.body.classList.remove('dark', 'light', 'tp', 'grey');
   document.body.classList.add(theme);
   if (save) localStorage.setItem('qa_theme', theme);
-  updateThemeButtons(theme);
+  updateActiveButtons(theme);
 }
 
 function getCurrentTheme() {
@@ -18,30 +18,32 @@ function getCurrentTheme() {
   return 'grey';
 }
 
-function updateThemeButtons(activeTheme) {
+function updateActiveButtons(activeTheme) {
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    const theme = btn.dataset.theme;
-    btn.classList.toggle('active', theme === activeTheme);
+    btn.classList.toggle('active', btn.dataset.theme === activeTheme);
   });
 }
 
-function renderThemeButtons(containerSelector = '.theme-switch') {
+function renderThemeButtons() {
   if (window.__themeRendered) return;
   
-  const container = document.querySelector(containerSelector);
+  // Önce ID'li konteynırı dene, yoksa class'lıyı kullan
+  let container = document.querySelector('#themeSwitchContainer');
+  if (!container) container = document.querySelector('.theme-switch');
   if (!container) return;
   
+  // Zaten buton varsa sadece aktiflik güncelle
   if (container.children.length > 0) {
     window.__themeRendered = true;
-    updateThemeButtons(getCurrentTheme());
+    updateActiveButtons(getCurrentTheme());
     return;
   }
   
   const themes = [
-    { id: 'grey', label: '🌓 Gri', icon: '🌓' },
-    { id: 'dark', label: '🌑 Siyah', icon: '🌑' },
-    { id: 'light', label: '☀️ Beyaz', icon: '☀️' },
-    { id: 'tp', label: '✦ TP', icon: '✦' }
+    { id: 'grey', label: 'Gri', icon: '🌓' },
+    { id: 'dark', label: 'Siyah', icon: '🌑' },
+    { id: 'light', label: 'Beyaz', icon: '☀️' },
+    { id: 'tp', label: 'TP', icon: '✦' }
   ];
   
   container.innerHTML = themes.map(t => `
