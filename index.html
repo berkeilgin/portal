@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Portal</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<script src="js/theme.js" defer></script>
+<script src="js/common.js" defer></script>
+<script src="js/index.js" defer></script>
+</head>
+<body class="grey">
+
+<!-- Announcement banner -->
+<div class="announce hide" id="announceBar">
+  <span id="announceText"></span>
+  <button class="announce-close" id="announceClose">✕</button>
+</div>
+
+<aside class="sidebar">
+  <div class="logo">
+    <img src="logos/logo.png" onerror="this.style.display='none'">
+    <span class="logo-text">QA Portal</span>
+  </div>
+  <div class="nav-label">Menü</div>
+  <nav class="nav" id="nav">
+    <a class="active" data-cat="all" onclick="filterCat('all',this)">
+      <span class="nav-icon">⊞</span> Dashboard
+    </a>
+  </nav>
+  <div class="sb-div"></div>
+  <div class="sb-sec">
+    <h4>⭐ Favoriler</h4>
+    <div id="favList"></div>
+    <button class="clear-btn" id="clearFavBtn">Temizle</button>
+  </div>
+  <div class="sb-div"></div>
+  <div class="sb-sec">
+    <h4>🕐 Son Kullanılan</h4>
+    <div id="recentList"></div>
+  </div>
+</aside>
+
+<main class="main" id="mainEl">
+  <div class="topbar">
+    <div class="page-title">QA <span>Portal</span></div>
+    <div class="topbar-right">
+      <button class="lang-btn" id="langBtn">
+        <img id="langFlag" src="logos/tr.png" onerror="this.style.display='none'">
+        <span id="langLabel">TR</span>
+        <span class="lang-sep">|</span>
+        <span id="langOther">EN</span>
+      </button>
+      <div class="theme-switch"></div>
+    </div>
+  </div>
+  <div id="app"></div>
+</main>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<style>
+/* sidebar ve index'e özel stiller (mevcut stiller buraya veya components.css'e taşınabilir) */
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);position:fixed;inset:0 auto 0 0;padding:24px 16px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;z-index:50}
+.logo{display:flex;align-items:center;gap:10px;padding:0 8px 16px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.logo img{width:28px;height:28px}
+.logo-text{font-family:var(--mono);font-size:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:10px 8px 2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;color:var(--muted);border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;transition:all .2s}
+.nav a:hover{background:var(--card);color:var(--text)}
+.nav a.active{background:rgba(108,99,255,.15);color:var(--accent)}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.sb-div{height:1px;background:var(--border);margin:8px 0}
+.sb-sec h4{font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;padding:4px 8px;margin-bottom:4px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12.5px;color:var(--muted);border-radius:8px;cursor:pointer;transition:.2s}
+.sb-item:hover{background:var(--card);color:var(--text)}
+.sb-item img{width:16px;height:16px;object-fit:contain;border-radius:4px}
+.clear-btn{display:block;width:100%;margin-top:6px;padding:6px 8px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);transition:.2s}
+.clear-btn:hover{border-color:#ff4d6d;color:#ff4d6d}
+.main{margin-left:240px;padding:32px 32px 60px;width:100%;min-height:100vh}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.page-title{font-family:var(--mono);font-size:20px}
+.page-title span{color:var(--accent)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.lang-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:30px;cursor:pointer;font-family:var(--font);font-size:13px;color:var(--text);transition:.2s}
+.lang-btn:hover{border-color:var(--accent2);background:var(--card)}
+.lang-btn img{width:18px;height:13px;object-fit:cover;border-radius:2px;flex-shrink:0}
+.lang-sep{color:var(--muted);font-size:11px}
+.cat-section{margin-bottom:36px;opacity:0;transform:translateY(12px);animation:fadeUp .4s ease forwards}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.cat-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.cat-title{font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.cat-line{flex:1;height:1px;background:var(--border)}
+.cat-count{font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:2px 8px;border-radius:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s,transform .2s,box-shadow .2s}
+.card:hover:not(.disabled){border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 30px rgba(108,99,255,.15)}
+.card.disabled{opacity:.45;cursor:not-allowed}
+.card-icon{width:36px;height:36px;object-fit:contain;border-radius:8px}
+.card-name{font-size:12.5px;font-weight:500;text-align:center;color:var(--text);line-height:1.3}
+.ribbon{position:absolute;top:10px;right:-28px;font-size:9px;font-weight:700;letter-spacing:.5px;padding:3px 34px;transform:rotate(45deg);pointer-events:none}
+.r-new {background:#ff4d6d;color:#fff}
+.r-test{right:auto;left:-28px;transform:rotate(-45deg);background:#ffd60a;color:#111}
+.r-best{background:#22c55e;color:#fff}
+.fav-btn{margin-top:2px;padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--muted);font-size:10.5px;cursor:pointer;font-family:var(--font);transition:.2s}
+.fav-btn:hover{border-color:#ffd60a;color:#ffd60a}
+.fav-btn.on{background:rgba(255,214,10,.12);border-color:#ffd60a;color:#ffd60a}
+.announce{position:fixed;top:0;left:240px;right:0;z-index:200;display:flex;align-items:center;justify-content:center;gap:12px;padding:9px 20px;font-size:13px;font-weight:500;transition:transform .3s}
+.announce.info   {background:rgba(108,99,255,.85);color:#fff}
+.announce.success{background:rgba(34,197,94,.85);color:#fff}
+.announce.warn   {background:rgba(255,214,10,.85);color:#111}
+.announce.danger {background:rgba(255,77,109,.85);color:#fff}
+.announce.hide   {transform:translateY(-100%)}
+.announce-close{background:transparent;border:none;color:inherit;cursor:pointer;font-size:16px;line-height:1;margin-left:8px;opacity:.7}
+.announce-close:hover{opacity:1}
+body.has-announce .main{padding-top:72px}
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:300;transition:opacity .4s}
+.loading-screen.hide{opacity:0;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-family:var(--mono);font-size:13px;color:var(--muted)}
+#maintOverlay{position:fixed;inset:0;background:#0a0a10;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:9999;color:var(--text);text-align:center;gap:12px}
+.maint-icon{font-size:52px;animation:swing 2s ease-in-out infinite}
+@keyframes swing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+#maintOverlay h1{font-family:var(--mono);font-size:28px;color:var(--accent)}
+</style>
+
+<!-- Loading Screen -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="load-txt">Portal yükleniyor…</div>
+</div>
+<div id="maintOverlay">
+  <div class="maint-icon">🔧</div>
+  <h1>Güncelleme Yapılıyor</h1>
+  <p id="maintMsg">Portal şu anda bakımda. Lütfen daha sonra tekrar deneyin.</p>
+</div>
+</body>
+</html>

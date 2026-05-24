@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalite Raporu Hazırlama</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* ===== THEMES ===== */
+[data-theme="dark"]{--bg:#0d0d14;--surface:#141420;--card:#1a1a26;--card2:#20202e;--border:rgba(255,255,255,.09);--border2:rgba(255,255,255,.15);--text:#eeeef5;--muted:#6a6a88;--muted2:#42425e;--shadow:0 4px 24px rgba(0,0,0,.4)}
+[data-theme="light"]{--bg:#f0f0f8;--surface:#fff;--card:#fafafe;--card2:#f0f0fa;--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.18);--text:#1a1a2e;--muted:#6666aa;--muted2:#c0c0dc;--shadow:0 4px 24px rgba(0,0,0,.1)}
+[data-theme="grey"]{--bg:#1f1f28;--surface:#272734;--card:#2e2e3e;--card2:#35354a;--border:rgba(255,255,255,.09);--border2:rgba(255,255,255,.17);--text:#e2e2f0;--muted:#8888aa;--muted2:#48486a;--shadow:0 4px 24px rgba(0,0,0,.4)}
+[data-theme="tp"]{--bg:#0e0812;--surface:#14091c;--card:#1c1026;--card2:#231530;--border:rgba(255,0,130,.1);--border2:rgba(255,0,130,.22);--text:#f5eef8;--muted:#b07ab8;--muted2:#52245a;--shadow:0 4px 24px rgba(120,0,150,.4);--accent:#FF0082;--accent2:#9b30c0;--accent3:#ff6b6b;--accent4:#f4a261;--accent-cc:#FF0082;--accent-bc:#9b30c0;--accent-compc:#c946ef}
+:root{--accent:#06d6a0;--accent2:#7c6dfa;--accent3:#ff6b6b;--accent4:#f4a261;--accent-cc:#06b4d6;--accent-bc:#7c6dfa;--accent-compc:#06d6a0;--font:"DM Sans",sans-serif;--display:"Syne",sans-serif;--mono:"DM Mono",monospace;--r:16px;--rs:10px;--rx:8px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+/* HEADER */
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;gap:10px;box-shadow:var(--shadow)}
+.hl{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.logo{font-family:var(--display);font-size:14px;font-weight:800;flex-shrink:0}.logo span{color:var(--accent)}
+.sep{width:1px;height:16px;background:var(--border2)}
+.hdr-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.theme-switch{display:flex;gap:4px}
+.nav-btn{padding:6px 12px;background:rgba(124,109,250,.1);border:1.5px solid rgba(124,109,250,.3);color:var(--accent2);border-radius:var(--rx);cursor:pointer;font-size:10px;font-family:var(--mono);font-weight:500;transition:.2s;white-space:nowrap}
+.nav-btn:hover{background:rgba(124,109,250,.2)}
+.reset-btn{padding:6px 12px;background:rgba(255,107,107,.12);border:1.5px solid rgba(255,107,107,.4);color:var(--accent3);border-radius:var(--rx);cursor:pointer;font-size:10px;font-family:var(--mono);font-weight:600;transition:.2s;white-space:nowrap}
+.reset-btn:hover{background:rgba(255,107,107,.25);border-color:var(--accent3)}
+/* STICKY STEPS */
+.sw{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;position:sticky;top:50px;z-index:190;overflow-x:auto}
+.st{display:flex;min-width:max-content;max-width:1100px;margin:0 auto}
+.stab{display:flex;align-items:center;gap:7px;padding:12px 10px 12px 0;position:relative;flex:1;min-width:100px}
+.stab:not(:last-child)::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);border:5px solid transparent;border-left:7px solid var(--muted2);transition:.3s}
+.stab.active:not(:last-child)::after{border-left-color:rgba(6,214,160,.4)}
+.sc{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:500;flex-shrink:0;background:var(--muted2);color:var(--muted);border:1px solid transparent;transition:.3s}
+.stab.active .sc{background:rgba(6,214,160,.15);color:var(--accent);border-color:rgba(6,214,160,.3)}
+.stab.done .sc{background:rgba(6,214,160,.2);color:var(--accent);border-color:rgba(6,214,160,.4)}
+.sl{font-family:var(--mono);font-size:7px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:1px}
+.sn{font-family:var(--display);font-size:10px;font-weight:700;color:var(--muted);transition:.3s}
+.stab.active .sn,.stab.done .sn{color:var(--text)}.stab.done .sn{color:var(--accent)}
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+.screen{display:none}.screen.active{display:block;animation:fu .3s ease}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* PANELS */
+.sbadge{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;background:rgba(6,214,160,.1);color:var(--accent);border:1px solid rgba(6,214,160,.2);margin-bottom:8px}
+.dot{width:4px;height:4px;border-radius:50%;background:currentColor;animation:pu 2s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.3}}
+.stitle{font-family:var(--display);font-size:19px;font-weight:800;margin-bottom:4px}
+.stitle em{font-style:normal;color:var(--accent)}
+.sdesc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:11px}
+.pt{font-family:var(--display);font-size:12px;font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:7.5px;letter-spacing:.8px;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.06);color:var(--muted)}
+.pill.req{background:rgba(255,107,107,.1);color:var(--accent3)}
+.pill.auto{background:rgba(6,214,160,.1);color:var(--accent)}
+/* HINT */
+.hint{background:rgba(124,109,250,.07);border:1px solid rgba(124,109,250,.15);border-radius:var(--rx);padding:9px 12px;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:11px;display:flex;gap:8px}
+.hint.warn{background:rgba(244,162,97,.07);border-color:rgba(244,162,97,.2);color:var(--accent4)}
+.hint.err{background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.2);color:var(--accent3)}
+.hint.ok{background:rgba(6,214,160,.07);border-color:rgba(6,214,160,.2);color:var(--accent)}
+.hi{font-size:13px;flex-shrink:0;margin-top:1px}
+/* DROP */
+.drop{border:2px dashed var(--border2);border-radius:12px;padding:30px 16px;text-align:center;cursor:pointer;transition:.25s}
+.drop:hover,.drop.drag{border-color:var(--accent);background:rgba(6,214,160,.04)}
+.drop.has{border-style:solid;border-color:rgba(6,214,160,.4);background:rgba(6,214,160,.04)}
+.dico{font-size:24px;margin-bottom:6px;display:block}
+.dtitle{font-family:var(--display);font-size:12px;font-weight:700;margin-bottom:2px}
+.dsub{font-size:10px;color:var(--muted)}
+.fbar{display:none;align-items:center;gap:10px;padding:9px 13px;background:rgba(6,214,160,.07);border:1px solid rgba(6,214,160,.2);border-radius:9px;margin-top:8px}
+.fbar.on{display:flex}
+.fn{font-family:var(--mono);font-size:11px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm{font-size:9px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.fdel{background:none;border:none;color:var(--accent3);cursor:pointer;font-size:13px}
+/* FORM */
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.sg{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:12px}
+.sgl{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px}
+.req{color:var(--accent3)}
+.fi{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:var(--rx);padding:7px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;transition:.2s}
+.fi:focus{border-color:rgba(6,214,160,.5);background:rgba(6,214,160,.02)}
+.fi::placeholder{color:var(--muted)}
+.fi option{background:var(--card2);color:var(--text)}
+.tw{position:relative}.tu{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:10px;color:var(--muted);pointer-events:none}
+.note{font-size:8.5px;color:var(--muted);margin-top:4px;line-height:1.5;font-family:var(--mono)}
+/* LOB */
+.lob-banner{background:linear-gradient(135deg,rgba(124,109,250,.15),rgba(6,214,160,.1));border:2px solid rgba(124,109,250,.3);border-radius:var(--r);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.lob-banner-ico{font-size:22px}
+.lob-banner-name{font-family:var(--display);font-size:18px;font-weight:800;color:var(--accent2)}
+.lob-banner-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+.lob-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px}
+.lob-tab{padding:6px 14px;border:1.5px solid var(--border);border-radius:var(--rx);cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--muted);transition:.2s;white-space:nowrap;background:var(--card2)}
+.lob-tab:hover{border-color:var(--border2);color:var(--text)}
+.lob-tab.done{border-color:rgba(6,214,160,.4);color:var(--accent);background:rgba(6,214,160,.07)}
+.lob-tab.active{border-color:rgba(124,109,250,.5);color:var(--accent2);background:rgba(124,109,250,.1);font-weight:700}
+.lob-prog{display:flex;gap:4px;margin-bottom:14px}
+.lob-prog-step{flex:1;height:3px;border-radius:2px;background:var(--muted2);transition:.3s}
+.lob-prog-step.done{background:var(--accent)}
+.lob-prog-step.active{background:var(--accent2)}
+.lob-entry{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;margin-bottom:8px}
+.lob-entry-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border)}
+.lob-entry-num{width:20px;height:20px;border-radius:5px;background:rgba(124,109,250,.12);border:1px solid rgba(124,109,250,.2);color:var(--accent2);font-family:var(--mono);font-size:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lob-name-inp{flex:1;background:transparent;border:none;outline:none;font-family:var(--font);font-size:12px;color:var(--text)}
+.lob-name-inp::placeholder{color:var(--muted)}
+.lob-suggest{font-size:9px;color:var(--accent2);font-family:var(--mono);cursor:pointer;padding:2px 7px;border:1px solid rgba(124,109,250,.3);border-radius:4px;background:rgba(124,109,250,.08);margin-left:4px;transition:.2s}
+.lob-suggest:hover{background:rgba(124,109,250,.15)}
+.lob-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px;transition:.2s;border-radius:3px}
+.lob-del:hover{color:var(--accent3)}
+.ladd{width:100%;padding:8px;border:1.5px dashed rgba(124,109,250,.25);border-radius:var(--rs);background:rgba(124,109,250,.04);color:var(--accent2);cursor:pointer;font-family:var(--display);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;transition:.2s}
+.ladd:hover{border-color:var(--accent2);background:rgba(124,109,250,.08)}
+.lob-lmd{border:2px dashed rgba(255,255,255,.1);border-radius:8px;padding:10px;text-align:center;cursor:pointer;transition:.2s;font-size:10px;color:var(--muted);margin:10px}
+.lob-lmd:hover,.lob-lmd.drag{border-color:var(--accent);color:var(--text);background:rgba(6,214,160,.04)}
+.lob-lmd.has{border-style:solid;border-color:rgba(6,214,160,.3);color:var(--accent)}
+/* CHIP SPLIT */
+.chip-filter{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:var(--rx);padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:10px;outline:none;transition:.2s;margin-bottom:7px}
+.chip-filter:focus{border-color:rgba(6,214,160,.4)}
+.chip-scroll{overflow-x:auto;padding:7px;border:1px solid var(--border);border-radius:var(--rs);background:rgba(255,255,255,.02);margin-bottom:7px}
+.chip-row{display:flex;align-items:center;min-width:max-content;padding:2px 0}
+.hchip{display:inline-flex;align-items:center;padding:5px 9px;font-family:var(--mono);font-size:9px;border:1px solid var(--muted2);border-radius:0;cursor:pointer;transition:.15s;white-space:nowrap;background:rgba(255,255,255,.03);color:var(--muted);user-select:none}
+.hchip:first-child{border-radius:6px 0 0 6px}.hchip:last-child{border-radius:0 6px 6px 0}
+.hchip+.hchip{border-left:none}
+.hchip:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.hchip.split{background:rgba(6,214,160,.15);border-color:rgba(6,214,160,.5);color:var(--accent);font-weight:700}
+.hchip.dynamic{background:rgba(6,214,160,.07);border-color:rgba(6,214,160,.2);color:var(--accent)}
+.hchip.excluded{background:rgba(255,107,107,.06);border-color:rgba(255,107,107,.2);color:var(--accent3);text-decoration:line-through;opacity:.6}
+.hchip.tcd{background:rgba(124,109,250,.12);border-color:rgba(124,109,250,.4);color:var(--accent2)}
+.hchip.cat-cc{background:rgba(6,180,214,.1);border-color:rgba(6,180,214,.35);color:var(--accent-cc)}
+.hchip.cat-bc{background:rgba(124,109,250,.1);border-color:rgba(124,109,250,.35);color:var(--accent-bc)}
+.hchip.cat-compc{background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.35);color:var(--accent-compc)}
+.splitbar{width:3px;height:30px;background:var(--accent);flex-shrink:0;margin:0 2px;box-shadow:0 0 6px rgba(6,214,160,.5);position:relative}
+.splitbar::before{content:"SABİT|DİNAMİK";position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:var(--mono);font-size:6.5px;color:var(--accent);background:rgba(6,214,160,.15);border:1px solid rgba(6,214,160,.3);padding:1px 5px;border-radius:3px}
+.chip-leg{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.cl{display:flex;align-items:center;gap:3px;font-size:9px;font-family:var(--mono);color:var(--muted)}
+.cld{width:6px;height:6px;border-radius:2px}
+/* CRIT TAGS */
+.sel-crit-area{margin-top:10px;padding:10px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--rs)}
+.sel-crit-chips{display:flex;flex-wrap:wrap;gap:5px}
+.crit-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:5px;font-family:var(--mono);font-size:9.5px;border:1px solid rgba(6,214,160,.3);background:rgba(6,214,160,.07);color:var(--accent)}
+.crit-tag.cc{border-color:rgba(6,180,214,.3);background:rgba(6,180,214,.07);color:var(--accent-cc)}
+.crit-tag.bc{border-color:rgba(124,109,250,.3);background:rgba(124,109,250,.07);color:var(--accent-bc)}
+.crit-tag.compc{border-color:rgba(6,214,160,.35);background:rgba(6,214,160,.1);color:var(--accent-compc)}
+.crit-tag.excl{border-color:rgba(255,107,107,.3);background:rgba(255,107,107,.07);color:var(--accent3)}
+.crit-tag-rm{background:none;border:none;color:rgba(255,107,107,.7);cursor:pointer;font-size:11px;padding:0 0 0 2px;line-height:1;transition:.2s}
+.crit-tag-rm:hover{color:var(--accent3)}
+/* POSITIVE */
+.pos-tabs{display:flex;gap:6px;margin-bottom:12px}
+.ptab{padding:6px 14px;border:1.5px solid var(--border);border-radius:var(--rx);cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--muted);transition:.2s}
+.ptab.on{border-color:rgba(244,162,97,.5);background:rgba(244,162,97,.1);color:var(--accent4)}
+.pos-global{display:none}.pos-global.on{display:block}
+.pos-per{display:none}.pos-per.on{display:block}
+.pwarn{font-family:var(--display);font-size:10px;font-weight:700;color:var(--accent4);margin-bottom:8px;padding:7px 11px;background:rgba(244,162,97,.08);border:1px solid rgba(244,162,97,.2);border-radius:var(--rx)}
+.popts{display:flex;flex-wrap:wrap;gap:6px}
+.popt{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--rx);cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--muted);transition:.2s;background:rgba(255,255,255,.03)}
+.popt.sel{border-color:rgba(244,162,97,.6);background:rgba(244,162,97,.12);color:var(--accent4);font-weight:600}
+.pc-item{display:flex;align-items:flex-start;gap:9px;padding:8px 11px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rx);margin-bottom:6px}
+.pc-name{font-family:var(--mono);font-size:10px;color:var(--text);flex:0 0 200px;padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-opts{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.pcopt{padding:3px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:9px;color:var(--muted);transition:.15s}
+.pcopt.sel{border-color:rgba(244,162,97,.6);background:rgba(244,162,97,.12);color:var(--accent4);font-weight:600}
+/* CRITERIA BOXES */
+.cg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.cbox{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden}
+.cbh{padding:7px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:5px}
+.cbt{font-family:var(--display);font-size:10px;font-weight:700}
+.cbt.cc{color:var(--accent-cc)}.cbt.bc{color:var(--accent-bc)}.cbt.compc{color:var(--accent-compc)}
+.cbcnt{font-family:var(--mono);font-size:8.5px;color:var(--muted)}
+.cat-clear{padding:2px 6px;border:1px solid rgba(255,107,107,.3);border-radius:3px;background:rgba(255,107,107,.07);color:var(--accent3);font-family:var(--mono);font-size:7.5px;cursor:pointer;transition:.2s}
+.cat-clear:hover{background:rgba(255,107,107,.14)}
+.cbb{padding:6px;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.cbb::-webkit-scrollbar{width:3px}
+.cbb::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:3px}
+.copt{display:flex;align-items:flex-start;gap:5px;padding:4px 6px;border-radius:4px;cursor:pointer;transition:.15s;font-size:9.5px;line-height:1.4}
+.copt:hover{background:rgba(255,255,255,.04)}
+.copt.sel,.copt.auto{background:rgba(6,214,160,.08)}
+.copt.cc{background:rgba(6,180,214,.07)}.copt.bc{background:rgba(124,109,250,.07)}.copt.compc{background:rgba(6,214,160,.09)}
+.cck{width:12px;height:12px;border-radius:3px;border:1.5px solid var(--muted2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.2s;margin-top:1px}
+.copt.sel .cck,.copt.auto .cck{border-color:var(--accent);background:var(--accent)}
+.copt.sel .cck::after,.copt.auto .cck::after{content:"✓";font-size:7px;color:#0a0a0f;font-weight:700}
+.copt-name{flex:1}
+.copt-name.cc{color:var(--accent-cc)}.copt-name.bc{color:var(--accent-bc)}.copt-name.compc{color:var(--accent-compc)}
+.cauto{font-size:7.5px;font-family:var(--mono);padding:1px 4px;border-radius:3px;background:rgba(6,214,160,.13);color:var(--accent);margin-left:auto;flex-shrink:0}
+.cempty{font-size:9px;color:var(--muted);padding:9px;text-align:center;font-family:var(--mono)}
+/* OUTLIER */
+.ob-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.ob{padding:7px 13px;border:1.5px solid var(--border);border-radius:var(--rx);cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--muted);transition:.2s;background:rgba(255,255,255,.03)}
+.ob:hover{border-color:var(--border2);color:var(--text)}
+.ob.sel{border-color:rgba(124,109,250,.5);background:rgba(124,109,250,.08);color:var(--accent2)}
+.ob-sub{display:none;margin-top:10px;background:var(--card2);border:1px solid rgba(124,109,250,.2);border-radius:var(--rx);padding:12px}
+.ob-sub.on{display:block}
+.tchips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.tchip{padding:3px 9px;border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:9px;color:var(--muted);cursor:pointer;transition:.15s}
+.tchip.sel{border-color:rgba(124,109,250,.5);background:rgba(124,109,250,.08);color:var(--accent2)}
+/* DATE */
+.daterow{display:flex;gap:6px}
+.dsb{flex:1;padding:8px 6px;border:1.5px solid var(--border);border-radius:var(--rx);text-align:center;cursor:pointer;transition:.2s;font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.dsb:hover{border-color:var(--border2);color:var(--text)}
+.dsb.sel{border-color:rgba(6,214,160,.5);background:rgba(6,214,160,.09);color:var(--accent)}
+.dsb .di{font-size:14px;display:block;margin-bottom:3px}
+/* TYPE BADGES */
+.type-badge{font-size:7px;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-weight:600}
+.type-date{background:rgba(77,166,255,.15);color:#4da6ff;border:1px solid rgba(77,166,255,.25)}
+.type-datetime{background:rgba(176,77,255,.15);color:#b04dff;border:1px solid rgba(176,77,255,.25)}
+.type-time{background:rgba(77,255,217,.15);color:#4dffd9;border:1px solid rgba(77,255,217,.25)}
+.type-int64{background:rgba(6,214,160,.15);color:var(--accent);border:1px solid rgba(6,214,160,.25)}
+.type-float{background:rgba(255,224,77,.15);color:#ffe04d;border:1px solid rgba(255,224,77,.25)}
+.type-percent{background:rgba(255,145,77,.15);color:#ff914d;border:1px solid rgba(255,145,77,.25)}
+.type-binary{background:rgba(6,214,160,.25);color:#fff;border:1px solid var(--accent)}
+.type-text{background:rgba(153,153,187,.1);color:#9999bb;border:1px solid rgba(153,153,187,.2)}
+/* COL EDITOR */
+.excel-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--rs);background:rgba(255,255,255,.01)}
+.excel-grid{display:flex;min-width:max-content;align-items:stretch}
+.excel-col{display:flex;flex-direction:column;min-width:120px;max-width:155px;flex-shrink:0;border-right:1px solid var(--border);transition:opacity .15s;cursor:pointer}
+.excel-col:last-child{border-right:none}
+.excel-col.dragging{opacity:.3}
+.excel-col.drag-over{background:rgba(6,214,160,.06);border-left:2px solid var(--accent)}
+.excel-col.sel-col{background:rgba(124,109,250,.06)}
+.col-letter{background:rgba(124,109,250,.1);border-bottom:1.5px solid var(--border);text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent2);padding:5px 4px;user-select:none}
+.col-hd{background:rgba(6,214,160,.06);border-bottom:1px solid var(--border);padding:6px 8px;display:flex;align-items:flex-start;gap:4px;cursor:grab;user-select:none;min-height:52px}
+.col-hd:active{cursor:grabbing}
+.col-hd-name{font-family:var(--mono);font-size:8.5px;font-weight:700;color:var(--accent);word-break:break-all;line-height:1.3;flex:1}
+.col-samples{display:flex;flex-direction:column}
+.col-cell{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--mono);font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:22px}
+.col-cell:nth-child(odd){background:rgba(255,255,255,.01)}
+.col-cell.nc{color:var(--accent);text-align:right}
+.col-cell.dc{color:#4da6ff}
+.col-tool-btn{padding:5px 10px;border:1px solid var(--border);border-radius:var(--rx);background:var(--card2);color:var(--muted);cursor:pointer;font-family:var(--mono);font-size:9px;transition:.2s}
+.col-tool-btn:hover{border-color:var(--border2);color:var(--text)}
+/* PREVIEW */
+.trtag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(124,109,250,.07);border:1px solid rgba(124,109,250,.18);border-radius:4px;font-size:9px;font-family:var(--mono);color:var(--accent2);margin:2px}
+.trdot{width:4px;height:4px;border-radius:50%;background:var(--accent2);flex-shrink:0}
+.rcrow{display:flex;align-items:center;gap:7px;margin-bottom:9px;flex-wrap:wrap}
+.rcb{width:26px;height:22px;border:1px solid var(--border);border-radius:4px;background:var(--card2);color:var(--muted);cursor:pointer;font-size:9px;font-family:var(--mono);transition:.2s}
+.rcb:hover,.rcb.a{border-color:rgba(6,214,160,.4);color:var(--accent);background:rgba(6,214,160,.07)}
+.pvt-wrap{overflow-x:auto;border-radius:var(--rs);border:1px solid var(--border)}
+.pvt{width:100%;border-collapse:collapse;font-size:9px;font-family:var(--mono)}
+.pvt th{background:rgba(124,109,250,.08);padding:6px 9px;text-align:left;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500;white-space:nowrap;font-size:8.5px;text-transform:uppercase}
+.pvt td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);white-space:nowrap}
+.pvt tr:last-child td{border-bottom:none}
+.pvt tr:hover td{background:rgba(255,255,255,.02)}
+.pvt td.gt{color:var(--accent)}.pvt td.lt{color:var(--accent3)}.pvt td.eq{color:var(--accent4)}.pvt td.nc{background:rgba(6,214,160,.04);font-style:italic}
+/* SGGS */
+.sggs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.sgc{background:var(--card2);border:1px solid var(--border);border-radius:var(--rx);padding:8px 10px;display:flex;align-items:center;gap:6px}
+.scd{width:6px;height:6px;border-radius:2px;flex-shrink:0}
+.scd.on{background:var(--accent)}.scd.off{background:var(--muted2)}.scd.cd{background:var(--accent2)}
+.scn{font-size:9px;font-family:var(--mono);color:var(--muted)}.scn.on{color:var(--text)}
+/* TOGGLE */
+.tsw{width:34px;height:18px;border-radius:9px;background:var(--muted2);position:relative;transition:.3s;flex-shrink:0;cursor:pointer}
+.tsw::before{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.3s}
+.tsw.on{background:var(--accent)}.tsw.on::before{transform:translateX(16px)}
+/* BUTTONS */
+.btnrow{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 17px;border:none;border-radius:var(--rx);cursor:pointer;font-family:var(--display);font-size:11px;font-weight:700;transition:.2s}
+.btn-p{background:var(--accent);color:#0a0a0f}.btn-p:hover{background:#04c490}.btn-p:disabled{opacity:.35;cursor:not-allowed}
+.btn-g{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-g:hover{border-color:var(--border2);color:var(--text)}
+.btn-e{background:linear-gradient(135deg,rgba(6,214,160,.2),rgba(124,109,250,.2));border:1px solid rgba(6,214,160,.3);color:var(--accent)}.btn-e:disabled{opacity:.35;cursor:not-allowed}
+.btn-bms{background:rgba(244,162,97,.12);border:1px solid rgba(244,162,97,.3);color:var(--accent4)}.btn-bms:disabled{opacity:.35;cursor:not-allowed}
+.btn-pdf{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);color:var(--accent3)}.btn-pdf:disabled{opacity:.35;cursor:not-allowed}
+.sbar{display:none;padding:8px 12px;border-radius:var(--rx);font-size:10px;font-family:var(--mono);margin-top:7px}
+.sbar.on{display:block}
+.sbar.ok{background:rgba(6,214,160,.07);border:1px solid rgba(6,214,160,.2);color:var(--accent)}
+.sbar.err{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.2);color:var(--accent3)}
+.sbar.warn{background:rgba(244,162,97,.07);border:1px solid rgba(244,162,97,.2);color:var(--accent4)}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal{background:var(--card);border:1px solid rgba(255,107,107,.3);border-radius:var(--r);padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-title{font-family:var(--display);font-size:16px;font-weight:800;color:var(--accent3);margin-bottom:8px}
+.modal-desc{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:18px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body class="grey">
+
+<!-- RESET MODAL -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <div class="modal-title">⚠ İşlemleri Sıfırla</div>
+    <div class="modal-desc">Yapılan tüm işlemler sıfırlanacaktır: yüklenen dosyalar, konfigürasyon ayarları ve LOB yapılandırmaları silinecek.<br><br><strong>Bu işlem geri alınamaz. Onaylıyor musunuz?</strong></div>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="document.getElementById('resetModal').classList.remove('on')">Vazgeç</button>
+      <button class="btn" style="background:var(--accent3);color:#fff" onclick="doReset()">🔄 Evet, Sıfırla</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hl">
+    <div class="logo">📊 QA <span>Portal</span></div>
+    <div class="sep"></div>
+    <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">Kalite Raporu Hazırlama</div>
+  </div>
+  <div class="hdr-right">
+    <div class="theme-switch"></div>
+    <button class="nav-btn" style="background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.3);color:var(--accent)" onclick="location.href='index.html'">🏠 Ana Sayfa</button>
+    <button class="nav-btn" onclick="location.href='qareportsupdate.html'">🔄 Güncelleme</button>
+    <button class="reset-btn" onclick="document.getElementById('resetModal').classList.add('on')">🔴 Sıfırla</button>
+  </div>
+</div>
+
+<!-- STICKY STEPS -->
+<!-- VALIDATION MODAL -->
+<div class="modal-overlay" id="valModal" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="modal" style="border-color:rgba(244,162,97,.4);max-width:480px">
+    <div class="modal-title" style="color:var(--accent4)">⚠ Eksik / Hatalı Alanlar</div>
+    <div class="modal-desc">Devam edebilmek için aşağıdaki alanları tamamlayın:</div>
+    <div id="valModalList" style="margin-bottom:16px;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-btns">
+      <button class="btn btn-g" onclick="document.getElementById('valModal').classList.remove('on')">Tamam, Düzelteceğim</button>
+    </div>
+  </div>
+</div>
+
+<div class="sw"><div class="st">
+  <div class="stab active" id="tab1"><div class="sc">01</div><div><div class="sl">Step 1</div><div class="sn">Data Yükleme</div></div></div>
+  <div class="stab" id="tab2"><div class="sc">02</div><div><div class="sl">Step 2</div><div class="sn">Rapor Ayarları</div></div></div>
+  <div class="stab" id="tab3"><div class="sc">03</div><div><div class="sl">Step 3</div><div class="sn">LOB Yapılandırma</div></div></div>
+  <div class="stab" id="tab4"><div class="sc">04</div><div><div class="sl">Step 4</div><div class="sn">Kontrol & Onay</div></div></div>
+  <div class="stab" id="tab5"><div class="sc">05</div><div><div class="sl">Step 5</div><div class="sn">Başlık Düzeni</div></div></div>
+  <div class="stab" id="tab6"><div class="sc">06</div><div><div class="sl">Step 6</div><div class="sn">Export</div></div></div>
+</div></div>
+
+<div class="main">
+  <!-- STEP 1: DATA YÜKLEME -->
+  <div class="screen active" id="s1">
+    <div class="sbadge"><span class="dot"></span>STEP 1 / 6</div>
+    <div class="stitle">Data <em>Yükleme</em></div>
+    <div class="sdesc">Ana CSV dosyanızı yükleyin. LOB kullanıyorsanız her LOB için ayrı CSV yükleyin.</div>
+    <div class="panel">
+      <div class="pt">📥 Ana Data Dosyası <span class="pill req">ZORUNLU</span></div>
+      <div class="drop" id="mainDrop"><span class="dico">📄</span><div class="dtitle">CSV dosyasını buraya sürükleyin</div><div class="dsub">veya tıklayarak seçin</div></div>
+      <input type="file" id="mainFile" hidden accept=".csv,.xlsx,.xls">
+      <div class="fbar" id="mainFBar"><span>✅</span><span class="fn" id="mainFN"></span><span class="fm" id="mainFM"></span><button class="fdel" id="mainFDel">✕</button></div>
+      <div class="sbar" id="mainSt"></div>
+    </div>
+    <div class="panel">
+      <div class="pt">🖼️ Rapor Logosu <span class="pill">OPSİYONEL</span></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="lgPrev" style="width:52px;height:52px;border-radius:8px;border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;background:var(--card2);font-size:18px">🏢</div>
+        <div><button onclick="document.getElementById('lgFile').click()" style="padding:7px 14px;border:1px solid var(--border2);border-radius:var(--rx);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;font-family:var(--mono);font-size:9.5px;transition:.2s">Logo Yükle</button>
+        <input type="file" id="lgFile" hidden accept=".png,.jpg,.jpeg,.svg">
+        <div class="note" style="margin-top:4px">Önerilen: 200×60 px · PNG/JPG</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="pt">🏢 LOB (Line of Business)</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);cursor:pointer" onclick="toggleLOB()">
+        <div><div style="font-size:12px;font-weight:500">LOB var mı?</div><div style="font-size:10px;color:var(--muted);margin-top:1px">Birden fazla birim — her LOB için ayrı CSV ve konfigürasyon</div></div>
+        <div class="tsw" id="lobSw"></div>
+      </div>
+      <div id="lobArea" style="display:none;margin-top:10px">
+        <div class="hint"><div class="hi">💡</div><div>Her LOB için dosya adından LOB ismi önerilir. Gerekirse düzenleyin. Çift tıklayarak önerilen ismi kabul edin.</div></div>
+        <div id="lobList"></div>
+        <button class="ladd" onclick="addLOB()">＋ Yeni LOB Ekle</button>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-p" id="s1Next" onclick="tryGoto(2)">Rapor Ayarlarına Geç →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: RAPOR AYARLARI -->
+  <div class="screen" id="s2">
+    <div class="sbadge"><span class="dot"></span>STEP 2 / 6</div>
+    <div class="stitle">Rapor <em>Ayarları</em></div>
+    <div class="sdesc">Proje adı, hedef skor ve tarih kaynağı gibi genel ayarları yapılandırın.</div>
+    <div class="panel">
+      <div class="pt">🏷️ Proje Bilgileri</div>
+      <div class="sg2">
+        <div class="sg">
+          <div class="sgl">Proje Adı <span class="req">*</span></div>
+          <input class="fi" id="pName" placeholder="örn. Q2_2025_Kalite" oninput="v2();updateExpName()">
+          <div class="sgl" style="margin-top:10px">Rapor Ayı</div>
+          <select class="fi" id="raporAy" onchange="updateExpName()">
+            <option value="">Ay seçin...</option>
+            <option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option>
+            <option>Mayıs</option><option>Haziran</option><option>Temmuz</option><option>Ağustos</option>
+            <option>Eylül</option><option>Ekim</option><option>Kasım</option><option>Aralık</option>
+          </select>
+          <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+            <button style="width:28px;height:28px;border:1px solid var(--border2);border-radius:var(--rx);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:13px" onclick="adjYear(-1)">−</button>
+            <input class="fi" id="raporYil" type="number" style="text-align:center;flex:1" oninput="updateExpName()">
+            <button style="width:28px;height:28px;border:1px solid var(--border2);border-radius:var(--rx);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:13px" onclick="adjYear(1)">+</button>
+          </div>
+          <div class="note" id="expNamePreview">Dosya adı otomatik oluşturulur</div>
+        </div>
+        <div class="sg">
+          <div class="sgl" id="targetLbl">Proje Hedefi (Manuel) <span class="req">*</span></div>
+          <div class="hint" style="font-size:10px;margin-bottom:8px"><div class="hi">⚠️</div><div id="targetHintTxt">Hedef skoru otomatik hesaplanmaz — manuel giriniz.</div></div>
+          <div id="singleTargetArea">
+            <div class="tw"><input class="fi" id="pTarget" type="number" min="0" max="100" step="0.1" placeholder="örn. 85.0" style="padding-right:32px" oninput="v2()"><div class="tu">%</div></div>
+          </div>
+          <div id="lobTargetArea" style="display:none">
+            <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:8px">Ana Data ve her LOB için ayrı hedef girin:</div>
+            <div id="lobTargetList"></div>
+          </div>
+          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+            <span style="font-size:9px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:2px;background:#06d6a0;display:inline-block"></span>≥ Hedef</span>
+            <span style="font-size:9px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:2px;background:#f4a261;display:inline-block"></span>= Hedef</span>
+            <span style="font-size:9px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:2px;background:#ff6b6b;display:inline-block"></span>&lt; Hedef</span>
+          </div>
+          <div class="sgl" style="margin-top:12px">Tarih Kaynağı <span class="req">*</span></div>
+          <div class="daterow">
+            <div class="dsb" onclick="setDate(this,'Monitor Date')"><span class="di">📡</span>Monitor Date</div>
+            <div class="dsb" onclick="setDate(this,'Created Date')"><span class="di">🗓️</span>Created Date</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="pt">📊 Outlier & İleri Analiz <span class="pill">OPSİYONEL</span></div>
+      <div class="ob-grid">
+        <div class="ob" onclick="toggleOb(this,'AHT')">⏱ AHT Outlier</div>
+        <div class="ob" onclick="toggleOb(this,'SKOR')">📊 Kalite Skor Outlier</div>
+        <div class="ob" onclick="toggleOb(this,'TCD')">🔍 TCD</div>
+        <div class="ob" onclick="toggleOb(this,'REPEAT')">🔁 Repeat Fail MT</div>
+        <div class="ob" onclick="toggleOb(this,'TREND')">📈 Trend Grafik</div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-g" onclick="gotoStep(1)">← Data Yüklemeye Dön</button>
+      <button class="btn btn-p" id="s2Next" onclick="tryGoto(3)">LOB/Kriter Yapılandırmasına Geç →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: LOB YAPILANDIRMA (kısa) -->
+  <div class="screen" id="s3">
+    <div class="sbadge"><span class="dot"></span>STEP 3 / 6</div>
+    <div class="stitle">Kriter <em>Yapılandırma</em></div>
+    <div class="sdesc" id="s3Desc">Her LOB için sütun sınırı, kriter cevabı ve kategorileri ayrı ayrı ayarlayın.</div>
+    <div id="lobWizard"></div>
+    <div class="btnrow">
+      <button class="btn btn-g" onclick="gotoStep(2)">← Rapor Ayarlarına Dön</button>
+      <button class="btn btn-p" id="s3Next" onclick="tryGoto(4)">Kontrol & Onaya Geç →</button>
+    </div>
+  </div>
+</div>
+
+  <!-- STEP 4: KONTROL & ONAY -->
+  <div class="screen" id="s4">
+    <div class="sbadge"><span class="dot"></span>STEP 4 / 6</div>
+    <div class="stitle">Kontrol &amp; <em>Onay</em></div>
+    <div class="sdesc">Oluşturulacak veriyi önizleyin ve dönüşümleri kontrol edin.</div>
+    <div class="panel">
+      <div class="pt">⚙️ Uygulanacak Dönüşümler</div>
+      <div>
+        <span class="trtag"><span class="trdot"></span>Employee Name: İsim Soyisim</span>
+        <span class="trtag"><span class="trdot"></span>Manager Name: İsim Soyisim</span>
+        <span class="trtag"><span class="trdot"></span>Weighted Avg → virgüllü 1 hane</span>
+        <span class="trtag"><span class="trdot"></span>Hafta/Ay/AY'YIL/Yıl eklenir</span>
+        <span class="trtag"><span class="trdot"></span>Başarı 0/1 sayısal (INT64)</span>
+        <span class="trtag"><span class="trdot"></span>CC Skoru/BC Skoru/CompC Skoru hesaplanır</span>
+        <span class="trtag"><span class="trdot"></span>N/A → boş (null)</span>
+        <span class="trtag"><span class="trdot"></span>Tarihler → Türkçe gg.aa.yyyy</span>
+        <span id="lobTransTag" class="trtag" style="display:none"><span class="trdot"></span>LOB: BirleşimData oluşturulur</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="pt">👁️ Veri Önizleme <span id="prevLobLabel" class="pill"></span></div>
+      <div class="rcrow">
+        <span style="font-size:10px;color:var(--muted)">Göster:</span>
+        <button class="rcb a" onclick="setPR(5,this)">5</button>
+        <button class="rcb" onclick="setPR(10,this)">10</button>
+        <button class="rcb" onclick="setPR(25,this)">25</button>
+      </div>
+      <div class="pvt-wrap"><table class="pvt"><thead id="pH"></thead><tbody id="pB"></tbody></table></div>
+      <div class="sbar" id="prevSt"></div>
+    </div>
+    <div class="panel">
+      <div class="pt">📑 Oluşturulacak Sheetler</div>
+      <div class="sggs" id="sheetGrid">
+        <div class="sgc"><div class="scd on"></div><div class="scn on">Ana Sayfa</div></div>
+        <div class="sgc"><div class="scd on"></div><div class="scn on">Özet</div></div>
+        <div class="sgc"><div class="scd on"></div><div class="scn on">Değerlendirici Özet</div></div>
+        <div class="sgc"><div class="scd on"></div><div class="scn on">Kriter Bazlı | Ay</div></div>
+        <div class="sgc"><div class="scd on"></div><div class="scn on">Kriter Bazlı | Hafta</div></div>
+        <div class="sgc" id="sgAHT" style="display:none"><div class="scd cd"></div><div class="scn on">AHT Outlier</div></div>
+        <div class="sgc" id="sgSKOR" style="display:none"><div class="scd cd"></div><div class="scn on">Kalite Skor Outlier</div></div>
+        <div class="sgc" id="sgTCD" style="display:none"><div class="scd cd"></div><div class="scn on">TCD</div></div>
+        <div class="sgc" id="sgREPEAT" style="display:none"><div class="scd cd"></div><div class="scn on">Repeat Fail MT</div></div>
+        <div class="sgc" id="sgTREND" style="display:none"><div class="scd cd"></div><div class="scn on">Trend Grafik</div></div>
+        <div class="sgc" id="sgBirlesim" style="display:none"><div class="scd cd"></div><div class="scn on">BirleşimData</div></div>
+        <div class="sgc" style="border-color:rgba(6,214,160,.3)"><div class="scd on"></div><div class="scn on" style="color:var(--accent)">BMSData ← Son</div></div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-g" onclick="gotoStep(3)">← Kriter Yapılandırmasına Dön</button>
+      <button class="btn btn-p" onclick="gotoStep(5)">Başlık Düzenine Geç →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5: BAŞLIK DÜZENİ -->
+  <div class="screen" id="s5">
+    <div class="sbadge"><span class="dot"></span>STEP 5 / 6</div>
+    <div class="stitle">Başlık <em>Düzenleme</em></div>
+    <div class="sdesc">Tüm sütunları (hesaplananlar dahil) sürükleyerek sıralayın. Veri tiplerini ayarlayın.</div>
+    <div class="panel">
+      <div class="pt">🔢 Veri Tipi Özeti</div>
+      <div id="typeSummary4" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px"></div>
+      <div class="hint" style="margin-bottom:0"><div class="hi">💡</div><div>INT64 → tam sayı (büyük ID'ler metin kalır). DATE → Türkçe gg.aa.yyyy. BINARY → 0/1. Her sütun üzerindeki type seçimini değiştirebilirsiniz.</div></div>
+    </div>
+    <div class="panel">
+      <div class="pt">🗂️ Sütun Sırası <span class="pill">SÜRÜKLE & BIRAK — TÜM SÜTUNLAR</span></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap">
+        <button class="col-tool-btn" onclick="resetColOrder()">↺ Orijinal</button>
+        <button class="col-tool-btn" onclick="moveColDir(-1)">← Sola</button>
+        <button class="col-tool-btn" onclick="moveColDir(1)">Sağa →</button>
+        <button class="col-tool-btn" onclick="moveColEdge(0)">⇤ Başa</button>
+        <button class="col-tool-btn" onclick="moveColEdge(1)">⇥ Sona</button>
+        <span style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:auto" id="selColLbl"></span>
+      </div>
+      <div class="excel-wrap"><div class="excel-grid" id="excelGrid"></div></div>
+      <div class="sbar" id="colSt"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-g" onclick="gotoStep(4)">← Kontrol & Onaya Dön</button>
+      <button class="btn btn-bms" id="bmsOnlyBtn" onclick="doExportBMSOnly()">📥 Sadece BMSData</button>
+      <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF Raporu</button>
+      <button class="btn btn-p" onclick="gotoStep(6)">Exporta Geç →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6: EXPORT -->
+  <div class="screen" id="s6">
+    <div class="sbadge"><span class="dot"></span>STEP 6 / 6</div>
+    <div class="stitle">Export &amp; <em>İndir</em></div>
+    <div class="sdesc">Hazırladığınız raporu Excel veya PDF olarak indirin.</div>
+    <div class="panel">
+      <div class="pt">💾 Export Seçenekleri</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px">Dosya adı: <strong id="expNameDisplay" style="color:var(--accent)">—</strong></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-bms" onclick="doExportBMSOnly()">📥 Sadece BMSData</button>
+        <button class="btn btn-e" onclick="doExport()">⬇ Tam Rapor (Excel)</button>
+        <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF Raporu</button>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-g" onclick="gotoStep(5)">← Başlık Düzenine Dön</button>
+    </div>
+    <div class="sbar" id="expSt"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/qareportscreated.js"></script>
+</body>
+</html>

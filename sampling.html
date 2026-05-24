@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSH Sampling — QA Portal</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* Sampling özel stiller */
+.toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.add-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: rgba(124,109,250,.12); border: 1px solid rgba(124,109,250,.25); color: var(--accent2); border-radius: 10px; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; transition: .2s; }
+.add-btn:hover { background: rgba(124,109,250,.2); }
+.clear-btn2 { display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); color: var(--accent3); border-radius: 10px; cursor: pointer; font-family: var(--font); font-size: 13px; transition: .2s; }
+.clear-btn2:hover { background: rgba(255,107,107,.15); }
+.toolbar-count { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-left: auto; }
+.grid { display: flex; flex-wrap: wrap; gap: 18px; padding: 24px; align-items: flex-start; }
+.data-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); width: 320px; flex-shrink: 0; animation: fadeUp .35s ease; overflow: hidden; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.box-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--card2); border-bottom: 1px solid var(--border); }
+.box-num { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.box-name { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.del-box { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 6px; transition: .2s; }
+.del-box:hover { color: var(--accent3); background: rgba(255,107,107,.1); }
+.box-drop { border: 2px dashed var(--border2); border-radius: 10px; padding: 18px 12px; text-align: center; cursor: pointer; transition: .2s; margin: 14px 14px 0; color: var(--muted); font-size: 12.5px; }
+.box-drop:hover, .box-drop.drag { border-color: var(--accent2); background: rgba(124,109,250,.05); color: var(--text); }
+.box-drop.loaded { border-color: rgba(6,214,160,.4); background: rgba(6,214,160,.05); color: var(--accent); }
+.range-wrap { padding: 0 14px 14px; }
+.range-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+.range-table th { padding: 6px 8px; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+.range-table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+.range-table tr:last-child td { border: none; }
+.range-input { background: var(--card2); border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 12px; width: 60px; outline: none; transition: .2s; text-align: center; }
+.range-input:focus { border-color: var(--accent2); }
+.add-row-btn { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; padding: 7px; background: rgba(124,109,250,.06); border: 1px dashed rgba(124,109,250,.2); border-radius: 8px; cursor: pointer; font-size: 12px; color: var(--accent2); font-family: var(--font); transition: .2s; margin-top: 8px; }
+.add-row-btn:hover { background: rgba(124,109,250,.12); }
+.del-row { background: transparent; border: none; cursor: pointer; color: var(--muted); font-size: 13px; padding: 2px 4px; border-radius: 4px; transition: .2s; }
+.del-row:hover { color: var(--accent3); }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 14px; text-align: center; width: 100%; }
+.empty-icon { font-size: 48px; opacity: .5; }
+.empty-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--muted); }
+.empty-sub { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body class="grey">
+
+<div class="header">
+  <div class="logo">📊 BSH Dağıtım</div>
+  <div class="theme-switch"></div>
+  <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Ana Sayfa</button>
+  <button class="btn btn-primary" onclick="run()">🚀 Çalıştır</button>
+</div>
+
+<div class="toolbar">
+  <button class="add-btn" onclick="addData()">➕ Yeni Data</button>
+  <button class="clear-btn2" onclick="clearAll()">🗑 Temizle</button>
+  <span class="toolbar-count" id="toolbarCount">0 dataset</span>
+</div>
+
+<div id="grid" class="grid">
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">📂</div>
+    <div class="empty-title">Henüz dataset yok</div>
+    <div class="empty-sub">Yeni Data butonuna tıklayarak Excel dosyalarınızı yükleyin</div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/sampling.js"></script>
+</body>
+</html>

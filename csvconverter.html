@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV Converter — QA Portal</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* CSV Converter özel stiller */
+.file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.file-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card2); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; animation: fadeUp .3s ease; }
+.file-item.ok { border-color: rgba(6,214,160,.3); }
+.file-name { font-family: var(--mono); color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-rows { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.file-del { background: none; border: none; color: var(--accent3); cursor: pointer; font-size: 14px; padding: 2px; flex-shrink: 0; }
+
+.mode-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.mode-btn { flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; font-family: var(--mono); font-size: 10px; color: var(--muted); transition: .2s; background: var(--card2); text-align: center; }
+.mode-btn:hover { border-color: var(--border2); color: var(--text); }
+.mode-btn.on { border-color: rgba(6,214,160,.5); background: rgba(6,214,160,.08); color: var(--accent); font-weight: 700; }
+
+.edit-panel { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 12px; display: none; }
+.edit-panel.on { display: block; }
+.edit-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.edit-row:last-child { border-bottom: none; }
+.edit-label { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--text); }
+.edit-val { font-family: var(--mono); font-size: 10px; color: var(--muted); min-width: 80px; text-align: right; }
+.edit-toggle { width: 36px; height: 18px; border-radius: 9px; background: var(--muted); border: none; cursor: pointer; position: relative; transition: .2s; flex-shrink: 0; }
+.edit-toggle::before { content: ''; position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: .2s; }
+.edit-toggle.on { background: var(--accent2); }
+.edit-toggle.on::before { transform: translateX(18px); }
+
+.features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.feat { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 12px 16px; }
+.feat-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.feat-desc { font-size: 10.5px; color: var(--muted); line-height: 1.4; }
+</style>
+</head>
+<body class="grey">
+
+<div class="header">
+  <div class="logo">📊 CSV Converter</div>
+  <div class="theme-switch"></div>
+  <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Ana Sayfa</button>
+</div>
+
+<div class="main" style="max-width: 720px;">
+  <div class="panel">
+    <div class="pt">📁 Dosya Yükleme <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">Birden fazla seçilebilir</span></div>
+    
+    <div class="drop-zone" id="drop">
+      📥 Dosyaları sürükleyin veya tıklayın
+      <div class="dsub" style="margin-top: 6px;">CSV, XLSX veya XLS — çoklu seçim desteklenir</div>
+    </div>
+    <input type="file" id="fileInput" hidden multiple accept=".csv,.xlsx,.xls">
+    
+    <div class="file-list" id="fileList"></div>
+
+    <div class="pt" style="margin-top: 16px;">⚙️ Mod Seçimi</div>
+    <div class="mode-row">
+      <button class="mode-btn on" id="modeStandart" onclick="setMode('standart')">📦 Standart<br><span style="font-size:9px;font-weight:400">Doğrudan dönüştür</span></button>
+      <button class="mode-btn" id="modeDuzenle" onclick="setMode('duzenle')">✏️ Düzenle<br><span style="font-size:9px;font-weight:400">Kolonları kontrol et</span></button>
+    </div>
+
+    <div class="edit-panel" id="editPanel">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;">İlk dosya yüklendiğinde kolon listesi görünür.</div>
+      <div id="editColList"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="downloadBtn" disabled onclick="downloadAll()">⬇ Tümünü İndir</button>
+      <button class="btn btn-ghost" id="resetBtn">🔄 Sıfırla</button>
+    </div>
+    <div class="status-bar" id="status"></div>
+
+    <div class="features">
+      <div class="feat"><div class="feat-title">📅 Tarih Formatı</div><div class="feat-desc">dd.mm.yyyy otomatik algılanır</div></div>
+      <div class="feat"><div class="feat-title">🔢 Sayısal Değer</div><div class="feat-desc">Türkçe ondalık virgülü uygulanır</div></div>
+      <div class="feat"><div class="feat-title">📂 Çoklu Dosya</div><div class="feat-desc">Her CSV ayrı Excel olarak indirilir</div></div>
+      <div class="feat"><div class="feat-title">🆔 IDENT Sütun</div><div class="feat-desc">ID sütunları değiştirilmeden korunur</div></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/csvconverter.js"></script>
+</body>
+</html>

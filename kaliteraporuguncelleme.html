@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalite Raporu Güncelleme — QA Portal</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* Kalite Raporu Güncelleme özel stiller */
+.stepper {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.step {
+  flex: 1;
+  padding: 16px 12px;
+  text-align: center;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: .2s;
+  min-width: 100px;
+}
+.step.active {
+  border-bottom-color: var(--accent2);
+  background: rgba(124,109,250,.05);
+}
+.step.done {
+  border-bottom-color: var(--accent);
+}
+.step .step-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--muted);
+}
+.step .step-name {
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+.step.active .step-name { color: var(--accent2); }
+.step.done .step-name { color: var(--accent); }
+
+.screen { display: none; animation: fadeIn .3s ease; }
+.screen.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--accent2);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.period-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+.period-btn {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: .2s;
+}
+.period-btn.selected {
+  border-color: var(--accent2);
+  background: rgba(124,109,250,.1);
+  color: var(--accent2);
+}
+.period-icon { font-size: 20px; display: block; margin-bottom: 5px; }
+.period-label { font-size: 12px; font-weight: 500; }
+
+.diff-table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.diff-table th, .diff-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.diff-table .row-new { background: rgba(6,214,160,.05); }
+.diff-table .row-dup { background: rgba(255,107,107,.05); opacity: .7; }
+.diff-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 5px;
+}
+.legend-new { background: var(--accent); }
+.legend-dup { background: var(--accent3); }
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.preview-table th, .preview-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.preview-table .gt { color: var(--accent); font-weight: bold; }
+.preview-table .lt { color: var(--accent3); }
+.preview-table .eq { color: var(--accent4); }
+
+.sheets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.sheet-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sheet-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.sheet-dot.updated { background: var(--accent2); }
+.sheet-dot.active { background: var(--accent); }
+</style>
+</head>
+<body class="grey">
+
+<div class="header">
+  <div class="logo">🔄 QA Portal</div>
+  <div class="theme-switch"></div>
+  <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Ana Sayfa</button>
+</div>
+
+<div class="main" style="max-width: 1000px;">
+  <!-- STEPPER -->
+  <div class="stepper">
+    <div class="step active" data-step="1">
+      <div class="step-num">01</div>
+      <div class="step-name">Rapor Yükle</div>
+    </div>
+    <div class="step" data-step="2">
+      <div class="step-num">02</div>
+      <div class="step-name">Yeni Data</div>
+    </div>
+    <div class="step" data-step="3">
+      <div class="step-num">03</div>
+      <div class="step-name">Kontrol & Diff</div>
+    </div>
+    <div class="step" data-step="4">
+      <div class="step-num">04</div>
+      <div class="step-name">Export</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Rapor Yükle -->
+  <div class="screen active" id="step1">
+    <div class="panel">
+      <div class="panel-title">📂 Mevcut Excel Raporu <span class="badge badge-new">ZORUNLU</span></div>
+      <div class="drop-zone" id="existingDrop">
+        📊 Excel raporunu sürükleyin veya tıklayın
+        <input type="file" id="existingFile" hidden accept=".xlsx,.xls">
+      </div>
+      <div class="file-info" id="existingInfo" style="display:none; margin-top:12px; padding:8px; background:var(--surface); border-radius:8px;"></div>
+      <div class="stats-row" id="existingStats" style="display:none;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🏷️ Proje Bilgileri</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Proje Adı <span class="req">*</span></label>
+          <input type="text" id="projectName" class="form-input" placeholder="Örn: Q2_2025_Kalite">
+        </div>
+        <div class="form-group">
+          <label>Güncelleme Periyodu</label>
+          <div class="period-grid">
+            <div class="period-btn" data-period="Günlük"><span class="period-icon">📆</span><span class="period-label">Günlük</span></div>
+            <div class="period-btn" data-period="Haftalık"><span class="period-icon">📅</span><span class="period-label">Haftalık</span></div>
+            <div class="period-btn" data-period="Aylık"><span class="period-icon">🗓️</span><span class="period-label">Aylık</span></div>
+            <div class="period-btn" data-period="Dönemsel"><span class="period-icon">📊</span><span class="period-label">Dönemsel</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="step1Next" disabled>Yeni Data Yükle →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Yeni Data -->
+  <div class="screen" id="step2">
+    <div class="panel">
+      <div class="panel-title">📥 Yeni CSV/Excel Dosyası <span class="badge badge-new">ZORUNLU</span></div>
+      <div class="drop-zone" id="newDrop">
+        📄 Yeni dosyayı sürükleyin veya tıklayın
+        <input type="file" id="newFile" hidden accept=".csv,.xlsx,.xls">
+      </div>
+      <div class="file-info" id="newInfo" style="display:none; margin-top:12px;"></div>
+    </div>
+
+    <div class="panel" id="headerValidation" style="display:none;">
+      <div class="panel-title">🔍 Başlık Uyuşma Kontrolü</div>
+      <div id="headerMatchList"></div>
+      <div id="headerMissList"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goToStep(1)">← Geri</button>
+      <button class="btn btn-primary" id="step2Next" disabled>IDENT Kontrolü Yap →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Kontrol & Diff -->
+  <div class="screen" id="step3">
+    <div class="panel" id="checkingPanel">
+      <div style="text-align:center; padding:30px;">
+        <div class="loading-spinner" style="margin:0 auto 12px;"></div>
+        <div>IDENT Kontrolü yapılıyor...</div>
+        <div class="progress-bar" id="checkProgress" style="width:0%; height:4px; background:var(--accent2); margin-top:12px; transition:width .3s;"></div>
+      </div>
+    </div>
+
+    <div id="resultPanel" style="display:none;">
+      <div class="stats-row" id="identStats"></div>
+
+      <div class="panel">
+        <div class="panel-title">🔄 Veri Diff Önizleme</div>
+        <div class="btn-row" style="margin-bottom:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="setDiffFilter('all')">Tümü</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDiffFilter('new')">✅ Yeni</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDiffFilter('dup')">✕ Duplikasyon</button>
+          <span style="margin-left:auto;">Göster:
+            <button class="btn btn-ghost btn-sm" onclick="setDiffRows(10)">10</button>
+            <button class="btn btn-ghost btn-sm" onclick="setDiffRows(25)">25</button>
+            <button class="btn btn-ghost btn-sm" onclick="setDiffRows(50)">50</button>
+          </span>
+        </div>
+        <div class="diff-table-wrapper">
+          <table class="diff-table" id="diffTable">
+            <thead id="diffHead"></thead>
+            <tbody id="diffBody"></tbody>
+          </table>
+        </div>
+        <div class="diff-legend">
+          <div><span class="legend-dot legend-new"></span> Yeni kayıt - eklenecek</div>
+          <div><span class="legend-dot legend-dup"></span> Duplikasyon - hariç</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goToStep(2)">← Geri</button>
+      <button class="btn btn-primary" id="step3Next" disabled>Export Ayarlarına Geç →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Export -->
+  <div class="screen" id="step4">
+    <div class="panel">
+      <div class="panel-title">📑 Güncellenecek Sheetler</div>
+      <div class="sheets-grid">
+        <div class="sheet-card"><div class="sheet-dot updated"></div> Ana Sayfa</div>
+        <div class="sheet-card"><div class="sheet-dot updated"></div> Özet</div>
+        <div class="sheet-card"><div class="sheet-dot updated"></div> Değerlendirici Özet</div>
+        <div class="sheet-card"><div class="sheet-dot updated"></div> Kriter Bazlı | Ay</div>
+        <div class="sheet-card"><div class="sheet-dot updated"></div> Kriter Bazlı | Hafta</div>
+        <div class="sheet-card"><div class="sheet-dot active"></div> BMSData</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">💾 Export Seçenekleri</div>
+      <div class="form-group">
+        <label>Güncelleme Notu (opsiyonel)</label>
+        <input type="text" id="updateNote" class="form-input" placeholder="Örn: Hafta 23 güncellemesi">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="exportBtn" disabled onclick="doExport()">⬇ Güncellenmiş Raporu İndir</button>
+      </div>
+      <div id="exportStatus" class="status-bar" style="display:none;"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goToStep(3)">← Geri</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/kaliteraporuguncelleme.js"></script>
+</body>
+</html>

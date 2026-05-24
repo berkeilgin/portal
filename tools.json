@@ -1,0 +1,404 @@
+{
+  "copyrightText": "© 2025 QA Portal. Tüm hakları saklıdır.",
+  "maintenance": false,
+  "maintenanceMessage": "Portal şu anda bakımda. Lütfen daha sonra tekrar deneyin.",
+  "announcement": {
+    "active": false,
+    "text": "Yeni özellikler eklendi! 🎉",
+    "type": "warn"
+  },
+  "categories": [
+    {
+      "id": "bms",
+      "label": "BMS Tools",
+      "icon": "❤️"
+    },
+    {
+      "id": "tp",
+      "label": "TP Tools",
+      "icon": "🖥️"
+    },
+    {
+      "id": "qa",
+      "label": "QA Tools",
+      "icon": "🔬"
+    },
+    {
+      "id": "reports",
+      "label": "Power BI Reports",
+      "icon": "📊"
+    },
+    {
+      "id": "office",
+      "label": "Microsoft Office",
+      "icon": "📎"
+    },
+    {
+      "id": "google",
+      "label": "Google Ürünleri",
+      "icon": "⚜️"
+    },
+    {
+      "id": "portal",
+      "label": "Portal",
+      "icon": "💭"
+    }
+  ],
+  "tools": [
+    {
+      "id": "bms",
+      "name": "BMS Ana Sayfa",
+      "icon": "logos/tp_bms.png",
+      "cat": "bms",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://sebra.ccms.teleperformance.com/"
+    },
+    {
+      "id": "mytp",
+      "name": "MYTP",
+      "icon": "logos/mytp.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://teleperformance-mytp.sabacloud.com/"
+    },
+    {
+      "id": "ikon",
+      "name": "İKON (Yıllık İzin)",
+      "icon": "logos/ikon.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://ikon.teleperformance.com.tr/logo/corporate"
+    },
+    {
+      "id": "srvdesk",
+      "name": "Service Desk (Case)",
+      "icon": "logos/logo.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://support.teleperformance.com/esc?id=ec_dashboard"
+    },
+    {
+      "id": "peyk",
+      "name": "PEYK - Bordro Görüntüleme",
+      "icon": "logos/peyk.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://peyk.kolaysoft.com.tr/login"
+    },
+    {
+      "id": "random",
+      "name": "Randomizer",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "randomizer.html"
+    },
+    {
+      "id": "corel",
+      "name": "Correlation",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": true,
+      "isEnabled": true,
+      "url": "corel.html"
+    },
+    {
+      "id": "csv",
+      "name": "Data CSV Converter",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "csvconverter.html"
+    },
+    {
+      "id": "sampling",
+      "name": "BSH Dağıtım",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "sampling.html"
+    },
+    {
+      "id": "trceviri",
+      "name": "Trendyol CSV Converter",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "trendyolceviri.html"
+    },
+    {
+      "id": "powerbifb",
+      "name": "Feedback Raporu",
+      "icon": "logos/powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/"
+    },
+    {
+      "id": "powerbidm",
+      "name": "Domestic - Kalite Raporu",
+      "icon": "logos/powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/"
+    },
+    {
+      "id": "powerbiml",
+      "name": "Multi Lingual - Kalite Raporu",
+      "icon": "logos/powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/913d085a-39b0-47ba-8d86-93f7562967b5/ReportSection6e0f125c1a8e11c66787?experience=power-bi"
+    },
+    {
+      "id": "powerpharos",
+      "name": "Pharos",
+      "icon": "logos/pharos.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/apps/41d62312-bcc5-4135-a533-27c99a17330b/reports/35f2923b-4391-420b-b20c-39a5fbbf71af/ReportSection?ctid=638fcbaf-ba4c-43e1-adae-5475c970fe10&experience=power-bi"
+    },
+    {
+      "id": "powerbitops",
+      "name": "TOPS Report",
+      "icon": "logos/powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/fa9a4773-1f17-4e70-8d61-c2abdd623f10/4ff2d5fd86b13526c481?experience=power-bi"
+    },
+    {
+      "id": "powerbimgm",
+      "name": "Domestic - Management Report",
+      "icon": "logos/powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/5e8a5883-5b0c-468a-aa43-4eafb84a948b/ReportSection129752e63008ee0ccb20?experience=power-bi"
+    },
+    {
+      "id": "excel",
+      "name": "Excel",
+      "icon": "logos/excel.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://excel.cloud.microsoft/"
+    },
+    {
+      "id": "ppt",
+      "name": "PowerPoint",
+      "icon": "logos/powerpoint.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://powerpoint.cloud.microsoft/"
+    },
+    {
+      "id": "word",
+      "name": "Word",
+      "icon": "logos/word.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://word.cloud.microsoft/"
+    },
+    {
+      "id": "kaliterapor",
+      "name": "Kalite Raporu Hazırla & Güncelle",
+      "icon": "logos/logo.png",
+      "cat": "qa",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "url": "kaliterapor.html"
+    },
+    {
+      "id": "bmsform",
+      "name": "BMS Form Oluşturma",
+      "icon": "logos/tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/cgi-bin/console/form_configuration.pl"
+    },
+    {
+      "id": "bmsraw",
+      "name": "BMS Raw Data",
+      "icon": "logos/tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": true,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/form.pl?frmTarget=MONITOR&form_type_ident=101&frmOption=EXPORT"
+    },
+    {
+      "id": "bsmcreatedcalib",
+      "name": "BMS Kalibrasyon Oluşturma",
+      "icon": "logos/tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/console/calibration.pl"
+    },
+    {
+      "id": "bmstops",
+      "name": "BMS TOPS Report",
+      "icon": "logos/tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/tops.pl"
+    },
+    {
+      "id": "outlook",
+      "name": "Outlook Web",
+      "icon": "logos/out.png",
+      "cat": "office",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "http://outlook.office.com/"
+    },
+    {
+      "id": "portaladmin",
+      "name": "Admin Paneli",
+      "icon": "logos/admin.png",
+      "cat": "portal",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "admin.html"
+    },
+    {
+      "id": "portalcase",
+      "name": "Kalite Case Aç",
+      "icon": "logos/logo.png",
+      "cat": "portal",
+      "isEnabled": true,
+      "isNew": true,
+      "isTest": true,
+      "isBest": false,
+      "url": "case.html"
+    },
+    {
+      "id": "casecoz",
+      "name": "Case Çözümle",
+      "icon": "logos/logo.png",
+      "cat": "portal",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "caseyonetim.html"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "icon": "logos/gemini.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://gemini.google.com"
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "icon": "logos/ggmail.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://workspace.google.com/gmail/"
+    },
+    {
+      "id": "spr",
+      "name": "Spread Sheet (Excel)",
+      "icon": "logos/gspread.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://docs.google.com/spreadsheets/u/0/"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "salt": "28896315444b4832135bc38473099db4",
+      "hash": "6cf020c35a9f60e709d34f75823fc56437d125ac843ed561a19676d87df2362c",
+      "role": "admin"
+    },
+    {
+      "username": "remziakat",
+      "salt": "a5b38ec595d3442c78393829d8ef2d03",
+      "hash": "bfb674cbaa921614d130b9a22847fbe4c88fa2d5b66af44351dd1d13ff418da9",
+      "role": "editor"
+    }
+  ]
+}

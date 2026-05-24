@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Yönetim — Admin</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* Case Yönetim özel stiller */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-number {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent2);
+}
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.filter-bar input, .filter-bar select {
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+}
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-beklemede { background: rgba(156,39,176,.2); color: #ce93d8; }
+.status-sürüyor { background: rgba(244,162,97,.2); color: var(--accent4); }
+.status-çözüldü { background: rgba(6,214,160,.2); color: var(--accent); }
+.status-reddedildi { background: rgba(158,158,158,.2); color: #bdbdbd; }
+.tab-btn-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.topic-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.note-item {
+  background: var(--card2);
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.notification-badge {
+  background: var(--accent3);
+  color: #fff;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-left: 8px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body class="grey">
+
+<div class="header">
+  <div class="logo">👑 CASE ADMIN</div>
+  <div class="theme-switch"></div>
+  <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Ana Sayfa</button>
+  <button class="btn btn-ghost" id="logoutBtn">Çıkış</button>
+</div>
+
+<div class="main">
+  <!-- Giriş Ekranı -->
+  <div id="loginScreen" class="panel" style="max-width:400px; margin:40px auto;">
+    <h3>Admin Girişi</h3>
+    <div class="form-group">
+      <label>E-posta</label>
+      <input type="email" id="adminEmail" class="form-input" placeholder="admin@example.com">
+    </div>
+    <div class="form-group">
+      <label>Şifre</label>
+      <input type="password" id="adminPassword" class="form-input" placeholder="••••">
+    </div>
+    <button class="btn btn-primary" id="adminLoginBtn">Giriş</button>
+    <div id="adminLoginError" style="color:var(--accent3); margin-top:10px"></div>
+  </div>
+
+  <!-- Admin Paneli -->
+  <div id="adminPanel" style="display:none">
+    <div class="admin-toolbar">
+      <div class="toolbar-left" style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="refreshBtn">🔄 Yenile</button>
+        <button class="btn btn-ghost" onclick="window.location.href='case.html'">🏠 Portal'a Dön</button>
+        <div id="newCaseAlert" style="display:inline-block"></div>
+      </div>
+      <div>
+        <span id="adminRoleBadge" class="badge badge-new">ADMIN</span>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="statsContainer"></div>
+
+    <div class="tab-btn-group">
+      <button class="btn btn-primary" onclick="showTab('cases')">📋 Case'ler</button>
+      <button class="btn btn-ghost" onclick="showTab('topics')">🏷️ Konular</button>
+      <button class="btn btn-ghost" onclick="showTab('users')">👥 Kullanıcılar</button>
+      <button class="btn btn-ghost" onclick="showTab('mail')">📧 Mail Ayarları</button>
+    </div>
+
+    <!-- Case'ler Tab -->
+    <div id="casesTab" class="panel">
+      <div class="filter-bar">
+        <input type="text" id="searchCase" placeholder="Ara (ID/başlık/e-posta)" class="form-input">
+        <select id="statusFilter" class="form-input">
+          <option value="">Tüm Durumlar</option>
+          <option value="beklemede">Beklemede</option>
+          <option value="sürüyor">Sürüyor</option>
+          <option value="çözüldü">Çözüldü</option>
+          <option value="reddedildi">Reddedildi</option>
+        </select>
+        <select id="topicFilter" class="form-input">
+          <option value="">Tüm Konular</option>
+        </select>
+        <button class="btn btn-primary" onclick="filterCases()">Filtrele</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="casesTable">
+          <thead>
+            <tr><th>ID</th><th>Konu</th><th>Başlık</th><th>Kullanıcı</th><th>E-posta</th><th>Durum</th><th>Öncelik</th><th>Oluşturma</th><th>İşlem</th></tr>
+          </thead>
+          <tbody id="casesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Konular Tab -->
+    <div id="topicsTab" class="panel" style="display:none">
+      <button class="btn btn-primary" onclick="openTopicModal()">+ Yeni Konu Ekle</button>
+      <div id="topicsList" style="margin-top:16px"></div>
+    </div>
+
+    <!-- Kullanıcılar Tab -->
+    <div id="usersTab" class="panel" style="display:none">
+      <button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button>
+      <div class="table-wrapper" style="margin-top:16px">
+        <table>
+          <thead><tr><th>ID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mail Ayarları Tab -->
+    <div id="mailTab" class="panel" style="display:none">
+      <div class="form-group"><label>SMTP E-posta Adresi (Gmail)</label><input type="email" id="smtpEmail" class="form-input" placeholder="ornek@gmail.com"></div>
+      <div class="form-group"><label>SMTP Şifresi (Uygulama Şifresi)</label><input type="password" id="smtpPassword" class="form-input" placeholder="16 haneli uygulama şifresi"></div>
+      <div class="form-group"><label>Admin Bildirim E-posta</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
+      <div class="form-group"><label>CC E-posta (opsiyonel)</label><input type="email" id="ccEmail" class="form-input" placeholder="cc@example.com"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveMailSettings()">Kaydet</button>
+        <button class="btn btn-ghost" onclick="testEmail()">Test Maili Gönder</button>
+      </div>
+      <div id="mailStatus" style="margin-top:12px; font-size:12px"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<!-- Modal: Case Detay -->
+<div class="modal-overlay" id="caseDetailModal">
+  <div class="modal">
+    <h3>Case Detay</h3>
+    <div id="caseDetailContent"></div>
+    <div class="btn-row" style="margin-top:20px; justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal('caseDetailModal')">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Konu Ekle/Düzenle -->
+<div class="modal-overlay" id="topicModal">
+  <div class="modal">
+    <h3 id="topicModalTitle">+ Yeni Konu</h3>
+    <div class="form-group"><label>Başlık</label><input type="text" id="topicTitle" class="form-input"></div>
+    <div class="form-group"><label>Açıklama</label><textarea id="topicDesc" rows="2" class="form-input"></textarea></div>
+    <div class="form-group"><label>Sorumlu E-posta</label><input type="email" id="topicResponsibleEmail" class="form-input"></div>
+    <div class="form-group"><label><input type="checkbox" id="topicActive" checked> Aktif</label></div>
+    <div class="btn-row" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal('topicModal')">İptal</button>
+      <button class="btn btn-primary" id="saveTopicBtn">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Kullanıcı Ekle/Düzenle -->
+<div class="modal-overlay" id="userEditModal">
+  <div class="modal">
+    <h3 id="userEditModalTitle">+ Yeni Kullanıcı</h3>
+    <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="editUsername" class="form-input"></div>
+    <div class="form-group"><label>Şifre</label><input type="password" id="editPassword" class="form-input" placeholder="Değiştirmek için yazın"></div>
+    <div class="form-group"><label>E-posta</label><input type="email" id="editUserEmail" class="form-input"></div>
+    <div class="form-group"><label>Rol</label>
+      <select id="editUserRole" class="form-input">
+        <option value="user">Kullanıcı</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="btn-row" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal('userEditModal')">İptal</button>
+      <button class="btn btn-primary" id="saveUserEditBtn">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="smtp.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/caseyonetim.js"></script>
+</body>
+</html>

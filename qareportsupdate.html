@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalite Raporu Güncelleme — QA Portal</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+/* QAReportsUpdate özel stilleri (mevcut inline stiller burada toplanmıştır) */
+:root{
+  --bg:#0d0d14;--surface:#141420;--card:#1a1a26;--card2:#20202e;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --accent:#06d6a0;--accent2:#7c6dfa;--accent3:#ff6b6b;--accent4:#f4a261;
+  --text:#eeeef5;--muted:#6a6a88;--muted2:#42425e;
+  --font:'DM Sans',sans-serif;--display:'Syne',sans-serif;--mono:'DM Mono',monospace;
+  --r:16px;--rs:10px;--rx:8px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;gap:10px}
+.hl{display:flex;align-items:center;gap:12px;flex:1}
+.logo{font-family:var(--display);font-size:15px;font-weight:800}.logo span{color:var(--accent2)}
+.sep{width:1px;height:17px;background:var(--border2)}
+.hdr-btns{display:flex;align-items:center;gap:8px}
+.nav-btn{padding:7px 14px;background:rgba(6,214,160,.1);border:1.5px solid rgba(6,214,160,.35);color:var(--accent);border-radius:var(--rx);cursor:pointer;font-size:11px;font-family:var(--mono);font-weight:500;transition:.2s}
+.nav-btn:hover{background:rgba(6,214,160,.2)}
+.back-btn{padding:7px 14px;background:rgba(124,109,250,.1);border:1.5px solid rgba(124,109,250,.35);color:var(--accent2);border-radius:var(--rx);cursor:pointer;font-size:11px;font-family:var(--mono);font-weight:600;transition:.2s}
+.back-btn:hover{background:rgba(124,109,250,.2)}
+.sw{background:var(--surface);border-bottom:1px solid var(--border);padding:0 26px;overflow-x:auto}
+.st{display:flex;min-width:max-content;max-width:1100px;margin:0 auto}
+.stab{display:flex;align-items:center;gap:7px;padding:13px 12px 13px 0;position:relative;flex:1;min-width:120px}
+.stab:not(:last-child)::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);border:5px solid transparent;border-left:7px solid var(--muted2)}
+.stab.active:not(:last-child)::after{border-left-color:rgba(124,109,250,.35)}
+.sc{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:500;flex-shrink:0;background:var(--muted2);color:var(--muted);border:1px solid transparent;transition:.3s}
+.stab.active .sc{background:rgba(124,109,250,.15);color:var(--accent2);border-color:rgba(124,109,250,.3)}
+.stab.done .sc{background:rgba(6,214,160,.2);color:var(--accent);border-color:rgba(6,214,160,.4)}
+.sl{font-family:var(--mono);font-size:7px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:1px}
+.sn{font-family:var(--display);font-size:10px;font-weight:700;color:var(--muted);transition:.3s}
+.stab.active .sn,.stab.done .sn{color:var(--text)}.stab.done .sn{color:var(--accent)}
+.main{max-width:1100px;margin:0 auto;padding:24px 22px 60px}
+.screen{display:none}.screen.active{display:block;animation:fu .3s ease}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.sbadge{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;background:rgba(124,109,250,.1);color:var(--accent2);border:1px solid rgba(124,109,250,.2);margin-bottom:9px}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--accent2);animation:pu 2s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.3}}
+.stitle{font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:5px}
+.stitle em{font-style:normal;color:var(--accent2)}
+.sdesc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:12px}
+.pt{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:8px;letter-spacing:.8px;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.06);color:var(--muted)}
+.pill.req{background:rgba(255,107,107,.1);color:var(--accent3)}
+.drop{border:2px dashed var(--border2);border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;transition:.25s}
+.drop:hover,.drop.drag{border-color:var(--accent2);background:rgba(124,109,250,.04)}
+.drop.has{border-style:solid;border-color:rgba(6,214,160,.4);background:rgba(6,214,160,.04)}
+.dico{font-size:26px;margin-bottom:7px;display:block}
+.dtitle{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:2px}
+.dsub{font-size:11px;color:var(--muted)}
+.fbar{display:none;align-items:center;gap:11px;padding:10px 14px;background:rgba(6,214,160,.07);border:1px solid rgba(6,214,160,.2);border-radius:9px;margin-top:9px}
+.fbar.on{display:flex}
+.fn{font-family:var(--mono);font-size:12px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm{font-size:10px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.fdel{background:none;border:none;color:var(--accent3);cursor:pointer;font-size:14px;opacity:.7;transition:.2s}
+.fdel:hover{opacity:1}
+.hint{background:rgba(124,109,250,.07);border:1px solid rgba(124,109,250,.15);border-radius:var(--rx);padding:10px 13px;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:12px;display:flex;gap:8px}
+.hint.warn{background:rgba(244,162,97,.07);border-color:rgba(244,162,97,.2);color:var(--accent4)}
+.hint.err{background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.2);color:var(--accent3)}
+.hint.ok{background:rgba(6,214,160,.07);border-color:rgba(6,214,160,.2);color:var(--accent)}
+.hi{font-size:13px;flex-shrink:0;margin-top:1px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+.stat-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px}
+.stat-lbl{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:5px}
+.stat-val{font-family:var(--display);font-size:20px;font-weight:800}
+.stat-val.c1{color:var(--accent)}.stat-val.c2{color:var(--accent3)}.stat-val.c3{color:var(--text)}.stat-val.c4{color:var(--accent2)}
+.sheet-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
+.sheet-btn{padding:9px 8px;border:1.5px solid var(--border);border-radius:var(--rx);text-align:center;cursor:pointer;transition:.2s;background:var(--card2)}
+.sheet-btn:hover{border-color:var(--border2)}
+.sheet-btn.sel{border-color:rgba(124,109,250,.5);background:rgba(124,109,250,.1)}
+.sheet-btn-ico{font-size:14px;display:block;margin-bottom:4px}
+.sheet-btn-lbl{font-family:var(--display);font-size:10px;font-weight:700;color:var(--muted)}
+.sheet-btn.sel .sheet-btn-lbl{color:var(--accent2)}
+.sheet-btn-sub{font-size:8px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sg{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:13px}
+.sgl{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px}
+.fi{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:var(--rx);padding:7px 10px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;transition:.2s}
+.fi:focus{border-color:rgba(124,109,250,.5);background:rgba(124,109,250,.03)}
+.fi::placeholder{color:var(--muted)}
+.fi option{background:var(--card2);color:var(--text)}
+.yr-row{display:flex;gap:7px;align-items:center;margin-top:6px}
+.yr-btn{width:30px;height:30px;border:1px solid var(--border2);border-radius:var(--rx);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:14px;font-weight:700;transition:.2s;flex-shrink:0}
+.yr-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.note{font-size:9px;color:var(--muted);margin-top:4px;line-height:1.5;font-family:var(--mono)}
+.hval-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.hval-col{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden}
+.hval-head{padding:7px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;justify-content:space-between}
+.hval-list{max-height:160px;overflow-y:auto;padding:6px}
+.hval-item{display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:5px;font-family:var(--mono);font-size:9.5px;margin-bottom:2px}
+.hval-item.ok{color:var(--accent);background:rgba(6,214,160,.06)}
+.hval-item.miss{color:var(--accent3);background:rgba(255,107,107,.06)}
+.hval-item.extra{color:var(--accent4);background:rgba(244,162,97,.06)}
+.type-badge{font-size:7px;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-weight:600}
+.type-date{background:rgba(77,166,255,.15);color:#4da6ff;border:1px solid rgba(77,166,255,.25)}
+.type-datetime{background:rgba(176,77,255,.15);color:#b04dff;border:1px solid rgba(176,77,255,.25)}
+.type-time{background:rgba(77,255,217,.15);color:#4dffd9;border:1px solid rgba(77,255,217,.25)}
+.type-int64{background:rgba(6,214,160,.15);color:var(--accent);border:1px solid rgba(6,214,160,.25)}
+.type-float{background:rgba(255,224,77,.15);color:#ffe04d;border:1px solid rgba(255,224,77,.25)}
+.type-percent{background:rgba(255,145,77,.15);color:#ff914d;border:1px solid rgba(255,145,77,.25)}
+.type-binary{background:rgba(6,214,160,.25);color:#fff;border:1px solid var(--accent)}
+.type-text{background:rgba(153,153,187,.1);color:#9999bb;border:1px solid rgba(153,153,187,.2)}
+.excel-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--rs);background:rgba(255,255,255,.01)}
+.excel-grid{display:flex;min-width:max-content;align-items:stretch}
+.excel-col{display:flex;flex-direction:column;min-width:120px;max-width:155px;flex-shrink:0;border-right:1px solid var(--border);transition:opacity .15s;cursor:pointer}
+.excel-col:last-child{border-right:none}
+.excel-col.dragging{opacity:.3}
+.excel-col.drag-over{background:rgba(6,214,160,.06);border-left:2px solid var(--accent)}
+.excel-col.sel-col{background:rgba(124,109,250,.06)}
+.col-letter{background:rgba(124,109,250,.1);border-bottom:1.5px solid var(--border);text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent2);padding:5px 4px;user-select:none}
+.col-hd{background:rgba(6,214,160,.07);border-bottom:1px solid var(--border);padding:6px 8px;display:flex;align-items:flex-start;gap:5px;cursor:grab;user-select:none;min-height:50px}
+.col-hd:active{cursor:grabbing}
+.col-hd-name{font-family:var(--mono);font-size:8.5px;font-weight:700;color:var(--accent);word-break:break-all;line-height:1.3;flex:1}
+.col-samples{display:flex;flex-direction:column}
+.col-cell{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--mono);font-size:8.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:24px}
+.col-cell:nth-child(odd){background:rgba(255,255,255,.01)}
+.col-cell.num-cell{color:var(--accent);text-align:right}
+.col-cell.date-cell{color:#4da6ff}
+.col-cell.computed-cell{color:var(--accent2);font-style:italic}
+.col-toolbar{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.col-tool-btn{padding:5px 11px;border:1px solid var(--border);border-radius:var(--rx);background:var(--card2);color:var(--muted);cursor:pointer;font-family:var(--mono);font-size:9px;transition:.2s}
+.col-tool-btn:hover{border-color:var(--border2);color:var(--text)}
+.type-toggle-row{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}
+.type-sel-btn{padding:2px 6px;border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:7px;border:1px solid var(--border);background:transparent;color:var(--muted);transition:.15s}
+.type-sel-btn:hover{border-color:var(--border2);color:var(--text)}
+.type-sel-btn.active{background:rgba(124,109,250,.15);border-color:rgba(124,109,250,.4);color:var(--accent2)}
+.diff-ctrl{display:flex;align-items:center;gap:7px;margin-bottom:10px;flex-wrap:wrap}
+.df-btn{padding:5px 11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--card2);transition:.2s}
+.df-btn.on{border-color:rgba(124,109,250,.4);color:var(--accent2);background:rgba(124,109,250,.08)}
+.df-btn.on.nf{border-color:rgba(6,214,160,.4);color:var(--accent);background:rgba(6,214,160,.08)}
+.df-btn.on.df{border-color:rgba(255,107,107,.4);color:var(--accent3);background:rgba(255,107,107,.08)}
+.pvt-wrap{overflow-x:auto;border-radius:var(--rs);border:1px solid var(--border)}
+.pvt{width:100%;border-collapse:collapse;font-size:10px;font-family:var(--mono)}
+.pvt th{background:rgba(124,109,250,.08);padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500;white-space:nowrap;font-size:9px;text-transform:uppercase}
+.pvt td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap}
+.pvt tr.rn td{color:var(--text)}.pvt tr.rd td{color:var(--muted);opacity:.5}
+.ai-start-btn{width:100%;padding:14px;border:2px solid rgba(124,109,250,.3);border-radius:var(--r);background:rgba(124,109,250,.07);color:var(--accent2);cursor:pointer;font-family:var(--display);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:.25s;margin-bottom:13px}
+.ai-start-btn:hover{background:rgba(124,109,250,.15);border-color:rgba(124,109,250,.5)}
+.ai-start-btn:disabled{opacity:.35;cursor:not-allowed}
+.ai-panel{display:none;background:linear-gradient(135deg,rgba(124,109,250,.06),rgba(6,214,160,.04));border:1px solid rgba(124,109,250,.2);border-radius:var(--r);padding:20px;margin-bottom:13px}
+.ai-panel.on{display:block}
+.ai-panel-title{font-family:var(--display);font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:13px;display:flex;align-items:center;gap:7px}
+.ai-text{font-size:12px;line-height:1.8;color:var(--text);white-space:pre-wrap}
+.ai-text h3{font-family:var(--display);font-size:13px;font-weight:700;color:var(--accent);margin:14px 0 5px}
+.ai-text p{color:var(--muted);margin-bottom:7px}
+.ai-section{margin-bottom:11px;padding:11px 13px;background:rgba(255,255,255,.03);border-radius:var(--rx);border-left:3px solid var(--accent2)}
+.ai-loading{text-align:center;padding:30px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(124,109,250,.3);border-top-color:var(--accent2);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sggs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.sgc{background:var(--card2);border:1px solid var(--border);border-radius:var(--rx);padding:8px 10px;display:flex;align-items:center;gap:6px}
+.scd{width:6px;height:6px;border-radius:2px;flex-shrink:0}
+.scd.on{background:var(--accent)}.scd.upd{background:var(--accent2)}
+.scn{font-size:9px;font-family:var(--mono);color:var(--muted)}.scn.on{color:var(--text)}
+.btnrow{display:flex;gap:8px;margin-top:15px;justify-content:flex-end;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 18px;border:none;border-radius:var(--rx);cursor:pointer;font-family:var(--display);font-size:12px;font-weight:700;transition:.2s}
+.btn-p{background:var(--accent2);color:#fff}.btn-p:hover{background:#6a5de0}.btn-p:disabled{opacity:.35;cursor:not-allowed}
+.btn-g{background:transparent;border:1px solid var(--border);color:var(--muted)}.btn-g:hover{border-color:var(--border2);color:var(--text)}
+.btn-e{background:linear-gradient(135deg,rgba(124,109,250,.2),rgba(6,214,160,.2));border:1px solid rgba(124,109,250,.3);color:var(--accent2)}.btn-e:disabled{opacity:.35;cursor:not-allowed}
+.btn-bms{background:rgba(244,162,97,.12);border:1px solid rgba(244,162,97,.3);color:var(--accent4)}.btn-bms:disabled{opacity:.35;cursor:not-allowed}
+.btn-pdf{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);color:var(--accent3)}.btn-pdf:disabled{opacity:.35;cursor:not-allowed}
+.sbar{display:none;padding:8px 12px;border-radius:var(--rx);font-size:11px;font-family:var(--mono);margin-top:8px}
+.sbar.on{display:block}
+.sbar.ok{background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.2);color:var(--accent)}
+.sbar.err{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);color:var(--accent3)}
+.sbar.warn{background:rgba(244,162,97,.08);border:1px solid rgba(244,162,97,.2);color:var(--accent4)}
+.prog-wrap{height:3px;background:var(--muted2);border-radius:2px;overflow:hidden;margin:9px 0}
+.prog-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent));width:0%;transition:width .4s}
+.trtag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(124,109,250,.08);border:1px solid rgba(124,109,250,.2);border-radius:5px;font-size:9px;font-family:var(--mono);color:var(--accent2);margin:2px}
+.trdot{width:4px;height:4px;border-radius:50%;background:var(--accent2);flex-shrink:0}
+.theme-switch {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  padding: 4px 10px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+}
+</style>
+</head>
+<body class="grey">
+
+<div class="hdr">
+  <div class="hl">
+    <div class="logo">🔄 QA <span>Portal</span></div>
+    <div class="sep"></div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Kalite Raporu Güncelleme</div>
+  </div>
+  <div class="hdr-btns">
+    <div class="theme-switch"></div>
+    <button class="nav-btn" style="background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.3);color:var(--accent)" onclick="location.href='index.html'">🏠 Ana Sayfa</button>
+    <button class="nav-btn" onclick="location.href='qareportscreated.html'">📊 Rapor Hazırlama</button>
+    <button class="back-btn" onclick="history.back()">← Geri</button>
+  </div>
+</div>
+
+<div class="sw"><div class="st">
+  <div class="stab active" id="tab1"><div class="sc">01</div><div><div class="sl">Step 1</div><div class="sn">Rapor Yükle</div></div></div>
+  <div class="stab" id="tab2"><div class="sc">02</div><div><div class="sl">Step 2</div><div class="sn">Yeni Data</div></div></div>
+  <div class="stab" id="tab3"><div class="sc">03</div><div><div class="sl">Step 3</div><div class="sn">Diff & Kontrol</div></div></div>
+  <div class="stab" id="tab4"><div class="sc">04</div><div><div class="sl">Step 4</div><div class="sn">Başlık Düzeni</div></div></div>
+  <div class="stab" id="tab5"><div class="sc">05</div><div><div class="sl">Step 5</div><div class="sn">AI Analiz</div></div></div>
+  <div class="stab" id="tab6"><div class="sc">06</div><div><div class="sl">Step 6</div><div class="sn">Export</div></div></div>
+</div></div>
+
+<div class="main">
+  <!-- STEP 1 – Rapor Yükle (içerik aynı, kısaltılmıştır) -->
+  <div class="screen active" id="s1">
+    <div class="sbadge"><span class="dot"></span>STEP 1 / 6</div>
+    <div class="stitle">Mevcut Raporu <em>Yükle</em></div>
+    <div class="sdesc">Daha önce oluşturulmuş Excel raporunu yükleyin. Proje adı ve ayarlar otomatik alınır.</div>
+    <div class="hint ok"><div class="hi">ℹ️</div><div><strong>BMSData</strong> sheeti standart olarak önerilir. Proje adı dosya adından otomatik alınır — değiştirebilirsiniz.</div></div>
+    <div class="panel">
+      <div class="pt">📂 Mevcut Excel Raporu <span class="pill req">ZORUNLU</span></div>
+      <div class="drop" id="exDrop"><span class="dico">📊</span><div class="dtitle">Excel raporunu sürükleyin</div><div class="dsub">veya tıklayarak seçin · .xlsx</div></div>
+      <input type="file" id="exFile" hidden accept=".xlsx,.xls">
+      <div class="fbar" id="exFBar"><span>📊</span><span class="fn" id="exFN"></span><span class="fm" id="exFM"></span><button class="fdel" id="exFDel">✕</button></div>
+      <div class="sbar" id="exSt"></div>
+    </div>
+    <div id="sheetArea" style="display:none">
+      <div class="panel">
+        <div class="pt">📋 Sheet Seçimi</div>
+        <div class="hint warn"><div class="hi">⚠️</div><div>Standart BMSData sheeti beklenmektedir. Farklı bir sheet seçerseniz başlık yapısı uyuşmayabilir.</div></div>
+        <div class="sheet-grid" id="sheetBtns"></div>
+        <div class="hint" id="sheetHint" style="margin-bottom:0"><div class="hi">💡</div><div id="sheetHintTxt">Sheet seçin</div></div>
+      </div>
+      <div class="panel">
+        <div class="pt">📊 Rapor Özeti</div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-lbl">Toplam Kayıt</div><div class="stat-val c3" id="exTotal">—</div></div>
+          <div class="stat-card"><div class="stat-lbl">Benzersiz IDENT</div><div class="stat-val c1" id="exIdents">—</div></div>
+          <div class="stat-card"><div class="stat-lbl">Sütun Sayısı</div><div class="stat-val c4" id="exCols">—</div></div>
+          <div class="stat-card"><div class="stat-lbl">Son Kayıt</div><div class="stat-val c3" id="exDate" style="font-size:13px;color:var(--muted)">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="pt">🏷️ Proje Bilgileri</div>
+      <div class="sg2">
+        <div class="sg">
+          <div class="sgl">Proje Adı</div>
+          <input class="fi" id="pName" placeholder="Dosya adından otomatik alınır" oninput="v1();updateExpName()">
+          <div class="note">Dosya adından alındı — düzenleyebilirsiniz.</div>
+        </div>
+        <div class="sg">
+          <div class="sgl">Rapor Ayı & Yılı</div>
+          <select class="fi" id="raporAy" onchange="updateExpName()" style="margin-bottom:6px">
+            <option value="">Ay seçin...</option>
+            <option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option>
+            <option>Mayıs</option><option>Haziran</option><option>Temmuz</option><option>Ağustos</option>
+            <option>Eylül</option><option>Ekim</option><option>Kasım</option><option>Aralık</option>
+          </select>
+          <div class="yr-row">
+            <button class="yr-btn" onclick="adjYear(-1)">−</button>
+            <input class="fi" id="raporYil" type="number" style="text-align:center;flex:1" oninput="updateExpName()">
+            <button class="yr-btn" onclick="adjYear(1)">+</button>
+          </div>
+          <div class="note" id="expNamePreview">Dosya adı otomatik oluşturulur</div>
+        </div>
+      </div>
+    </div>
+    <div class="btnrow"><button class="btn btn-p" id="s1Next" disabled onclick="gotoStep(2)">Yeni Data Yükle →</button></div>
+  </div>
+
+  <!-- STEP 2 – Yeni Data (içerik aynı) -->
+  <div class="screen" id="s2">
+    <div class="sbadge"><span class="dot"></span>STEP 2 / 6</div>
+    <div class="stitle">Yeni <em>Data</em> Yükle</div>
+    <div class="sdesc">Yeni CSV/Excel datasını yükleyin. Başlıklar mevcut raporla otomatik karşılaştırılır.</div>
+    <div class="panel">
+      <div class="pt">📥 Yeni CSV Dosyası <span class="pill req">ZORUNLU</span></div>
+      <div class="drop" id="newDrop"><span class="dico">📄</span><div class="dtitle">Yeni CSV/Excel dosyasını sürükleyin</div><div class="dsub">veya tıklayarak seçin</div></div>
+      <input type="file" id="newFile" hidden accept=".csv,.xlsx,.xls">
+      <div class="fbar" id="newFBar"><span>✅</span><span class="fn" id="newFN"></span><span class="fm" id="newFM"></span><button class="fdel" id="newFDel">✕</button></div>
+      <div class="sbar" id="newSt"></div>
+    </div>
+    <div id="hvalArea" style="display:none">
+      <div class="panel">
+        <div class="pt">🔍 Başlık Uyuşma Kontrolü</div>
+        <div class="sbar on" id="hvalSt"></div>
+        <div class="hval-grid">
+          <div class="hval-col"><div class="hval-head"><span style="color:var(--accent)">✅ Eşleşen Başlıklar</span><span id="hvalMatchCnt">0</span></div><div class="hval-list" id="hvalMatch"></div></div>
+          <div class="hval-col"><div class="hval-head"><span style="color:var(--accent3)">❌ Eksik Başlıklar</span><span id="hvalMissCnt">0</span></div><div class="hval-list" id="hvalMiss"></div></div>
+        </div>
+        <div class="hval-col"><div class="hval-head"><span style="color:var(--accent4)">⚠ Fazladan Başlıklar</span><span id="hvalExtraCnt">0</span></div><div class="hval-list" id="hvalExtra"></div></div>
+      </div>
+    </div>
+    <div class="btnrow"><button class="btn btn-g" onclick="gotoStep(1)">← Geri</button><button class="btn btn-p" id="s2Next" disabled onclick="runCheck()">IDENT Kontrolü Yap →</button></div>
+  </div>
+
+  <!-- STEP 3 – Diff & Kontrol (içerik aynı) -->
+  <div class="screen" id="s3">
+    <div class="sbadge"><span class="dot"></span>STEP 3 / 6</div>
+    <div class="stitle">Diff &amp; <em>Kontrol</em></div>
+    <div class="sdesc">IDENT karşılaştırması — yeni kayıtlar yeşil, duplikasyonlar kırmızı gösterilir.</div>
+    <div class="panel" id="checkPanel"><div style="text-align:center;padding:24px"><div class="spinner" style="width:26px;height:26px;border-width:3px;display:inline-block;margin-bottom:9px"></div><div style="font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:4px">Kontrol yapılıyor...</div><div class="prog-wrap" style="max-width:280px;margin:9px auto 0"><div class="prog-bar" id="progBar"></div></div><div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:6px" id="progMsg">Kayıtlar okunuyor...</div></div></div>
+    <div id="resultArea" style="display:none">
+      <div class="panel"><div class="pt">📊 Kontrol Sonucu</div><div class="stat-grid"><div class="stat-card"><div class="stat-lbl">Yeni Kayıt</div><div class="stat-val c1" id="stNew">0</div></div><div class="stat-card"><div class="stat-lbl">Duplikasyon</div><div class="stat-val c2" id="stDup">0</div></div><div class="stat-card"><div class="stat-lbl">Toplam</div><div class="stat-val c3" id="stTot">0</div></div><div class="stat-card"><div class="stat-lbl">Eklenme %</div><div class="stat-val c4" id="stPct">—</div></div></div><div class="sbar on" id="identSt"></div></div>
+      <div class="panel"><div class="pt">🔄 Veri Diff</div><div class="diff-ctrl"><div class="df-btn on" id="dfAll" onclick="setF('all',this)">Tümü</div><div class="df-btn nf" id="dfNew" onclick="setF('new',this)">✅ Yeni</div><div class="df-btn df" id="dfDup" onclick="setF('dup',this)">✕ Dup</div><div style="display:flex;align-items:center;gap:5px;margin-left:auto"><span style="font-size:10px;color:var(--muted)">Göster:</span><button class="col-tool-btn a" onclick="setDR(10,this)">10</button><button class="col-tool-btn" onclick="setDR(25,this)">25</button><button class="col-tool-btn" onclick="setDR(50,this)">50</button></div></div><div class="pvt-wrap"><table class="pvt"><thead id="dH"></thead><tbody id="dB"></tbody></table></div></div>
+    </div>
+    <div class="btnrow"><button class="btn btn-g" onclick="gotoStep(2)">← Geri</button><button class="btn btn-p" id="s3Next" disabled onclick="gotoStep(4)">Başlık Düzenine Geç →</button></div>
+  </div>
+
+  <!-- STEP 4 – Başlık Düzeni (içerik aynı) -->
+  <div class="screen" id="s4">
+    <div class="sbadge"><span class="dot"></span>STEP 4 / 6</div>
+    <div class="stitle">Başlık <em>Düzenleme</em></div>
+    <div class="sdesc">Tüm sütunları (hesaplananlar dahil) sürükleyerek yeniden sıralayın. Veri tiplerini kontrol edin.</div>
+    <div class="panel"><div class="pt">📊 Tespit Edilen Veri Tipleri</div><div class="hint"><div class="hi">💡</div><div>Date/DateTime/Time → Metin olarak tutulur (Türkçe format). INT64 → tam sayı. Float → ondalık. Percent → yüzde. Binary → 0/1 sayısal. Text → metin. Her başlık üzerindeki tipo toggleları ile değiştirebilirsiniz.</div></div><div id="typeSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px"></div></div>
+    <div class="panel"><div class="pt">🗂️ Sütun Sırası <span class="pill">SÜRÜKLE & BIRAK — TÜM SÜTUNLAR</span></div><div class="col-toolbar"><button class="col-tool-btn" onclick="resetColOrder()">↺ Orijinal</button><button class="col-tool-btn" onclick="moveCol(-1)">← Sola</button><button class="col-tool-btn" onclick="moveCol(1)">Sağa →</button><button class="col-tool-btn" onclick="moveColEdge(0)">⇤ Başa</button><button class="col-tool-btn" onclick="moveColEdge(1)">⇥ Sona</button><span style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:auto" id="selColLbl"></span></div><div class="excel-wrap"><div class="excel-grid" id="excelGrid"></div></div><div class="sbar" id="colSt"></div></div>
+    <div class="btnrow"><button class="btn btn-g" onclick="gotoStep(3)">← Geri</button><button class="btn btn-p" onclick="gotoStep(5)">AI Analizine Geç →</button></div>
+  </div>
+
+  <!-- STEP 5 – AI Analiz (içerik aynı) -->
+  <div class="screen" id="s5">
+    <div class="sbadge"><span class="dot"></span>STEP 5 / 6</div>
+    <div class="stitle">AI <em>Analizi</em></div>
+    <div class="sdesc">Güncellenmiş datayı yapay zeka ile analiz ettirin. Başarı oranları, kalite skoru ve önerileri görün.</div>
+    <button class="ai-start-btn" id="aiStartBtn" onclick="runAI()">🤖 AI Analizi Başlat (Claude Sonnet)</button>
+    <div class="ai-panel" id="aiPanel"><div class="ai-panel-title">🤖 Claude Analiz Sonucu <span id="aiGenDate" style="font-size:10px;color:var(--muted);margin-left:auto"></span></div><div id="aiContent"><div class="ai-loading"><span class="spinner"></span>Analiz yapılıyor...</div></div></div>
+    <div class="btnrow"><button class="btn btn-g" onclick="gotoStep(4)">← Geri</button><button class="btn btn-p" onclick="gotoStep(6)">Exporta Geç →</button></div>
+  </div>
+
+  <!-- STEP 6 – Export (içerik aynı) -->
+  <div class="screen" id="s6">
+    <div class="sbadge"><span class="dot"></span>STEP 6 / 6</div>
+    <div class="stitle">Export &amp; <em>Kaydet</em></div>
+    <div class="sdesc">Güncellenmiş raporu Excel veya PDF olarak indirin.</div>
+    <div class="panel"><div class="pt">⚙️ Uygulanacak Dönüşümler</div><div><span class="trtag"><span class="trdot"></span>Mevcut + Yeni birleştirilir</span><span class="trtag"><span class="trdot"></span>Adlar: İsim Soyisim</span><span class="trtag"><span class="trdot"></span>Başarı 1/0 INT64</span><span class="trtag"><span class="trdot"></span>Hafta/Ay/Yıl güncellenir</span><span class="trtag"><span class="trdot"></span>Tarihler Türkçe format</span><span class="trtag"><span class="trdot"></span>ID büyük sayılar → Text</span><span class="trtag"><span class="trdot"></span>Özet sheetler yeniden hesaplanır</span></div></div>
+    <div class="panel"><div class="pt">📑 Oluşturulacak Sheetler</div><div class="sggs"><div class="sgc"><div class="scd upd"></div><div class="scn on">Ana Sayfa</div></div><div class="sgc"><div class="scd upd"></div><div class="scn on">Özet</div></div><div class="sgc"><div class="scd upd"></div><div class="scn on">Değerlendirici Özet</div></div><div class="sgc"><div class="scd upd"></div><div class="scn on">Kriter Bazlı | Ay</div></div><div class="sgc"><div class="scd upd"></div><div class="scn on">Kriter Bazlı | Hafta</div></div><div class="sgc" style="border-color:rgba(6,214,160,.3)"><div class="scd on"></div><div class="scn on" style="color:var(--accent)">BMSData ← Son</div></div></div></div>
+    <div class="panel"><div class="pt">💾 Export Seçenekleri</div><div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:9px">Dosya adı: <strong id="expNameDisplay" style="color:var(--accent)">—</strong></div><div class="btnrow" style="margin-top:0;justify-content:flex-start"><button class="btn btn-bms" onclick="doExportBMSOnly()">📥 Sadece BMSData</button><button class="btn btn-e" onclick="doExport()">⬇ Tam Rapor (Excel)</button><button class="btn btn-pdf" onclick="exportPDF()">📄 PDF Raporu İndir</button></div></div>
+    <div class="btnrow"><button class="btn btn-g" onclick="gotoStep(5)">← Geri</button></div>
+    <div class="sbar" id="expSt"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text"></div>
+</footer>
+
+<script src="js/theme.js"></script>
+<script src="js/common.js"></script>
+<script src="js/qareportsupdate.js"></script>
+</body>
+</html>
