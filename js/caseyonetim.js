@@ -54,12 +54,12 @@ async function loadStats() {
   const resolved = cases.filter(c => c.status === 'çözüldü').length;
   const open = cases.filter(c => c.status !== 'çözüldü' && c.status !== 'reddedildi').length;
   let avgTime = 0;
-  const times = cases.filter(c => c.resolutionTime).map(c => c.resolutionTime);
+  const times = cases.filter(c => c.resolutionMinutes).map(c => c.resolutionMinutes);
   if (times.length) avgTime = (times.reduce((a,b)=>a+b,0)/times.length).toFixed(1);
   document.getElementById('statsContainer').innerHTML = `
     <div class="stat-card"><div class="stat-number">${total}</div><div>Toplam Case</div></div>
     <div class="stat-card"><div class="stat-number">${resolved}</div><div>Çözülen</div></div>
-    <div class="stat-card"><div class="stat-number">${avgTime}</div><div>Ort. Çözüm (gün)</div></div>
+    <div class="stat-card"><div class="stat-number">${avgTime}</div><div>Ort. Çözüm (dk)</div></div>
     <div class="stat-card"><div class="stat-number">${open}</div><div>Aktif Case</div></div>
   `;
 }
@@ -109,6 +109,8 @@ async function renderCasesTable() {
     return `<tr><td>${shortId}</td><td>${escapeHtml(topicTitle)}</td><td>${escapeHtml(c.title)}</td><td>${escapeHtml(c.fullname)}</td><td>${c.email}</td><td><span class="status-badge status-${c.status}">${c.status}</span></td><td>${c.priority}</td><td>${new Date(c.createdAt.toDate()).toLocaleDateString('tr')}</td><td class="row-actions"><button class="btn btn-ghost btn-sm" onclick="openCaseDetail('${c.id}')">Detay</button><button class="btn btn-danger btn-sm" onclick="deleteCase('${c.id}')">Sil</button></td></tr>`;
   }).join('');
 }
+
+// ==================== CASE DETAY (MANUEL SÜRE + DATE) ====================
 window.openCaseDetail = async function(caseId) {
   const doc = await db.collection('cases').doc(caseId).get();
   if (!doc.exists) return;
@@ -118,22 +120,41 @@ window.openCaseDetail = async function(caseId) {
   const topic = topics.find(t => t.id === c.topicId);
   const notesHtml = (c.notes || []).map(n => `<div class="note-item"><strong>${new Date(n.createdAt.toDate()).toLocaleString()}</strong> - ${escapeHtml(n.text)} (${n.createdBy})</div>`).join('') || 'Not yok';
   const resolvedAtValue = c.resolvedAt ? new Date(c.resolvedAt.toDate()).toISOString().slice(0,10) : '';
+  const resolutionMinutes = c.resolutionMinutes || '';
   document.getElementById('caseDetailContent').innerHTML = `
     <div><strong>Case ID:</strong> ${c.id}</div>
     <div><strong>Kullanıcı:</strong> ${escapeHtml(c.fullname)} (${c.email})</div>
     <div><strong>Konu:</strong> ${topic ? escapeHtml(topic.title) : '-'}</div>
     <div><strong>Başlık:</strong> ${escapeHtml(c.title)}</div>
     <div><strong>Açıklama:</strong> ${escapeHtml(c.description)}</div>
-    <div><strong>Durum:</strong> <select id="detailStatus"><option value="beklemede" ${c.status==='beklemede'?'selected':''}>Beklemede</option><option value="sürüyor" ${c.status==='sürüyor'?'selected':''}>Sürüyor</option><option value="çözüldü" ${c.status==='çözüldü'?'selected':''}>Çözüldü</option><option value="reddedildi" ${c.status==='reddedildi'?'selected':''}>Reddedildi</option></select></div>
-    <div><strong>Öncelik:</strong> <select id="detailPriority"><option value="düşük" ${c.priority==='düşük'?'selected':''}>Düşük</option><option value="orta" ${c.priority==='orta'?'selected':''}>Orta</option><option value="yüksek" ${c.priority==='yüksek'?'selected':''}>Yüksek</option></select></div>
-    <div><strong>Çözen Kişi:</strong> <select id="detailResolvedBy"><option value="">Seçiniz</option>${users.map(u => `<option value="${u.id}" ${c.resolvedBy===u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.email})</option>`).join('')}</select></div>
+    <div><strong>Durum:</strong> <select id="detailStatus">
+      <option value="beklemede" ${c.status==='beklemede'?'selected':''}>Beklemede</option>
+      <option value="sürüyor" ${c.status==='sürüyor'?'selected':''}>Sürüyor</option>
+      <option value="çözüldü" ${c.status==='çözüldü'?'selected':''}>Çözüldü</option>
+      <option value="reddedildi" ${c.status==='reddedildi'?'selected':''}>Reddedildi</option>
+    </select></div>
+    <div><strong>Öncelik:</strong> <select id="detailPriority">
+      <option value="düşük" ${c.priority==='düşük'?'selected':''}>Düşük</option>
+      <option value="orta" ${c.priority==='orta'?'selected':''}>Orta</option>
+      <option value="yüksek" ${c.priority==='yüksek'?'selected':''}>Yüksek</option>
+    </select></div>
+    <div><strong>Çözen Kişi:</strong> <select id="detailResolvedBy">
+      <option value="">Seçiniz</option>${users.map(u => `<option value="${u.id}" ${c.resolvedBy===u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.email})</option>`).join('')}
+    </select></div>
     <div><strong>Çözülme Tarihi:</strong> <input type="date" id="detailResolvedAt" value="${resolvedAtValue}" class="form-input"></div>
-    <div><strong>Yeni Not:</strong> <textarea id="newNote" rows="2" class="form-input"></textarea><button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button></div>
+    <div><strong>Çözüm Süresi (Dakika):</strong> 
+      <input type="number" id="detailResolutionMinutes" value="${resolutionMinutes}" class="form-input" placeholder="Manuel süre (dk)" step="1" min="0">
+      <small class="muted">Not: Doldurulursa otomatik hesaplamayı geçersiz kılar.</small>
+    </div>
+    <div><strong>Yeni Not:</strong> <textarea id="newNote" rows="2" class="form-input"></textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:5px" onclick="addNote('${caseId}')">Not Ekle</button>
+    </div>
     <div><strong>Notlar:</strong><div id="notesArea">${notesHtml}</div></div>
     <div class="btn-row" style="margin-top:15px;"><button class="btn btn-primary" onclick="saveCaseDetail('${caseId}')">Kaydet</button></div>
   `;
   openModal('caseDetailModal');
 };
+
 window.addNote = async function(caseId) {
   const text = document.getElementById('newNote').value.trim();
   if (!text) return;
@@ -146,27 +167,49 @@ window.addNote = async function(caseId) {
   closeModal('caseDetailModal');
   openCaseDetail(caseId);
 };
+
 window.saveCaseDetail = async function(caseId) {
   const newStatus = document.getElementById('detailStatus').value;
   const newPriority = document.getElementById('detailPriority').value;
   const resolvedBy = document.getElementById('detailResolvedBy').value || null;
   let resolvedAtRaw = document.getElementById('detailResolvedAt').value;
   let resolvedAtTimestamp = resolvedAtRaw ? new Date(resolvedAtRaw) : null;
+  let manualMinutes = parseInt(document.getElementById('detailResolutionMinutes').value);
+  let resolutionMinutes = null;
+  
   const ref = db.collection('cases').doc(caseId);
   const doc = await ref.get();
   const created = doc.data().createdAt.toDate();
-  let update = { status: newStatus, priority: newPriority, updatedAt: new Date(), resolvedBy, resolvedAt: resolvedAtTimestamp };
+  
   if (newStatus === 'çözüldü') {
-    const endDate = resolvedAtTimestamp || new Date();
-    update.resolutionTime = Math.ceil((endDate - created) / (86400000));
-  } else {
-    update.resolutionTime = null;
+    if (!isNaN(manualMinutes) && manualMinutes > 0) {
+      resolutionMinutes = manualMinutes;
+    } else if (resolvedAtTimestamp) {
+      // Otomatik hesaplama (dakika cinsinden)
+      const diffMs = resolvedAtTimestamp - created;
+      resolutionMinutes = Math.round(diffMs / (1000 * 60));
+      if (resolutionMinutes < 0) resolutionMinutes = 0;
+    } else {
+      // Hiçbiri yoksa varsayılan 0
+      resolutionMinutes = 0;
+    }
   }
+  
+  const update = {
+    status: newStatus,
+    priority: newPriority,
+    updatedAt: new Date(),
+    resolvedBy: resolvedBy,
+    resolvedAt: resolvedAtTimestamp,
+    resolutionMinutes: resolutionMinutes
+  };
+  
   await ref.update(update);
   closeModal('caseDetailModal');
   refreshDashboard();
   if (document.getElementById('statsTab').style.display !== 'none') renderStats();
 };
+
 window.deleteCase = async function(caseId) {
   if (confirm('Silinsin mi?')) { await db.collection('cases').doc(caseId).delete(); refreshDashboard(); }
 };
@@ -263,39 +306,74 @@ async function testEmail() {
   } catch(err) { document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${err.text || err.message}</span>`; }
 }
 
-// ==================== İSTATİSTİKLER ====================
+// ==================== İSTATİSTİKLER ve EXCEL EXPORT ====================
 async function renderStats() {
   const cases = await loadCases();
   const users = await loadUsers();
   const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
-  // Sadece çözülmüş case'ler ve resolvedBy'si olanlar
-  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy && c.resolvedAt && c.createdAt);
+  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy && c.resolutionMinutes !== null && c.resolutionMinutes !== undefined);
   const stats = {};
   for (const c of resolvedCases) {
     const userId = c.resolvedBy;
-    if (!stats[userId]) stats[userId] = { count: 0, totalHours: 0 };
+    if (!stats[userId]) stats[userId] = { count: 0, totalMinutes: 0 };
     stats[userId].count++;
-    const created = c.createdAt.toDate();
-    const resolved = c.resolvedAt.toDate();
-    const hours = (resolved - created) / (1000 * 60 * 60);
-    stats[userId].totalHours += hours;
+    stats[userId].totalMinutes += c.resolutionMinutes;
   }
-  const labels = [], counts = [], avgHours = [];
+  const labels = [], counts = [], avgMinutes = [];
   for (const [userId, data] of Object.entries(stats)) {
     const name = userMap[userId] || userId.slice(-6);
     labels.push(name);
     counts.push(data.count);
-    avgHours.push((data.totalHours / data.count).toFixed(1));
+    avgMinutes.push((data.totalMinutes / data.count).toFixed(1));
   }
   const tableBody = document.getElementById('statsTableBody');
-  tableBody.innerHTML = labels.map((name, i) => `<tr><td>${escapeHtml(name)}</td><td>${counts[i]}</td><td>${avgHours[i]}</td><td>${(avgHours[i]/24).toFixed(1)} gün</td></tr>`).join('');
+  tableBody.innerHTML = labels.map((name, i) => `<tr><td>${escapeHtml(name)}</td><td>${counts[i]}</td><td>${avgMinutes[i]}</td><td>${(avgMinutes[i]/60).toFixed(1)} saat</td></tr>`).join('');
   if (window.statsChart) window.statsChart.destroy();
   const ctx = document.getElementById('statsChart').getContext('2d');
   window.statsChart = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'Çözülen Case Sayısı', data: counts, backgroundColor: '#7c3aed' }, { label: 'Ortalama Çözüm Süresi (saat)', data: avgHours, backgroundColor: '#f97316', yAxisID: 'y1' }] },
-    options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: 'Case Sayısı' } }, y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Saat' } } } }
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Çözülen Case Sayısı', data: counts, backgroundColor: '#7c3aed', yAxisID: 'y' },
+        { label: 'Ortalama Çözüm Süresi (dk)', data: avgMinutes, backgroundColor: '#f97316', yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'Case Sayısı' } },
+        y1: { position: 'right', beginAtZero: true, title: { display: true, text: 'Dakika' } }
+      }
+    }
   });
+}
+
+// Excel export: her çözülmüş case için ayrı satır, süreler dakika cinsinden
+async function exportToExcel() {
+  const cases = await loadCases();
+  const users = await loadUsers();
+  const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
+  const topics = await loadTopics();
+  const topicMap = Object.fromEntries(topics.map(t => [t.id, t.title]));
+  const resolvedCases = cases.filter(c => c.status === 'çözüldü' && c.resolvedBy);
+  const data = resolvedCases.map(c => ({
+    'Case ID': c.id,
+    'Başlık': c.title,
+    'Açıklama': c.description,
+    'Konu': topicMap[c.topicId] || 'Belirtilmemiş',
+    'Öncelik': c.priority,
+    'Oluşturan Kullanıcı': c.fullname,
+    'Oluşturan E-posta': c.email,
+    'Çözen Kişi': userMap[c.resolvedBy] || c.resolvedBy,
+    'Çözülme Tarihi': c.resolvedAt ? new Date(c.resolvedAt.toDate()).toLocaleString('tr') : '',
+    'Çözüm Süresi (dk)': c.resolutionMinutes !== undefined ? c.resolutionMinutes : '',
+    'Oluşturulma Tarihi': new Date(c.createdAt.toDate()).toLocaleString('tr')
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Çözülen Case\'ler');
+  XLSX.writeFile(wb, `case_cozum_raporu_${new Date().toISOString().slice(0,19)}.xlsx`);
 }
 
 // ==================== TAB MANAGEMENT ====================
