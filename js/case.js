@@ -18,9 +18,7 @@ async function loadTopics() {
   const snapshot = await db.collection('topics').where('active', '==', true).get();
   const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   const select = document.getElementById('caseTopic');
-  if (select) {
-    select.innerHTML = '<option value="">Seçiniz</option>' + topics.map(t => `<option value="${t.id}" data-responsible="${t.responsibleEmail || ''}">${escapeHtml(t.title)}</option>`).join('');
-  }
+  if (select) select.innerHTML = '<option value="">Seçiniz</option>' + topics.map(t => `<option value="${t.id}" data-responsible="${t.responsibleEmail || ''}">${escapeHtml(t.title)}</option>`).join('');
   return topics;
 }
 
@@ -43,7 +41,6 @@ window.createCase = async function() {
   }
 
   try {
-    // Topic bilgilerini al (sorumlu e-posta için)
     const topicDoc = await db.collection('topics').doc(topicId).get();
     const topicData = topicDoc.exists ? topicDoc.data() : {};
     const responsibleEmail = topicData.responsibleEmail || '';
@@ -61,47 +58,66 @@ window.createCase = async function() {
     };
     await newCaseRef.set(caseData);
 
-    // --- EmailJS ile bildirim gönder (admin + CC + sorumlu) ---
     const mailSettings = loadMailSettings();
-    if (mailSettings.publicKey && mailSettings.serviceId && mailSettings.templateId && typeof emailjs !== 'undefined') {
+    const baseUrl = window.location.origin + window.location.pathname.replace('case.html', 'caseyonetim.html');
+    let mailSent = false;
+
+    if (mailSettings.publicKey && mailSettings.serviceId && typeof emailjs !== 'undefined') {
       emailjs.init(mailSettings.publicKey);
-      
-      // Alıcı listesi: admin + sorumlu kişi
-      let toEmails = [mailSettings.adminEmail || 'admin@example.com'];
-      if (responsibleEmail && responsibleEmail.trim() !== '') {
-        toEmails.push(responsibleEmail);
+
+      // 1. Admin/CC Template'i (genel bildirim)
+      if (mailSettings.adminTemplateId) {
+        const toAddress = [mailSettings.adminEmail || 'admin@example.com'];
+        const ccList = mailSettings.ccEmail || '';
+        try {
+          await emailjs.send(mailSettings.serviceId, mailSettings.adminTemplateId, {
+            to_email: toAddress.join(','),
+            cc: ccList,
+            caseId: newCaseRef.id,
+            caseTitle: title,
+            caseDescription: description,
+            topicTitle: topicData.title || 'Belirtilmemiş',
+            topicDescription: topicData.description || '',
+            casePriorityText: priority === 'yüksek' ? 'Yüksek' : (priority === 'orta' ? 'Orta' : 'Düşük'),
+            caseStatusText: 'Beklemede',
+            createdAt: new Date().toLocaleString('tr'),
+            adminLink: baseUrl
+          });
+          mailSent = true;
+        } catch(e) { console.warn('Admin/CC mail hatası:', e); }
       }
-      // Benzersiz yap
-      toEmails = [...new Set(toEmails)];
-      
-      // CC'yi al (virgülle ayrılmış string)
-      let ccList = mailSettings.ccEmail || '';
-      
-      // Her bir alıcıya ayrı ayrı göndermek yerine, to alanına virgüllü liste yazılabilir
-      // EmailJS "to" alanında virgülle ayrılmış birden fazla e-postayı destekler.
-      const toAddress = toEmails.join(',');
-      
-      const templateParams = {
-        to_email: toAddress,
-        cc: ccList,
-        caseId: newCaseRef.id,
-        caseTitle: title,
-        caseDescription: description,
-        topicTitle: topicData.title || 'Belirtilmemiş',
-        topicDescription: topicData.description || '',
-        casePriorityText: priority === 'yüksek' ? 'Yüksek' : (priority === 'orta' ? 'Orta' : 'Düşük'),
-        caseStatusText: 'Beklemede',
-        createdAt: new Date().toLocaleString('tr'),
-        message: `Yeni bir case oluşturuldu. Detaylar için admin panele bakın.`
-      };
-      
-      await emailjs.send(mailSettings.serviceId, mailSettings.templateId, templateParams);
-      console.log('Bildirim maili gönderildi. Alıcılar:', toAddress, 'CC:', ccList);
-    } else {
-      console.warn('EmailJS ayarları eksik, mail gönderilmedi.');
+
+      // 2. Sorumlu Kişi Template'i (özel, çözümle butonlu)
+      if (responsibleEmail && mailSettings.responsibleTemplateId) {
+        try {
+          await emailjs.send(mailSettings.serviceId, mailSettings.responsibleTemplateId, {
+            to_email: responsibleEmail,
+            caseId: newCaseRef.id,
+            caseTitle: title,
+            caseDescription: description,
+            topicTitle: topicData.title || 'Belirtilmemiş',
+            casePriorityText: priority === 'yüksek' ? 'Yüksek' : (priority === 'orta' ? 'Orta' : 'Düşük'),
+            caseStatusText: 'Beklemede',
+            createdAt: new Date().toLocaleString('tr'),
+            createdBy: fullname,
+            createdByEmail: email,
+            notes: 'Henüz not eklenmemiş.',
+            cozumleLink: `${baseUrl}?caseId=${newCaseRef.id}&openDetail=true`
+          });
+          mailSent = true;
+        } catch(e) { console.warn('Sorumlu kişi mail hatası:', e); }
+      }
     }
 
-    statusEl.innerHTML = '<span style="color:#2e7d32">✅ Case başarıyla oluşturuldu. Case ID: ' + newCaseRef.id.slice(-6) + '</span>';
+    // Başarı mesajı (Case ID çok net gösteriliyor)
+    statusEl.innerHTML = `
+      <div style="background:#e8f5e9; border-radius:16px; padding:16px; text-align:center; margin-top:10px;">
+        <div style="font-size:14px; color:#2e7d32;">✅ Case başarıyla oluşturuldu!</div>
+        <div style="font-size:28px; font-weight:800; margin:10px 0; background:#2e7d32; color:white; padding:12px; border-radius:16px; letter-spacing:1px;">${newCaseRef.id.slice(-6)}</div>
+        <div style="font-size:12px; color:#2e7d32;">Case ID'nizi not alın. Sorgulama yapmak için yukarıdaki "Case Sorgula" sekmesini kullanabilirsiniz.</div>
+        ${mailSent ? '<div style="margin-top:10px; font-size:12px;">📧 Bildirim maili gönderildi.</div>' : '<div style="margin-top:10px; font-size:12px; color:#f57c00;">⚠️ Mail ayarları eksik olduğu için bildirim gönderilemedi.</div>'}
+      </div>
+    `;
     // Form temizleme
     document.getElementById('userFullname').value = '';
     document.getElementById('userEmail').value = '';
