@@ -3,7 +3,7 @@
   "maintenance": false,
   "maintenanceMessage": "Portal şu anda bakımda. Lütfen daha sonra tekrar deneyin.",
   "announcement": {
-    "active": false,
+    "active": true,
     "text": "Yeni özellikler eklendi! 🎉",
     "type": "warn"
   },
