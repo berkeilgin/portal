@@ -8,25 +8,34 @@ async function loadCommonData() {
       el.textContent = data.copyrightText || '© 2025 QA Portal. Tüm hakları saklıdır.';
     });
     
+    // Önce varsa eski bakım ve duyuru overlay'lerini kaldır
+    const oldMaint = document.getElementById('maintenance-overlay');
+    if (oldMaint) oldMaint.remove();
+    const oldBanner = document.getElementById('announcement-banner');
+    if (oldBanner) oldBanner.remove();
+    document.body.style.overflow = '';
+    document.body.style.marginTop = '0';
+    
     // Bakım modu
     if (data.maintenance === true) {
       const overlay = document.createElement('div');
       overlay.id = 'maintenance-overlay';
-      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;text-align:center;';
-      overlay.innerHTML = `<div style="font-size:48px;margin-bottom:20px;">🔧</div><h2>Bakım Modu</h2><p>${data.maintenanceMessage || 'Portal şu anda bakımda.'}</p>`;
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;text-align:center;font-family:sans-serif;';
+      overlay.innerHTML = `<div style="font-size:48px;margin-bottom:20px;">🔧</div><h2>Bakım Modu</h2><p>${data.maintenanceMessage || 'Portal şu anda bakımda. Lütfen daha sonra tekrar deneyin.'}</p>`;
       document.body.prepend(overlay);
       document.body.style.overflow = 'hidden';
     }
     
     // Duyuru banner
-    if (data.announcement?.active && data.announcement.text) {
+    if (data.announcement && data.announcement.active === true && data.announcement.text) {
       const banner = document.createElement('div');
+      banner.id = 'announcement-banner';
       const colors = { info: '#2196f3', success: '#4caf50', warn: '#ff9800', danger: '#f44336' };
-      banner.style.cssText = `position:fixed;top:0;left:0;width:100%;background:${colors[data.announcement.type] || '#2196f3'};color:white;padding:12px;text-align:center;z-index:9999;display:flex;justify-content:center;gap:16px;`;
-      banner.innerHTML = `<span>${data.announcement.text}</span><button id="closeAnnouncement" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 12px;border-radius:20px;cursor:pointer;">Kapat</button>`;
+      banner.style.cssText = `position:fixed;top:0;left:0;width:100%;background:${colors[data.announcement.type] || '#2196f3'};color:white;padding:12px;text-align:center;z-index:9999;display:flex;justify-content:center;gap:16px;flex-wrap:wrap;`;
+      banner.innerHTML = `<span>${data.announcement.text}</span><button id="closeAnnouncementBtn" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 12px;border-radius:20px;cursor:pointer;">Kapat</button>`;
       document.body.prepend(banner);
       document.body.style.marginTop = '52px';
-      document.getElementById('closeAnnouncement')?.addEventListener('click', () => {
+      document.getElementById('closeAnnouncementBtn')?.addEventListener('click', () => {
         banner.remove();
         document.body.style.marginTop = '0';
       });
