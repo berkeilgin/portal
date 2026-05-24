@@ -45,7 +45,7 @@ async function ghPut(path, content, sha, message) {
 function b64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 
-// ==================== LOAD DATA & RENDER SETTINGS ====================
+// ==================== LOAD DATA ====================
 async function loadData() {
   try {
     const result = await ghGet('tools.json');
@@ -57,9 +57,11 @@ async function loadData() {
     if (!data.copyrightText) data.copyrightText = '© 2025 QA Portal';
     
     // Toggle butonlarının durumunu yükle
-    document.getElementById('maintToggle').classList.toggle('on', data.maintenance === true);
+    const maintToggle = document.getElementById('maintToggle');
+    if (maintToggle) maintToggle.classList.toggle('on', data.maintenance === true);
+    const annToggle = document.getElementById('annToggle');
+    if (annToggle) annToggle.classList.toggle('on', data.announcement?.active === true);
     document.getElementById('maintMsg').value = data.maintenanceMessage || '';
-    document.getElementById('annToggle').classList.toggle('on', data.announcement?.active === true);
     document.getElementById('annText').value = data.announcement?.text || '';
     document.getElementById('annType').value = data.announcement?.type || 'info';
     document.getElementById('copyrightInput').value = data.copyrightText;
@@ -84,18 +86,35 @@ function renderToolsTable() {
   const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   const tbody = document.getElementById('toolsTableBody');
   tbody.innerHTML = data.tools.map(t => `
-    <table>
+    <tr>
       <td><img src="logos/${t.icon}" style="width:24px;" onerror="this.src='logos/logo.png'"></td>
       <td>${t.name}<br><span style="font-size:10px">${t.id}</span></td>
       <td>${catMap[t.cat]?.icon || ''} ${catMap[t.cat]?.label || t.cat}</td>
       <td class="url-cell">${t.url}</td>
-      <td><button class="toggle-switch ${t.isEnabled !== false ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isEnabled',this)"></button></td>
-      <td><button class="toggle-switch ${t.isNew ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isNew',this)"></button></td>
-      <td><button class="toggle-switch ${t.isTest ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isTest',this)"></button></td>
-      <td><button class="toggle-switch ${t.isBest ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isBest',this)"></button></td>
+      <td><button class="toggle-switch ${t.isEnabled !== false ? 'on' : ''}" data-id="${t.id}" data-field="isEnabled"></button></td>
+      <td><button class="toggle-switch ${t.isNew ? 'on' : ''}" data-id="${t.id}" data-field="isNew"></button></td>
+      <td><button class="toggle-switch ${t.isTest ? 'on' : ''}" data-id="${t.id}" data-field="isTest"></button></td>
+      <td><button class="toggle-switch ${t.isBest ? 'on' : ''}" data-id="${t.id}" data-field="isBest"></button></td>
       <td><button class="btn btn-ghost btn-sm" onclick="editTool('${t.id}')">✏️</button></td>
     </tr>
   `).join('');
+  
+  // Toggle butonlarına event listener ekle
+  document.querySelectorAll('#toolsTableBody .toggle-switch').forEach(btn => {
+    btn.removeEventListener('click', handleToolToggle);
+    btn.addEventListener('click', handleToolToggle);
+  });
+}
+
+function handleToolToggle(e) {
+  const btn = e.currentTarget;
+  const id = btn.dataset.id;
+  const field = btn.dataset.field;
+  const tool = data.tools.find(t => t.id === id);
+  if (tool) {
+    tool[field] = !tool[field];
+    btn.classList.toggle('on');
+  }
 }
 
 function renderCategoriesTable() {
@@ -103,8 +122,10 @@ function renderCategoriesTable() {
   tbody.innerHTML = data.categories.map((c, i) => `
     <tr>
       <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${i},-1)">▲</button> ${i+1}</td>
-      <td>${c.id}</td><td>${c.icon || ''} ${c.label}</td>
-      <td>${c.icon || ''}</td><td>${data.tools.filter(t => t.cat === c.id).length}</td>
+      <td>${c.id}</td>
+      <td>${c.icon || ''} ${c.label}</td>
+      <td>${c.icon || ''}</td>
+      <td>${data.tools.filter(t => t.cat === c.id).length}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editCategory('${c.id}')">✏️</button></td>
     </tr>
   `).join('');
@@ -119,11 +140,6 @@ function renderUsersTable() {
       <td><button class="btn btn-ghost btn-sm" onclick="editUser('${u.username}')">✏️</button></td>
     </tr>
   `).join('');
-}
-
-function toggleToolFlag(id, field, btn) {
-  const tool = data.tools.find(t => t.id === id);
-  if (tool) { tool[field] = !tool[field]; btn.classList.toggle('on'); }
 }
 
 function moveCategory(idx, dir) {
@@ -150,10 +166,10 @@ async function saveToGitHub() {
   if (!data || !fileSha) { alert('Veri yüklenmedi'); return; }
   
   // Toggle butonlarının durumunu oku
-  data.maintenance = document.getElementById('maintToggle').classList.contains('on');
+  data.maintenance = document.getElementById('maintToggle')?.classList.contains('on') || false;
   data.maintenanceMessage = document.getElementById('maintMsg').value;
   data.announcement = {
-    active: document.getElementById('annToggle').classList.contains('on'),
+    active: document.getElementById('annToggle')?.classList.contains('on') || false,
     text: document.getElementById('annText').value,
     type: document.getElementById('annType').value
   };
@@ -163,13 +179,14 @@ async function saveToGitHub() {
   btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
   try {
     await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, 'Admin güncelleme');
-    alert('✅ Kaydedildi! Sayfayı yenileyin.');
-    location.reload();
+    alert('✅ Kaydedildi! Değişiklikler aktif.');
+    // Sayfayı yenilemeden sadece banner/maintenance'i güncellemek için common.js'yi tetikle
+    if (typeof loadCommonData === 'function') loadCommonData();
   } catch(e) { alert('Hata: ' + e.message); }
   btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
 }
 
-// ==================== CASE STATS (MODERN) ====================
+// ==================== CASE STATS ====================
 async function loadCaseStats() {
   const cards = document.getElementById('caseStatsCards');
   const details = document.getElementById('caseStatsDetails');
@@ -213,6 +230,20 @@ async function loadCaseStats() {
   } catch(e) { cards.innerHTML = '<div class="status-bar err">Yüklenemedi</div>'; }
 }
 
+// ==================== TOGGLE EVENTLERİ (Bakım ve Duyuru) ====================
+function initToggles() {
+  const maintToggle = document.getElementById('maintToggle');
+  const annToggle = document.getElementById('annToggle');
+  if (maintToggle) {
+    maintToggle.removeEventListener('click', () => maintToggle.classList.toggle('on'));
+    maintToggle.addEventListener('click', () => maintToggle.classList.toggle('on'));
+  }
+  if (annToggle) {
+    annToggle.removeEventListener('click', () => annToggle.classList.toggle('on'));
+    annToggle.addEventListener('click', () => annToggle.classList.toggle('on'));
+  }
+}
+
 // ==================== LOGIN ====================
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const token = document.getElementById('githubToken').value.trim();
@@ -230,6 +261,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     currentUser = { username: userData.login, role: 'admin' };
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
     await loadData();
+    initToggles();
   } catch (err) { errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
 });
 
@@ -241,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('adminPanel').style.display = 'block';
     currentUser = { username: 'admin', role: 'admin' };
     document.getElementById('roleBadge').innerHTML = 'ADMIN';
-    loadData().catch(() => {
+    loadData().then(() => initToggles()).catch(() => {
       document.getElementById('loginScreen').style.display = 'block';
       document.getElementById('adminPanel').style.display = 'none';
       sessionStorage.removeItem('gh_token');
