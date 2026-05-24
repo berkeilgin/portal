@@ -20,7 +20,6 @@
   --display: 'Syne', sans-serif;
   --mono: 'DM Mono', monospace;
 }
-
 body.dark {
   --bg: #0d0d14;
   --surface: #141420;
@@ -32,7 +31,6 @@ body.dark {
   --muted: #6a6a88;
   --muted2: #42425e;
 }
-
 body.light {
   --bg: #f0f0f8;
   --surface: #fff;
@@ -44,7 +42,6 @@ body.light {
   --muted: #6666aa;
   --muted2: #c0c0dc;
 }
-
 body.tp {
   --bg: #0e0812;
   --surface: #14091c;
@@ -61,31 +58,4 @@ body.tp {
   --accent4: #f4a261;
   --shadow: 0 4px 24px rgba(120,0,150,.4);
 }
-
-.theme-switch {
-  display: flex;
-  gap: 6px;
-  background: var(--surface);
-  padding: 4px 10px;
-  border-radius: 40px;
-  border: 1px solid var(--border);
-}
-.theme-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 30px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--muted);
-  transition: .2s;
-  font-family: var(--font);
-}
-.theme-btn.active {
-  background: var(--accent2);
-  color: #fff;
-}
-.theme-btn:hover:not(.active) {
-  background: rgba(255,255,255,.1);
-  color: var(--text);
-}
+/* NOT: .theme-switch ve .theme-btn burada TANIMLANMAYACAK - base.css'te var */
