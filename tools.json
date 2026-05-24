@@ -385,6 +385,17 @@
       "isTest": false,
       "isBest": false,
       "url": "https://docs.google.com/spreadsheets/u/0/"
+    },
+    {
+      "id": "cx",
+      "name": "AA",
+      "icon": "logo.png",
+      "cat": "portal",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "case.html"
     }
   ],
   "users": [
