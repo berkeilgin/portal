@@ -1,3 +1,8 @@
+// ==================== SABİT REPO BİLGİLERİ ====================
+const GITHUB_OWNER = "berkeilgin";
+const GITHUB_REPO = "portal";
+const GITHUB_BRANCH = "main";
+
 // ==================== STATE ====================
 let data = null;
 let fileSha = null;
@@ -11,12 +16,10 @@ let uploadQueue = [];
 // ==================== GITHUB HELPERS ====================
 function getToken() { return sessionStorage.getItem('gh_token') || ''; }
 function apiBase() {
-  const owner = document.getElementById('ghOwner')?.value || 'berkeilgin';
-  const repo = document.getElementById('ghRepo')?.value || 'portal';
-  return `https://api.github.com/repos/${owner}/${repo}/contents`;
+  return `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`;
 }
 async function ghGet(path) {
-  const res = await fetch(`${apiBase()}/${path}?ref=main`, {
+  const res = await fetch(`${apiBase()}/${path}?ref=${GITHUB_BRANCH}`, {
     headers: { 'Authorization': `Bearer ${getToken()}`, 'Accept': 'application/vnd.github.v3+json' },
     cache: 'no-store'
   });
@@ -24,7 +27,7 @@ async function ghGet(path) {
   return res.json();
 }
 async function ghPut(path, content, sha, message) {
-  const body = { message, content, branch: 'main' };
+  const body = { message, content, branch: GITHUB_BRANCH };
   if (sha) body.sha = sha;
   const res = await fetch(`${apiBase()}/${path}`, {
     method: 'PUT',
@@ -110,7 +113,7 @@ function renderCategoriesTable() {
         <button class="btn btn-ghost btn-sm" onclick="openCategoryModal('${c.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">🗑</button>
       </td>
-    </tr>
+    </table>
   `).join('') || '<tr><td colspan="6">Kategori yok</td></tr>';
 }
 
@@ -487,30 +490,72 @@ function switchTab(tabId, btn) {
   btn.classList.add('active');
 }
 
-// ==================== INIT ====================
-document.addEventListener('DOMContentLoaded', () => {
-  // Tema butonları theme.js ile otomatik geliyor
-  // Admin giriş kontrolü (sessionStorage'dan)
-  const token = sessionStorage.getItem('gh_token');
-  const user = JSON.parse(sessionStorage.getItem('qa_user') || 'null');
-  if (!token || !user) {
-    window.location.href = 'index.html?admin=1';
+// ==================== LOGIN ====================
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const token = document.getElementById('githubToken').value.trim();
+  const errorDiv = document.getElementById('loginError');
+  if (!token) {
+    errorDiv.textContent = 'Lütfen bir GitHub token girin.';
     return;
   }
-  currentUser = user;
-  document.getElementById('roleBadge').innerHTML = user.role === 'admin' ? 'ADMIN' : 'EDITOR';
-  if (user.role !== 'admin') {
-    // Editor sadece tools tab'ını görebilir
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      if (btn.getAttribute('data-tab') !== 'tools') btn.style.display = 'none';
+  errorDiv.textContent = '';
+  // Token'ı sessionStorage'a kaydet
+  sessionStorage.setItem('gh_token', token);
+  // Kullanıcı bilgilerini almak için GitHub API'ye istek at (doğrulama)
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (!res.ok) throw new Error('Geçersiz token');
+    const userData = await res.json();
+    // Başarılı giriş: session'a user bilgisini kaydet (geçici olarak admin rolü ver)
+    // Not: Gerçek yetkilendirme için tools.json'daki kullanıcıları da kontrol edebiliriz.
+    // Ancak şimdilik token sahibini admin kabul ediyoruz.
+    sessionStorage.setItem('qa_user', JSON.stringify({ username: userData.login, role: 'admin' }));
+    // Giriş ekranını gizle, admin panelini göster
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    // Admin panelini başlat
+    currentUser = { username: userData.login, role: 'admin' };
+    document.getElementById('roleBadge').innerHTML = 'ADMIN';
+    setupUpload();
+    await loadData();
+    // Tab butonları
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn));
+    });
+    // Arama input
+    document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
+  } catch (err) {
+    errorDiv.textContent = 'Giriş başarısız: ' + err.message;
+    sessionStorage.removeItem('gh_token');
   }
-  setupUpload();
-  loadData();
-  // Tab butonları
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn));
-  });
-  // Arama input
-  document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
+});
+
+// Eğer zaten sessionStorage'da token varsa, doğrudan admin panelini göster
+document.addEventListener('DOMContentLoaded', () => {
+  const token = sessionStorage.getItem('gh_token');
+  if (token) {
+    // Token var, direkt admin panelini yüklemeyi dene
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    currentUser = { username: 'admin', role: 'admin' };
+    document.getElementById('roleBadge').innerHTML = 'ADMIN';
+    setupUpload();
+    loadData().catch(() => {
+      // Hata olursa tekrar login ekranını göster
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('adminPanel').style.display = 'none';
+      sessionStorage.removeItem('gh_token');
+    });
+    // Tab ve search eventleri
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'), btn));
+    });
+    document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
+  } else {
+    // Token yok, login ekranı zaten görünüyor
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('adminPanel').style.display = 'none';
+  }
 });
