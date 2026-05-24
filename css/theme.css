@@ -56,15 +56,17 @@ function renderThemeButtons() {
   window.__themeRendered = true;
 }
 
-// Sayfa yüklendiğinde tema başlat
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('qa_theme');
-  const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
-  document.body.classList.add(theme);
-  renderThemeButtons();
-});
+  /* Varsayılan: Grey Theme */
+body.grey {
+  --bg: #1f1f28;
+  --surface: #272734;
+  --card: #2e2e3e;
+  --text: #e2e2f0;
+  --border: rgba(255,255,255,.09);
+  --accent2: #7c6dfa;
+}
 
-  body.dark {
+body.dark {
   --bg: #0d0d14;
   --surface: #141420;
   --card: #1a1a26;
@@ -91,11 +93,11 @@ body.tp {
   --accent2: #9b30c0;
 }
 
-body.grey {
-  --bg: #1f1f28;
-  --surface: #272734;
-  --card: #2e2e3e;
-  --text: #e2e2f0;
-  --border: rgba(255,255,255,.09);
-  --accent2: #7c6dfa;
-}
+// Sayfa yüklendiğinde tema başlat
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('qa_theme');
+  const theme = (saved && ['dark','light','tp','grey'].includes(saved)) ? saved : DEFAULT_THEME;
+  document.body.classList.add(theme);
+  renderThemeButtons();
+});
+
