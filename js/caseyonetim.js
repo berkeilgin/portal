@@ -85,7 +85,6 @@ async function checkNewCases() {
   lastCaseCount = current;
 }
 
-// ==================== CASE OPERATIONS ====================
 async function loadCases() {
   const snapshot = await db.collection('cases').orderBy('createdAt', 'desc').get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -385,7 +384,7 @@ function saveMailSettings() {
     ccEmail: document.getElementById('ccEmail').value
   };
   localStorage.setItem('case_mail_settings', JSON.stringify(settings));
-  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">Kaydedildi</span>';
+  document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Kaydedildi</span>';
 }
 
 function loadMailSettingsToForm() {
@@ -396,7 +395,6 @@ function loadMailSettingsToForm() {
   document.getElementById('ccEmail').value = s.ccEmail || '';
 }
 
-async function testEmail() {
 async function testEmail() {
   const s = loadMailSettings();
   if (!s.smtpEmail || !s.smtpPassword) {
@@ -418,8 +416,6 @@ async function testEmail() {
       Subject: "Test Maili - QA Case Yönetim",
       Body: "Bu bir test mailidir. SMTP ayarlarınız doğru çalışıyor."
     });
-    
-    // SMTP.js başarılı olsa bile "OK" dönmeyebilir, kontrol edelim
     if (response && response.includes("OK")) {
       document.getElementById('mailStatus').innerHTML = '<span style="color:var(--accent)">✅ Test maili başarıyla gönderildi</span>';
     } else {
@@ -431,6 +427,7 @@ async function testEmail() {
     document.getElementById('mailStatus').innerHTML = `<span style="color:var(--accent3)">❌ Hata: ${errMsg}</span>`;
   }
 }
+
 // ==================== TAB MANAGEMENT ====================
 function showTab(tab) {
   const tabs = ['cases', 'topics', 'users', 'mail'];
