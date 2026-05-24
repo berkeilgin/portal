@@ -271,22 +271,3 @@ th {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-.theme-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 30px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--muted);
-  transition: .2s;
-}
-.theme-btn.active {
-  background: var(--accent2);
-  color: #fff;
-}
-.theme-btn:hover:not(.active) {
-  background: rgba(255,255,255,.1);
-  color: var(--text);
-}
