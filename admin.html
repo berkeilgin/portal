@@ -10,45 +10,219 @@
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/components.css">
 <style>
-/* Admin özel stiller */
-.admin-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
-.stat-card .number { font-size: 28px; font-weight: bold; color: var(--accent2); }
-.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.tab-btn { padding: 8px 20px; border: none; background: transparent; color: var(--muted); cursor: pointer; font-family: var(--font); font-size: 14px; border-radius: 20px; transition: .2s; }
-.tab-btn:hover { color: var(--text); background: rgba(255,255,255,.05); }
-.tab-btn.active { background: var(--accent2); color: #fff; }
-.tab-pane { display: none; }
-.tab-pane.active { display: block; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 4px; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 13px; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent2); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.chip { padding: 4px 12px; border: 1px solid var(--border); border-radius: 30px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
-.chip.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
-.url-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
-.row-actions { display: flex; gap: 6px; }
-.toggle-switch { width: 40px; height: 20px; background: var(--muted); border-radius: 20px; position: relative; cursor: pointer; border: none; }
-.toggle-switch::before { content: ''; position: absolute; width: 16px; height: 16px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: .2s; }
-.toggle-switch.on { background: var(--accent2); }
-.toggle-switch.on::before { transform: translateX(20px); }
-.upload-preview { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-.upload-thumb { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; width: 80px; text-align: center; }
-.upload-thumb img { width: 40px; height: 40px; object-fit: contain; }
-.upload-thumb span { font-size: 10px; display: block; margin-top: 4px; word-break: break-all; }
-#loginScreen { max-width: 400px; margin: 80px auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; }
-#loginScreen h2 { margin-bottom: 24px; color: var(--accent2); }
-.small-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
-.loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* Admin'e özel stiller */
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .number {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--accent2);
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.tab-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 14px;
+  border-radius: 20px;
+  transition: .2s;
+}
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+.tab-btn.active {
+  background: var(--accent2);
+  color: #fff;
+}
+.tab-pane {
+  display: none;
+}
+.tab-pane.active {
+  display: block;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--accent2);
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.chip {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.chip.active {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #fff;
+}
+.url-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+.toggle-switch {
+  width: 40px;
+  height: 20px;
+  background: var(--muted);
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+  border: none;
+}
+.toggle-switch::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: .2s;
+}
+.toggle-switch.on {
+  background: var(--accent2);
+}
+.toggle-switch.on::before {
+  transform: translateX(20px);
+}
+.upload-preview {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.upload-thumb {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  width: 80px;
+  text-align: center;
+}
+.upload-thumb img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.upload-thumb span {
+  font-size: 10px;
+  display: block;
+  margin-top: 4px;
+  word-break: break-all;
+}
+/* Login ekranı */
+#loginScreen {
+  max-width: 400px;
+  margin: 80px auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+}
+#loginScreen h2 {
+  margin-bottom: 24px;
+  color: var(--accent2);
+}
+.small-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.loading-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>
 </head>
 <body class="grey">
 
+<!-- GİRİŞ EKRANI -->
 <div id="loginScreen">
   <h2>🔐 Admin Girişi</h2>
   <div class="form-group">
@@ -60,6 +234,7 @@
   <div id="loginError" style="margin-top: 16px; color: var(--accent3); font-size: 12px;"></div>
 </div>
 
+<!-- ADMIN PANELİ -->
 <div id="adminPanel" style="display: none;">
   <div class="header">
     <div class="logo">⚙️ QA Portal Admin</div>
@@ -67,11 +242,18 @@
     <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Portal</button>
     <button class="btn btn-primary" id="saveBtn" onclick="saveToGitHub()" disabled>💾 Kaydet & Yayınla</button>
   </div>
+
   <div class="main">
+    <!-- Durum çubuğu -->
     <div class="panel" style="margin-bottom: 20px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-      <div class="status" id="statusBar"><span class="dot" style="background: var(--accent2);"></span><span id="statusMsg">Yükleniyor...</span></div>
+      <div class="status" id="statusBar">
+        <span class="dot" style="background: var(--accent2);"></span>
+        <span id="statusMsg">Yükleniyor...</span>
+      </div>
       <div><span class="badge" id="roleBadge">ADMIN</span></div>
     </div>
+
+    <!-- Sekmeler -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="tools">🛠 Araçlar</button>
       <button class="tab-btn" data-tab="categories">📂 Kategoriler</button>
@@ -86,7 +268,7 @@
     <div class="tab-pane active" id="tab-tools">
       <div class="panel">
         <div class="admin-toolbar"><h3>🛠 Araç Yönetimi</h3><button class="btn btn-primary" onclick="openToolModal()">+ Yeni Araç</button></div>
-        <div class="form-group"><input type="text" id="searchTools" placeholder="🔍 Araç ara..." style="width: 100%;"></div>
+        <input type="text" id="searchTools" placeholder="🔍 Araç ara..." style="width:100%; margin-bottom:16px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text);">
         <div class="chips" id="catFilterChips"></div>
         <div class="table-wrapper"><table id="toolsTable"><thead><tr><th>İkon</th><th>Ad / ID</th><th>Kategori</th><th>URL</th><th>Aktif</th><th>NEW</th><th>TEST</th><th>BEST</th><th>İşlem</th></tr></thead><tbody id="toolsTableBody"></tbody></table></div>
       </div>
@@ -100,7 +282,8 @@
 
     <!-- SETTINGS TAB -->
     <div class="tab-pane" id="tab-settings">
-      <div class="panel"><h3>🔧 Genel Ayarlar</h3><div class="grid-2">
+      <div class="panel"><h3>🔧 Genel Ayarlar</h3>
+      <div class="grid-2">
         <div class="form-group"><label>Bakım Modu</label><button class="toggle-switch" id="maintToggle"></button></div>
         <div class="form-group"><label>Bakım Mesajı</label><textarea id="maintMsg" rows="2" placeholder="Bakım mesajı..."></textarea></div>
         <div class="form-group"><label>Duyuru Aktif</label><button class="toggle-switch" id="annToggle"></button></div>
@@ -124,7 +307,11 @@
 
     <!-- UPLOADS TAB -->
     <div class="tab-pane" id="tab-uploads">
-      <div class="panel"><h3>📁 İkon / Logo Yükleme</h3><div class="drop-zone" id="dropZone">📂 Dosyaları sürükleyin veya tıklayın<input type="file" id="fileInput" multiple accept="image/*" style="display:none;"></div><div class="upload-preview" id="uploadPreview"></div><button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadFiles()">⬆️ GitHub'a Yükle</button><div id="uploadStatus"></div></div>
+      <div class="panel"><h3>📁 İkon / Logo Yükleme</h3>
+      <div class="drop-zone" id="dropZone">📂 Dosyaları sürükleyin veya tıklayın<input type="file" id="fileInput" multiple accept="image/*" style="display:none;"></div>
+      <div class="upload-preview" id="uploadPreview"></div>
+      <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadFiles()">⬆️ GitHub'a Yükle</button>
+      <div id="uploadStatus"></div></div>
     </div>
 
     <!-- CASE STATS TAB -->
@@ -136,47 +323,10 @@
   <footer class="footer"><div class="copyright-text"></div></footer>
 </div>
 
-<!-- MODAL: Araç Düzenleme -->
-<div class="modal-overlay" id="toolModal" style="display: none;">
-  <div class="modal">
-    <h3 id="toolModalTitle">+ Araç Ekle</h3>
-    <div class="grid-2">
-      <div class="form-group"><label>ID (slug)</label><input type="text" id="toolId" placeholder="ornek-arac"></div>
-      <div class="form-group"><label>Ad</label><input type="text" id="toolName" placeholder="Araç Adı"></div>
-      <div class="form-group full"><label>URL</label><input type="text" id="toolUrl" placeholder="https://..."></div>
-      <div class="form-group"><label>Kategori</label><select id="toolCat"></select></div>
-      <div class="form-group"><label>İkon Dosyası</label><input type="text" id="toolIcon" placeholder="logo.png"></div>
-      <div class="form-group"><label>Aktif</label><button class="toggle-switch" id="toolEnabled"></button></div>
-      <div class="form-group"><label>NEW</label><button class="toggle-switch" id="toolIsNew"></button></div>
-      <div class="form-group"><label>TEST</label><button class="toggle-switch" id="toolIsTest"></button></div>
-      <div class="form-group"><label>BEST</label><button class="toggle-switch" id="toolIsBest"></button></div>
-    </div>
-    <div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('toolModal')">İptal</button><button class="btn btn-primary" onclick="saveTool()">Kaydet</button></div>
-  </div>
-</div>
-
-<!-- MODAL: Kategori Düzenleme -->
-<div class="modal-overlay" id="categoryModal" style="display: none;">
-  <div class="modal">
-    <h3 id="categoryModalTitle">+ Kategori Ekle</h3>
-    <div class="form-group"><label>ID (slug)</label><input type="text" id="catId" placeholder="kategori-id"></div>
-    <div class="form-group"><label>Etiket</label><input type="text" id="catLabel" placeholder="Kategori Adı"></div>
-    <div class="form-group"><label>İkon (emoji)</label><input type="text" id="catIcon" placeholder="📊" maxlength="4"></div>
-    <div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('categoryModal')">İptal</button><button class="btn btn-primary" onclick="saveCategory()">Kaydet</button></div>
-  </div>
-</div>
-
-<!-- MODAL: Kullanıcı Düzenleme -->
-<div class="modal-overlay" id="userModal" style="display: none;">
-  <div class="modal">
-    <h3 id="userModalTitle">+ Kullanıcı Ekle</h3>
-    <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="userUsername"></div>
-    <div class="form-group"><label>Rol</label><select id="userRole"><option value="editor">Editor</option><option value="admin">Admin</option></select></div>
-    <div class="form-group"><label>Şifre</label><input type="password" id="userPassword" placeholder="Değiştirmek için yazın"></div>
-    <div class="form-group"><label>Şifre (tekrar)</label><input type="password" id="userPassword2"></div>
-    <div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('userModal')">İptal</button><button class="btn btn-primary" onclick="saveUser()">Kaydet</button></div>
-  </div>
-</div>
+<!-- MODAL'LAR -->
+<div class="modal-overlay" id="toolModal" style="display: none;"><div class="modal"><h3 id="toolModalTitle">+ Araç Ekle</h3><div class="grid-2"><div class="form-group"><label>ID (slug)</label><input type="text" id="toolId" placeholder="ornek-arac"></div><div class="form-group"><label>Ad</label><input type="text" id="toolName" placeholder="Araç Adı"></div><div class="form-group full"><label>URL</label><input type="text" id="toolUrl" placeholder="https://..."></div><div class="form-group"><label>Kategori</label><select id="toolCat"></select></div><div class="form-group"><label>İkon Dosyası</label><input type="text" id="toolIcon" placeholder="logo.png"></div><div class="form-group"><label>Aktif</label><button class="toggle-switch" id="toolEnabled"></button></div><div class="form-group"><label>NEW</label><button class="toggle-switch" id="toolIsNew"></button></div><div class="form-group"><label>TEST</label><button class="toggle-switch" id="toolIsTest"></button></div><div class="form-group"><label>BEST</label><button class="toggle-switch" id="toolIsBest"></button></div></div><div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('toolModal')">İptal</button><button class="btn btn-primary" onclick="saveTool()">Kaydet</button></div></div></div>
+<div class="modal-overlay" id="categoryModal" style="display: none;"><div class="modal"><h3 id="categoryModalTitle">+ Kategori Ekle</h3><div class="form-group"><label>ID (slug)</label><input type="text" id="catId" placeholder="kategori-id"></div><div class="form-group"><label>Etiket</label><input type="text" id="catLabel" placeholder="Kategori Adı"></div><div class="form-group"><label>İkon (emoji)</label><input type="text" id="catIcon" placeholder="📊" maxlength="4"></div><div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('categoryModal')">İptal</button><button class="btn btn-primary" onclick="saveCategory()">Kaydet</button></div></div></div>
+<div class="modal-overlay" id="userModal" style="display: none;"><div class="modal"><h3 id="userModalTitle">+ Kullanıcı Ekle</h3><div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="userUsername"></div><div class="form-group"><label>Rol</label><select id="userRole"><option value="editor">Editor</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Şifre</label><input type="password" id="userPassword" placeholder="Değiştirmek için yazın"></div><div class="form-group"><label>Şifre (tekrar)</label><input type="password" id="userPassword2"></div><div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('userModal')">İptal</button><button class="btn btn-primary" onclick="saveUser()">Kaydet</button></div></div></div>
 
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
