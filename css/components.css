@@ -38,16 +38,8 @@
   justify-content: flex-end;
   margin-top: 20px;
 }
-.modal .grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.modal .full {
-  grid-column: 1/-1;
-}
 
-/* ==================== DİĞER BİLEŞENLER ==================== */
+/* Loading spinner */
 .loading-spinner {
   width: 24px;
   height: 24px;
