@@ -2,6 +2,19 @@ async function loadCommonData() {
   try {
     const res = await fetch('tools.json?' + Date.now());
     const data = await res.json();
+
+    // Eğer Firebase zaten initialize edilmişse tekrar initialize etme
+if (!firebase.apps.length) {
+  const firebaseConfig = {
+    apiKey: "AIzaSyBDClqNyqtNL_h8Yovoe2r9RFAs8VjNef8",
+    authDomain: "case-management-system-53f44.firebaseapp.com",
+    projectId: "case-management-system-53f44",
+    storageBucket: "case-management-system-53f44.firebasestorage.app",
+    messagingSenderId: "381220130397",
+    appId: "1:381220130397:web:97124d8836681bc62c07b4"
+  };
+  firebase.initializeApp(firebaseConfig);
+}
     
     // Copyright
     document.querySelectorAll('.copyright-text').forEach(el => {
