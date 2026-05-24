@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSS - QA Portal Yardım Merkezi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0e0812;
+      font-family: 'DM Sans', sans-serif;
+      color: #f5eef8;
+      padding: 32px 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    /* TP Teması */
+    :root {
+      --tp-pink: #FF0082;
+      --tp-purple: #9b30c0;
+      --tp-bg: #14091c;
+      --tp-card: #1c1026;
+      --tp-border: rgba(255,0,130,0.2);
+      --tp-muted: #b07ab8;
+    }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      background: linear-gradient(135deg, var(--tp-pink), var(--tp-purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 8px;
+    }
+    .sub {
+      color: var(--tp-muted);
+      margin-bottom: 32px;
+      border-left: 3px solid var(--tp-pink);
+      padding-left: 16px;
+    }
+    /* Arama ve filtre */
+    .search-bar {
+      background: var(--tp-card);
+      border: 1px solid var(--tp-border);
+      border-radius: 60px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .search-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-bar input::placeholder {
+      color: #806090;
+    }
+    .cat-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .cat-btn {
+      background: transparent;
+      border: 1px solid var(--tp-border);
+      border-radius: 40px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--tp-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cat-btn.active {
+      background: linear-gradient(135deg, var(--tp-pink), var(--tp-purple));
+      border-color: transparent;
+      color: white;
+    }
+    /* FAQ kartları */
+    .faq-section {
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      margin: 24px 0 16px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--tp-pink);
+      display: inline-block;
+    }
+    .faq-item {
+      background: var(--tp-card);
+      border: 1px solid var(--tp-border);
+      border-radius: 20px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      transition: 0.2s;
+    }
+    .faq-question {
+      padding: 18px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: #f0e6f5;
+    }
+    .faq-question:hover {
+      background: rgba(255,0,130,0.05);
+    }
+    .faq-question .icon {
+      font-size: 20px;
+      color: var(--tp-pink);
+      transition: transform 0.2s;
+    }
+    .faq-answer {
+      padding: 0 20px 20px 20px;
+      display: none;
+      color: #c0a8c8;
+      line-height: 1.6;
+      font-size: 14px;
+      border-top: 1px solid rgba(255,0,130,0.1);
+    }
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+    .faq-item.open .icon {
+      transform: rotate(45deg);
+    }
+    .tool-badge {
+      display: inline-block;
+      background: rgba(155,48,192,0.2);
+      border-radius: 20px;
+      font-size: 10px;
+      padding: 2px 10px;
+      margin-left: 12px;
+      color: var(--tp-purple);
+      font-family: monospace;
+    }
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: var(--tp-muted);
+    }
+    footer {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 12px;
+      color: #5a3a6a;
+      border-top: 1px solid var(--tp-border);
+      padding-top: 24px;
+    }
+    @media (max-width: 600px) {
+      body { padding: 20px 16px; }
+      .faq-question { padding: 14px 16px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>❓ Sık Sorulan Sorular</h1>
+  <div class="sub">QA Portal hakkında merak edilenler – Kategori ve araç bazlı arama yapabilirsiniz.</div>
+
+  <!-- Arama Kutusu -->
+  <div class="search-bar">
+    <span>🔍</span>
+    <input type="text" id="searchInput" placeholder="Soru, cevap veya araç adı ara... (örn: CSV, rapor, IDENT, tema)">
+  </div>
+
+  <!-- Kategori Filtreleri -->
+  <div class="cat-filters" id="catFilters">
+    <button class="cat-btn active" data-cat="all">Tümü</button>
+    <button class="cat-btn" data-cat="rapor">📑 Kalite Raporu Araçları</button>
+    <button class="cat-btn" data-cat="donusum">🔄 Dönüşüm & CSV</button>
+    <button class="cat-btn" data-cat="analiz">📈 Analiz & Randomizer</button>
+    <button class="cat-btn" data-cat="tp">🖥️ TP Tools & BI</button>
+    <button class="cat-btn" data-cat="genel">⚙️ Genel & Teknik</button>
+  </div>
+
+  <!-- FAQ İçeriği (dinamik olarak doldurulacak) -->
+  <div id="faqContainer"></div>
+  <footer>
+    TP.com | 2026 – Hazırlayan: Berke Ilgın<br>
+    Sorularınız için: berke.ilgin@tp.com veya portal üzerinden "Kalite Case" açabilirsiniz.
+  </footer>
+</div>
+
+<script>
+  // Tüm SSS verileri (kategori, tool, soru, cevap)
+  const faqData = [
+    // KALİTE RAPORU HAZIRLAMA & GÜNCELLEME
+    { cat: "rapor", tool: "Kalite Raporu Hazırlama", q: "Kalite Raporu Hazırlama aracı hangi dosya formatlarını destekliyor?", a: "CSV, XLSX ve XLS dosyalarını destekler. Ana data dosyanızı yükledikten sonra LOB (Line of Business) yapılandırması yapabilirsiniz." },
+    { cat: "rapor", tool: "Kalite Raporu Hazırlama", q: "LOB nedir ve nasıl kullanılır?", a: "LOB (Line of Business) farklı birimlerin ayrı ayrı yapılandırılmasını sağlar. Her LOB için ayrı CSV yükleyebilir, kriter cevaplarını ve hedef skorları ayrı tanımlayabilirsiniz. Rapor sonunda BirleşimData sheet'i oluşur." },
+    { cat: "rapor", tool: "Kalite Raporu Güncelleme", q: "Mevcut raporumu güncellerken IDENT sütunu neden önemli?", a: "IDENT sütunu sayesinde sistem yeni gelen kayıtların daha önce var olup olmadığını tespit eder. Duplikasyonlar otomatik filtrelenir, sadece yeni kayıtlar eklenir. Bu sayede raporunuzda tekrar eden veriler oluşmaz." },
+    { cat: "rapor", tool: "Kalite Raporu Güncelleme", q: "Güncelleme sonrası hangi sheetler yenilenir?", a: "Ana Sayfa, Özet, Değerlendirici Özet, Kriter Bazlı (Ay & Hafta) ve BMSData sheetleri güncellenir. Ayrıca AI analiz sayfası ve loglar da yenilenir." },
+    { cat: "rapor", tool: "Kalite Raporu Hazırlama", q: "Hedef skor nasıl belirlenir? Otomatik hesaplanıyor mu?", a: "Hedef skor manuel olarak girilir. Otomatik hesaplama yapılmaz, çünkü her projenin hedefi farklı olabilir. Ancak raporda hedefe göre renklendirme (≥ hedef yeşil, < hedef kırmızı) uygulanır." },
+    { cat: "rapor", tool: "Kalite Raporu Hazırlama", q: "Outlier analizi nedir? Hangi türleri var?", a: "AHT Outlier (çağrı süresi aykırı değerler), Kalite Skor Outlier, TCD (dinlenme/çalışma oranı), Repeat Fail (tekrarlayan başarısız kriterler) ve Trend Grafik seçenekleri mevcuttur. İlgili opsiyonları aktif ederseniz ek sheetler oluşur." },
+
+    // DÖNÜŞÜM & CSV CONVERTER
+    { cat: "donusum", tool: "CSV Converter", q: "CSV Converter hangi formatları destekliyor? Birden fazla dosya yükleyebilir miyim?", a: "CSV, XLSX ve XLS dosyalarını destekler. Aynı anda birden fazla dosya seçebilir, her biri ayrı Excel dosyası olarak dönüştürülür. Düzenleme modunda istediğiniz sütunları hariç tutabilirsiniz." },
+    { cat: "donusum", tool: "CSV Converter", q: "Tarih formatı nasıl düzenlenir? Ondalık ayraç sorunu yaşıyorum.", a: "Sistem otomatik olarak gg.aa.yyyy formatını algılar ve Excel’e uygun hale getirir. Ondalık sayılar için nokta (.) virgüle (,) çevrilir. Weighted Average veya Score gibi sütunlar özel işleme tabi tutulur." },
+    { cat: "donusum", tool: "Trendyol CSV Tool", q: "Trendyol CSV Tool'u ne zaman kullanmalıyım?", a: "E-ticaret kalite verileriniz (Özet ve Detay CSV’leri) olduğunda kullanın. İptal kayıtlarını otomatik filtreler, tarihleri Türkçe formata çevirir ve iki dosyayı birleştirerek tek Excel’de sunar." },
+
+    // ANALİZ & RANDOMIZER
+    { cat: "analiz", tool: "Randomizer", q: "Randomizer ile Excel'den rastgele satır seçerken hangi sütunlar kullanılıyor?", a: "Tüm sütunlar dikkate alınır. Seçilen satır sayısını belirleyip 'Random Görüşme Seç' butonuna tıklayın. Sonuçları Excel olarak dışa aktarabilirsiniz. Manuel modda 1 ile N arasında sayı üretebilir, geçmiş logları tutar." },
+    { cat: "analiz", tool: "Korelasyon Analizi", q: "Korelasyon analizinde Pearson ve Spearman arasındaki fark nedir?", a: "Pearson doğrusal ilişkiyi ölçer, normal dağılım varsayar. Spearman ise sıra tabanlıdır, monotonic ilişkiler için uygundur ve aykırı değerlere daha dayanıklıdır. Isı haritası ve AI yorumları (Claude Sonnet) ile desteklenir." },
+    { cat: "analiz", tool: "Korelasyon Analizi", q: "AI yorumları ne kadar güvenilir? Doğrudan aksiyon alabilir miyim?", a: "AI yorumları Claude Sonnet tarafından üretilir ve yol göstericidir. Kesin analiz niteliği taşımaz; mutlaka bir analist tarafından kontrol edilmelidir. Ancak roadmap, riskler ve öneriler konusunda güçlü ipuçları verir." },
+    { cat: "analiz", tool: "BSH Dağıtım", q: "BSH Dağıtım aracında örneklem aralıklarını nasıl tanımlarım?", a: "Her dataset için min-max süre aralığı ve alınacak adet bilgisi girebilirsiniz. Dinamik olarak satır ekleyebilirsiniz. Çalıştır butonuna bastığınızda her bir agent için belirtilen aralıklardan rastgele örneklem alınır. Sonuçlar zip dosyası olarak iner." },
+
+    // TP TOOLS & POWER BI
+    { cat: "tp", tool: "TP Tools", q: "Portaldan hangi TP araçlarına erişebilirim?", a: "BMS Ana Sayfa, MYTP, İKON (Yıllık İzin), Service Desk (Case), PEYK – Bordro Görüntüleme, BMS Form Oluşturma, BMS Raw Data, BMS Kalibrasyon Oluşturma ve BMS TOPS Report. Her birine tek tıkla ulaşabilirsiniz." },
+    { cat: "tp", tool: "Power BI", q: "Power BI raporlarına erişim için özel izin gerekli mi?", a: "Evet, Power BI raporlarına erişmek için şirket domaininizle oturum açmanız gerekir. Portal sadece yönlendirme sağlar; erişim yetkileriniz Power BI tarafında tanımlı olmalıdır." },
+    { cat: "tp", tool: "Power BI", q: "Hangi Power BI raporları mevcut?", a: "Feedback Raporu, Domestic Kalite Raporu, Multi Lingual Kalite Raporu, Pharos, TOPS Report ve Domestic Management Report. Her biri için doğrudan link portaldadır." },
+
+    // GENEL & TEKNİK
+    { cat: "genel", tool: "Genel", q: "Portal hangi tarayıcılarda çalışır? Mobil uyumlu mu?", a: "Chrome, Edge, Firefox ve Safari'nin son 2 ana sürümüyle tam uyumludur. Mobil cihazlarda (iOS/Android) responsive tasarım sayesinde rahatça kullanılabilir, ancak Excel işlemleri için geniş ekran önerilir." },
+    { cat: "genel", tool: "Genel", q: "Yüklediğim dosyalar nereye gidiyor? Veri güvenliği nasıl sağlanıyor?", a: "Tüm dosyalar tarayıcınızın belleğinde işlenir, hiçbir sunucuya gönderilmez. Verileriniz kesinlikle dışarı aktarılmaz. İnternet bağlantınız olsa bile dosyalarınız sadece sizin bilgisayarınızda kalır." },
+    { cat: "genel", tool: "Genel", q: "Temalar arasında nasıl geçiş yapabilirim? TP teması nedir?", a: "Sağ üst köşedeki tema düğmeleriyle (Gri, Siyah, Beyaz, TP) anında geçiş yapabilirsiniz. TP teması, şirket renkleri olan pembe (FF0082) ve mor (9b30c0) tonlarını kullanır." },
+    { cat: "genel", tool: "Genel", q: "Bir hata ile karşılaştığımda ne yapmalıyım?", a: "Hata mesajını ve yaptığınız işlemleri not alarak Kalite Case Sistemi üzerinden talep oluşturun. Ayrıca doğrudan Analitik Uzman Berke Ilgın'a e-posta gönderebilirsiniz." },
+    { cat: "genel", tool: "Genel", q: "Portalın bakım modu olduğunu nasıl anlarım?", a: "Bakım modu aktifse ekran tamamen koyulaşır ve 'Bakım Modu' yazısı görünür. Bu durumda genellikle kısa süreli güncelleme yapılıyordur. Admin paneli üzerinden bakım durumunu yönetebilirsiniz." },
+    { cat: "genel", tool: "Kalite Case", q: "Case açtıktan sonra durumu nasıl takip edebilirim?", a: "Case ID veya e-posta adresinizle sorgulama yapabilirsiniz. Sistem size otomatik e-posta gönderir. Ayrıca case detayında not geçmişini ve son durumu görebilirsiniz." }
+  ];
+
+  let currentCat = "all";
+  let currentSearch = "";
+
+  function renderFaq() {
+    const filtered = faqData.filter(item => {
+      if (currentCat !== "all" && item.cat !== currentCat) return false;
+      if (currentSearch.trim() !== "") {
+        const searchLower = currentSearch.toLowerCase();
+        return item.q.toLowerCase().includes(searchLower) ||
+               item.a.toLowerCase().includes(searchLower) ||
+               item.tool.toLowerCase().includes(searchLower);
+      }
+      return true;
+    });
+
+    const container = document.getElementById("faqContainer");
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="no-results">🔍 Sorunuza uygun sonuç bulunamadı. Lütfen farklı kelimelerle arayın veya kategori seçin.</div>`;
+      return;
+    }
+
+    // Grupla (isteğe bağlı: kategori bazlı gruplama yapalım)
+    const grouped = {};
+    filtered.forEach(item => {
+      if (!grouped[item.cat]) grouped[item.cat] = [];
+      grouped[item.cat].push(item);
+    });
+
+    const catNames = {
+      rapor: "📑 Kalite Raporu Araçları",
+      donusum: "🔄 Dönüşüm & CSV Converter",
+      analiz: "📈 Analiz & Randomizer",
+      tp: "🖥️ TP Tools & Power BI",
+      genel: "⚙️ Genel & Teknik"
+    };
+
+    let html = "";
+    for (let [cat, items] of Object.entries(grouped)) {
+      html += `<div class="faq-section"><div class="section-title">${catNames[cat] || cat}</div>`;
+      items.forEach(item => {
+        const toolBadge = item.tool !== "Genel" ? `<span class="tool-badge">${item.tool}</span>` : "";
+        html += `
+          <div class="faq-item" data-search="${item.q} ${item.a} ${item.tool}">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>${item.q} ${toolBadge}</span>
+              <span class="icon">+</span>
+            </div>
+            <div class="faq-answer">${item.a}</div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  window.toggleFaq = function(el) {
+    const parent = el.closest(".faq-item");
+    parent.classList.toggle("open");
+  };
+
+  // Filtreleme işlemleri
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    currentSearch = e.target.value;
+    renderFaq();
+  });
+
+  const catBtns = document.querySelectorAll(".cat-btn");
+  catBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      catBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentCat = btn.dataset.cat;
+      renderFaq();
+    });
+  });
+
+  // İlk render
+  renderFaq();
+</script>
+</body>
+</html>
