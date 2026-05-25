@@ -570,17 +570,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const searchTools = document.getElementById('searchTools');
 if (searchTools) searchTools.addEventListener('input', () => renderToolsTable());
 
-// ========== TEMA YÖNETİMİ ==========
+// ==================== TEMA YÖNETİMİ ====================
 function renderThemesTable() {
   const tbody = document.getElementById('themesTableBody');
   if (!tbody || !data || !data.themes) return;
-  const lang = localStorage.getItem('qa_lang') || 'tr';
-  tbody.innerHTML = data.themes.map((t, idx) => `
+  tbody.innerHTML = data.themes.map((t) => `
     <tr>
       <td>${t.id}</td>
       <td>${t.icon || ''}</td>
-      <td>${t.nameTr}</td>
-      <td>${t.nameEn}</td>
+      <td>${t.nameTr || ''}</td>
+      <td>${t.nameEn || ''}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editTheme('${t.id}')">✏️</button></td>
     </tr>
   `).join('');
@@ -596,7 +595,6 @@ function editTheme(themeId) {
   document.getElementById('themeNameTr').value = theme.nameTr || '';
   document.getElementById('themeNameEn').value = theme.nameEn || '';
 
-  // Renk alanlarını dinamik oluştur
   const container = document.getElementById('colorFields');
   const colors = theme.colors || {};
   container.innerHTML = Object.keys(colors).map(key => `
@@ -618,7 +616,6 @@ function openThemeModal() {
   document.getElementById('themeIcon').value = '';
   document.getElementById('themeNameTr').value = '';
   document.getElementById('themeNameEn').value = '';
-  // Varsayılan renk şablonu (ilk temadan kopyala)
   const defaultColors = data.themes[0]?.colors || {};
   const container = document.getElementById('colorFields');
   container.innerHTML = Object.keys(defaultColors).map(key => `
@@ -638,7 +635,6 @@ function saveTheme() {
   const nameEn = document.getElementById('themeNameEn').value.trim();
   if (!id || !nameTr) { alert('ID ve TR ad zorunlu'); return; }
 
-  // Renkleri topla
   const colors = {};
   document.querySelectorAll('#colorFields input[data-color-key]').forEach(inp => {
     colors[inp.dataset.colorKey] = inp.value;
@@ -646,36 +642,30 @@ function saveTheme() {
 
   const newTheme = { id, icon, nameTr, nameEn, colors };
   const existingIndex = data.themes.findIndex(t => t.id === id);
-  if (existingIndex >= 0) {
-    data.themes[existingIndex] = newTheme;
-  } else {
-    data.themes.push(newTheme);
-  }
+  if (existingIndex >= 0) data.themes[existingIndex] = newTheme;
+  else data.themes.push(newTheme);
+
   closeModal('themeModal');
   renderThemesTable();
-  // Tema listesini index.js'e de bildir (isteğe bağlı)
   if (window.refreshThemeList) window.refreshThemeList(data.themes);
-  // Aktif tema ise hemen uygula
-  if (getCurrentTheme() === id) setTheme(id, false);
+  if (window.getCurrentTheme && window.getCurrentTheme() === id) window.setTheme(id, false);
 }
 
 function deleteTheme(themeId) {
-  if (data.themes.length <= 1) {
-    alert('En az bir tema kalmalıdır.');
-    return;
-  }
+  if (data.themes.length <= 1) { alert('En az bir tema kalmalıdır.'); return; }
   if (!confirm(`"${themeId}" temasını silmek istediğinizden emin misiniz?`)) return;
   data.themes = data.themes.filter(t => t.id !== themeId);
-  if (getCurrentTheme() === themeId) {
-    const newTheme = data.themes[0].id;
-    setTheme(newTheme);
+  if (window.getCurrentTheme && window.getCurrentTheme() === themeId) {
+    window.setTheme(data.themes[0].id, true);
   }
   renderThemesTable();
+  if (window.refreshThemeList) window.refreshThemeList(data.themes);
   closeModal('themeModal');
 }
 
-// Tema listesi değiştiğinde butonları yenile
-window.refreshThemeList = (themes) => {
-  if (window.themeData) window.themeData = themes;
-  renderThemeButtons();
-};
+// Fonksiyonları global yap
+window.renderThemesTable = renderThemesTable;
+window.editTheme = editTheme;
+window.openThemeModal = openThemeModal;
+window.saveTheme = saveTheme;
+window.deleteTheme = deleteTheme;
