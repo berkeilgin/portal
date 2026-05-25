@@ -12,7 +12,7 @@
       "id": "faq",
       "label": "Sıkça Sorulan Sorular",
       "icon": "❓",
-      "labelEn": "Sıkça Sorulan Sorular"
+      "labelEn": "Frequently Asked Questions"
     },
     {
       "id": "bms",
@@ -22,19 +22,19 @@
     },
     {
       "id": "tp",
-      "label": "TP Tools",
+      "label": "TP Araçları",
       "icon": "🖥️",
       "labelEn": "TP Tools"
     },
     {
       "id": "qa",
-      "label": "QA Tools",
+      "label": "QA Araçları",
       "icon": "🔬",
       "labelEn": "QA Tools"
     },
     {
       "id": "reports",
-      "label": "Power BI Reports",
+      "label": "Power BI Raproları",
       "icon": "📊",
       "labelEn": "Power BI Reports"
     },
@@ -48,13 +48,19 @@
       "id": "google",
       "label": "Google Ürünleri",
       "icon": "⚜️",
-      "labelEn": "Google Ürünleri"
+      "labelEn": "Google Products"
     },
     {
       "id": "portal",
-      "label": "Portal",
+      "label": "Portal Yönetimi",
       "icon": "💭",
-      "labelEn": "Portal"
+      "labelEn": "Portal Management"
+    },
+    {
+      "id": "casedesk",
+      "label": "Destek Talebi Oluştur",
+      "labelEn": "Create a Support Request",
+      "icon": "🆘"
     }
   ],
   "tools": [
