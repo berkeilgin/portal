@@ -59,11 +59,10 @@
       "colors": { ... }
     }
   ]
-}
 
-{
-  "tools": [...],
-  "categories": [...],
+  {
+  "tools": [],
+  "categories": [],
   "themes": [
     {
       "id": "grey",
@@ -91,7 +90,21 @@
       "nameTr": "Siyah",
       "nameEn": "Dark",
       "icon": "🌑",
-      "colors": { ... }
+      "colors": {
+        "bg": "#0d0d14",
+        "surface": "#141420",
+        "card": "#1a1a26",
+        "card2": "#20202e",
+        "border": "rgba(255,255,255,0.09)",
+        "border2": "rgba(255,255,255,0.15)",
+        "text": "#eeeef5",
+        "muted": "#6a6a88",
+        "muted2": "#42425e",
+        "accent": "#06d6a0",
+        "accent2": "#7c6dfa",
+        "accent3": "#ff6b6b",
+        "accent4": "#f4a261"
+      }
     },
     {
       "id": "light",
@@ -119,7 +132,21 @@
       "nameTr": "TP",
       "nameEn": "TP",
       "icon": "✦",
-      "colors": { ... }
+      "colors": {
+        "bg": "#0e0812",
+        "surface": "#14091c",
+        "card": "#1c1026",
+        "card2": "#231530",
+        "border": "rgba(255,0,130,0.1)",
+        "border2": "rgba(255,0,130,0.22)",
+        "text": "#f5eef8",
+        "muted": "#b07ab8",
+        "muted2": "#52245a",
+        "accent": "#FF0082",
+        "accent2": "#9b30c0",
+        "accent3": "#ff6b6b",
+        "accent4": "#f4a261"
+      }
     }
   ]
 }
