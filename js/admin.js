@@ -82,16 +82,24 @@ async function loadData() {
     if (maintToggle) maintToggle.classList.toggle('on', data.maintenance === true);
     if (annToggle) annToggle.classList.toggle('on', data.announcement?.active === true);
     
-    document.getElementById('maintMsg').value = data.maintenanceMessage || '';
-    document.getElementById('annText').value = data.announcement?.text || '';
-    document.getElementById('annType').value = data.announcement?.type || 'info';
-    document.getElementById('copyrightInput').value = data.copyrightText;
+    const maintMsg = document.getElementById('maintMsg');
+    const annText = document.getElementById('annText');
+    const annType = document.getElementById('annType');
+    const copyrightInput = document.getElementById('copyrightInput');
+    if (maintMsg) maintMsg.value = data.maintenanceMessage || '';
+    if (annText) annText.value = data.announcement?.text || '';
+    if (annType) annType.value = data.announcement?.type || 'info';
+    if (copyrightInput) copyrightInput.value = data.copyrightText;
     
-    document.getElementById('saveBtn').disabled = false;
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) saveBtn.disabled = false;
+    
     renderAll();
   } catch(e) {
     console.error(e);
-    document.getElementById('statusMsg').textContent = 'Veri yüklenemedi: ' + e.message;
+    const statusMsg = document.getElementById('statusMsg');
+    if (statusMsg) statusMsg.textContent = 'Veri yüklenemedi: ' + e.message;
+    else alert('Veri yüklenemedi: ' + e.message);
   }
 }
 
@@ -103,8 +111,9 @@ function renderAll() {
 }
 
 function renderToolsTable() {
-  const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   const tbody = document.getElementById('toolsTableBody');
+  if (!tbody || !data) return;
+  const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   tbody.innerHTML = data.tools.map(t => `
     <tr>
       <td><img src="logos/${t.icon}" style="width:24px;" onerror="this.src='logos/logo.png'"></td>
@@ -122,6 +131,7 @@ function renderToolsTable() {
 
 function renderCategoriesTable() {
   const tbody = document.getElementById('categoriesTableBody');
+  if (!tbody || !data) return;
   tbody.innerHTML = data.categories.map((c, i) => `
     <tr>
       <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${i},-1)">▲</button> ${i+1}</td>
@@ -136,6 +146,7 @@ function renderCategoriesTable() {
 
 function renderUsersTable() {
   const tbody = document.getElementById('usersTableBody');
+  if (!tbody || !data) return;
   tbody.innerHTML = data.users.map(u => `
     <tr>
       <td>${u.username}</td>
@@ -159,7 +170,8 @@ function moveCategory(idx, dir) {
 
 // ==================== MODAL KONTROLLERİ (POPUP) ====================
 function closeModal(modalId) {
-  document.getElementById(modalId).style.display = 'none';
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = 'none';
 }
 
 // ----- TOOL MODAL -----
@@ -169,6 +181,7 @@ function openToolModal(toolId = null) {
   const modal = document.getElementById('toolModal');
   const title = document.getElementById('toolModalTitle');
   const catSelect = document.getElementById('toolCat');
+  if (!modal || !title || !catSelect) return;
   
   catSelect.innerHTML = '<option value="">Seçin</option>' + 
     data.categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.label}</option>`).join('');
@@ -188,10 +201,10 @@ function openToolModal(toolId = null) {
     document.getElementById('toolUrl').value = tool.url;
     document.getElementById('toolIcon').value = tool.icon || '';
     catSelect.value = tool.cat;
-    enabledBtn.classList.toggle('on', tool.isEnabled !== false);
-    isNewBtn.classList.toggle('on', tool.isNew === true);
-    isTestBtn.classList.toggle('on', tool.isTest === true);
-    isBestBtn.classList.toggle('on', tool.isBest === true);
+    if (enabledBtn) enabledBtn.classList.toggle('on', tool.isEnabled !== false);
+    if (isNewBtn) isNewBtn.classList.toggle('on', tool.isNew === true);
+    if (isTestBtn) isTestBtn.classList.toggle('on', tool.isTest === true);
+    if (isBestBtn) isBestBtn.classList.toggle('on', tool.isBest === true);
   } else {
     title.innerText = '+ Yeni Araç';
     document.getElementById('toolId').disabled = false;
@@ -200,11 +213,10 @@ function openToolModal(toolId = null) {
     document.getElementById('toolUrl').value = '';
     document.getElementById('toolIcon').value = '';
     catSelect.value = '';
-    enabledBtn.classList.remove('on');
-    isNewBtn.classList.remove('on');
-    isTestBtn.classList.remove('on');
-    isBestBtn.classList.remove('on');
-    enabledBtn.classList.add('on');
+    if (enabledBtn) { enabledBtn.classList.remove('on'); enabledBtn.classList.add('on'); }
+    if (isNewBtn) isNewBtn.classList.remove('on');
+    if (isTestBtn) isTestBtn.classList.remove('on');
+    if (isBestBtn) isBestBtn.classList.remove('on');
   }
   
   attachToggleClick([enabledBtn, isNewBtn, isTestBtn, isBestBtn]);
@@ -213,6 +225,7 @@ function openToolModal(toolId = null) {
 
 function attachToggleClick(buttons) {
   buttons.forEach(btn => {
+    if (!btn) return;
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
     newBtn.addEventListener('click', (e) => {
@@ -267,6 +280,7 @@ function openCategoryModal(catId = null) {
   if (!data) { alert('Veri henüz yüklenmedi.'); return; }
   const modal = document.getElementById('categoryModal');
   const title = document.getElementById('categoryModalTitle');
+  if (!modal || !title) return;
   
   if (catId) {
     const cat = data.categories.find(c => c.id === catId);
@@ -307,6 +321,7 @@ function openUserModal(username = null) {
   if (!data) { alert('Veri henüz yüklenmedi.'); return; }
   const modal = document.getElementById('userModal');
   const title = document.getElementById('userModalTitle');
+  if (!modal || !title) return;
   
   if (username) {
     const user = data.users.find(u => u.username === username);
@@ -354,9 +369,11 @@ window.editUser = function(username) { openUserModal(username); };
 
 // ==================== STATS ====================
 function loadStats() {
+  const statsContainer = document.getElementById('statsCards');
+  if (!statsContainer) return;
   const stats = JSON.parse(localStorage.getItem('qa_stats') || '{}');
   const total = Object.values(stats).reduce((a,b)=>a+b,0);
-  document.getElementById('statsCards').innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div>`;
+  statsContainer.innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div>`;
 }
 function clearStats() { localStorage.removeItem('qa_stats'); loadStats(); }
 
@@ -373,19 +390,24 @@ async function saveToGitHub() {
   data.copyrightText = document.getElementById('copyrightInput').value;
   
   const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
+  if (btn) {
+    btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
+  }
   try {
     await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, 'Admin güncelleme');
     alert('✅ Kaydedildi! Sayfa yenilenecek.');
     location.reload();
   } catch(e) { alert('Hata: ' + e.message); }
-  btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
+  if (btn) {
+    btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
+  }
 }
 
 // ==================== CASE STATS ====================
 async function loadCaseStats() {
   const cards = document.getElementById('caseStatsCards');
   const details = document.getElementById('caseStatsDetails');
+  if (!cards || !details) return;
   cards.innerHTML = '<div class="loading-spinner"></div>';
   details.innerHTML = '';
   try {
@@ -428,34 +450,40 @@ async function loadCaseStats() {
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const token = document.getElementById('githubToken').value.trim();
   const errorDiv = document.getElementById('loginError');
-  if (!token) { errorDiv.textContent = 'Token girin'; return; }
-  errorDiv.textContent = '';
+  if (!token) { if (errorDiv) errorDiv.textContent = 'Token girin'; return; }
+  if (errorDiv) errorDiv.textContent = '';
   sessionStorage.setItem('gh_token', token);
   try {
     const res = await fetch('https://api.github.com/user', { headers: { 'Authorization': `Bearer ${token}` } });
     if (!res.ok) throw new Error('Geçersiz token');
     const userData = await res.json();
     sessionStorage.setItem('qa_user', JSON.stringify({ username: userData.login, role: 'admin' }));
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminPanel').style.display = 'block';
+    const loginScreen = document.getElementById('loginScreen');
+    const adminPanel = document.getElementById('adminPanel');
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (adminPanel) adminPanel.style.display = 'block';
     currentUser = { username: userData.login, role: 'admin' };
-    document.getElementById('roleBadge').innerHTML = 'ADMIN';
+    const roleBadge = document.getElementById('roleBadge');
+    if (roleBadge) roleBadge.innerHTML = 'ADMIN';
     initToggles();
     await loadData();
-  } catch (err) { errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
+  } catch (err) { if (errorDiv) errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   const token = sessionStorage.getItem('gh_token');
   if (token) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminPanel').style.display = 'block';
+    const loginScreen = document.getElementById('loginScreen');
+    const adminPanel = document.getElementById('adminPanel');
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (adminPanel) adminPanel.style.display = 'block';
     currentUser = { username: 'admin', role: 'admin' };
-    document.getElementById('roleBadge').innerHTML = 'ADMIN';
+    const roleBadge = document.getElementById('roleBadge');
+    if (roleBadge) roleBadge.innerHTML = 'ADMIN';
     initToggles();
     loadData().catch(() => {
-      document.getElementById('loginScreen').style.display = 'block';
-      document.getElementById('adminPanel').style.display = 'none';
+      if (loginScreen) loginScreen.style.display = 'block';
+      if (adminPanel) adminPanel.style.display = 'none';
       sessionStorage.removeItem('gh_token');
     });
   }
@@ -467,11 +495,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const tabId = btn.dataset.tab;
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.add('active');
+    const activeTab = document.getElementById(`tab-${tabId}`);
+    if (activeTab) activeTab.classList.add('active');
     btn.classList.add('active');
     if (tabId === 'caseStats') loadCaseStats();
   });
 });
 
 // Search
-document.getElementById('searchTools').addEventListener('input', () => renderToolsTable());
+const searchTools = document.getElementById('searchTools');
+if (searchTools) searchTools.addEventListener('input', () => renderToolsTable());
