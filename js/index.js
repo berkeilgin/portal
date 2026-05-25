@@ -15,6 +15,9 @@ const STRINGS = {
     recentTitle: '🕐 Son Kullanılan',
     loading: 'Portal yükleniyor…',
     disabled: 'Bu araç şu anda devre dışı.',
+    newBadge: 'YENİ',
+    testBadge: 'TEST',
+    bestBadge: 'EN İYİ'
   },
   en: {
     menu: 'Menu',
@@ -24,6 +27,9 @@ const STRINGS = {
     recentTitle: '🕐 Recently Used',
     loading: 'Loading portal…',
     disabled: 'This tool is currently disabled.',
+    newBadge: 'NEW',
+    testBadge: 'TEST',
+    bestBadge: 'BEST'
   }
 };
 
@@ -44,6 +50,8 @@ function applyLang() {
   document.getElementById('langFlag').src = isEN ? 'logos/en.png' : 'logos/tr.png';
   document.getElementById('langLabel').textContent = LANG.toUpperCase();
   document.getElementById('langOther').textContent = isEN ? 'TR' : 'EN';
+  // Yeniden render (isimler ve badge'ler güncellensin)
+  if (DATA) render();
 }
 
 function trackOpen(id){
@@ -71,14 +79,35 @@ async function loadData(){
     if(!r.ok) throw new Error(r.statusText);
     const j = await r.json();
     DATA = j;
+    // Eksik alanları doldur (eski uyumluluk)
+    if (DATA.categories) {
+      DATA.categories.forEach(cat => {
+        if (!cat.labelEn) cat.labelEn = cat.label;
+      });
+    }
+    if (DATA.tools) {
+      DATA.tools.forEach(tool => {
+        if (!tool.nameEn) tool.nameEn = tool.name;
+        if (tool.order === undefined) tool.order = 0;
+      });
+      DATA.tools.sort((a,b) => (a.order || 0) - (b.order || 0));
+    }
     applyMaintenance();
     applyAnnouncement();
     buildNav();
     render();
     applyLang();
+    updateCopyright();
     hideLoading();
   }catch(e){
     document.querySelector('.load-txt').textContent='Veri yüklenemedi — sayfayı yenileyin.';
+  }
+}
+
+function updateCopyright() {
+  const footerDiv = document.querySelector('.footer .copyright-text');
+  if (footerDiv && DATA && DATA.copyrightText) {
+    footerDiv.textContent = DATA.copyrightText;
   }
 }
 
@@ -99,6 +128,8 @@ setInterval(async()=>{
       applyAnnouncement();
       buildNav();
       render();
+      applyLang();
+      updateCopyright();
     }
   }catch(_){}
 }, 30000);
@@ -140,7 +171,8 @@ function buildNav(){
     a.className='dyn';
     a.dataset.cat=cat.id;
     a.onclick=()=>filterCat(cat.id,a);
-    a.innerHTML=`<span class="nav-icon">${cat.icon||'▪'}</span> ${cat.label}`;
+    const catLabel = LANG === 'en' && cat.labelEn ? cat.labelEn : cat.label;
+    a.innerHTML=`<span class="nav-icon">${cat.icon||'▪'}</span> ${catLabel}`;
     nav.appendChild(a);
   });
 }
@@ -158,16 +190,17 @@ function render(){
   const app=document.getElementById('app');
   app.innerHTML='';
   (DATA.categories||[]).forEach((cat,i)=>{
-    const tools=(DATA.tools||[]).filter(t=>t.cat===cat.id);
+    const tools=(DATA.tools||[]).filter(t=>t.cat===cat.id).sort((a,b)=>(a.order||0)-(b.order||0));
     if(!tools.length) return;
     const sec=document.createElement('div');
     sec.className='cat-section';
     sec.dataset.cat=cat.id;
     sec.style.animationDelay=`${i*.07}s`;
     if(activeFilter!=='all'&&activeFilter!==cat.id) sec.style.display='none';
+    const catTitle = LANG === 'en' && cat.labelEn ? cat.labelEn : cat.label;
     sec.innerHTML=`
       <div class="cat-header">
-        <div class="cat-title">${cat.icon||''} ${cat.label}</div>
+        <div class="cat-title">${cat.icon||''} ${catTitle}</div>
         <div class="cat-line"></div>
         <div class="cat-count">${tools.length}</div>
       </div>
@@ -182,16 +215,18 @@ function cardHTML(t){
   const isFav=getFav().includes(t.id);
   const disabled=t.isEnabled===false;
   let ribbon='', cls='';
-  if(t.isBest)      {ribbon='<div class="ribbon r-best">BEST</div>'; cls='is-best';}
-  else if(t.isNew)  {ribbon='<div class="ribbon r-new">NEW</div>';   cls='is-new';}
-  else if(t.isTest) {ribbon='<div class="ribbon r-test">TEST</div>';}
+  const s = STRINGS[LANG];
+  if(t.isBest)      {ribbon=`<div class="ribbon r-best">${s.bestBadge}</div>`; cls='is-best';}
+  else if(t.isNew)  {ribbon=`<div class="ribbon r-new">${s.newBadge}</div>`;   cls='is-new';}
+  else if(t.isTest) {ribbon=`<div class="ribbon r-test">${s.testBadge}</div>`;}
   if(disabled) cls+=' disabled';
+  const toolName = LANG === 'en' && t.nameEn ? t.nameEn : t.name;
 
   return `
   <div class="card ${cls}" data-id="${t.id}" data-enabled="${!disabled}">
     ${ribbon}
     <img class="card-icon" src="logos/${t.icon}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2224%22 font-size=%2224%22>🔗</text></svg>'">
-    <div class="card-name">${t.name}</div>
+    <div class="card-name">${toolName}</div>
     <button class="fav-btn ${isFav?'on':''}" data-fav="${t.id}">
       ${isFav?'★ Favoride':'☆ Favori'}
     </button>
@@ -248,8 +283,10 @@ function updateFav(){
   const tools=DATA?.tools||[];
   document.getElementById('favList').innerHTML=getFav().map(id=>{
     const t=tools.find(x=>x.id===id);
-    return t?`<div class="sb-item" data-open="${t.id}">
-      <img src="logos/${t.icon}" onerror="this.style.display='none'">${t.name}</div>`:'';
+    if(!t) return '';
+    const toolName = LANG === 'en' && t.nameEn ? t.nameEn : t.name;
+    return `<div class="sb-item" data-open="${t.id}">
+      <img src="logos/${t.icon}" onerror="this.style.display='none'">${toolName}</div>`;
   }).join('');
   document.querySelectorAll('#favList [data-open]').forEach(el=>{
     el.addEventListener('click',()=>openTool(el.dataset.open));
@@ -261,8 +298,10 @@ function updateRecent(){
   document.getElementById('recentList').innerHTML=
     JSON.parse(localStorage.getItem('recent')||'[]').map(id=>{
       const t=tools.find(x=>x.id===id);
-      return t?`<div class="sb-item" data-open="${t.id}">
-        <img src="logos/${t.icon}" onerror="this.style.display='none'">${t.name}</div>`:'';
+      if(!t) return '';
+      const toolName = LANG === 'en' && t.nameEn ? t.nameEn : t.name;
+      return `<div class="sb-item" data-open="${t.id}">
+        <img src="logos/${t.icon}" onerror="this.style.display='none'">${toolName}</div>`;
     }).join('');
   document.querySelectorAll('#recentList [data-open]').forEach(el=>{
     el.addEventListener('click',()=>openTool(el.dataset.open));
@@ -273,7 +312,12 @@ document.getElementById('langBtn')?.addEventListener('click', () => {
   LANG = LANG === 'tr' ? 'en' : 'tr';
   localStorage.setItem('qa_lang', LANG);
   applyLang();
-  if (DATA) { updateFav(); updateRecent(); }
+  if (DATA) { 
+    buildNav();    // kategori isimlerini güncelle
+    render();      // araç isimlerini ve badge'leri güncelle
+    updateFav();
+    updateRecent();
+  }
 });
 
 loadData();
