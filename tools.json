@@ -9,6 +9,11 @@
   },
   "categories": [
     {
+      "id": "faq",
+      "label": "Sıkça Sorulan Sorular",
+      "icon": "❓"
+    },
+    {
       "id": "bms",
       "label": "BMS Tools",
       "icon": "❤️"
