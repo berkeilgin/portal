@@ -50,7 +50,6 @@ function initToggles() {
   const maintToggle = document.getElementById('maintToggle');
   const annToggle = document.getElementById('annToggle');
   
-  // Mevcut click event'lerini kaldır (varsa)
   const newMaint = maintToggle.cloneNode(true);
   maintToggle.parentNode.replaceChild(newMaint, maintToggle);
   const newAnn = annToggle.cloneNode(true);
@@ -77,7 +76,6 @@ async function loadData() {
     if (!data.users) data.users = [];
     if (!data.copyrightText) data.copyrightText = '© 2025 QA Portal';
     
-    // Toggle butonlarının durumunu ayarla
     const maintToggle = document.getElementById('maintToggle');
     const annToggle = document.getElementById('annToggle');
     maintToggle.classList.toggle('on', data.maintenance === true);
@@ -127,8 +125,10 @@ function renderCategoriesTable() {
   tbody.innerHTML = data.categories.map((c, i) => `
     <tr>
       <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${i},-1)">▲</button> ${i+1}</td>
-      <td>${c.id}</td><td>${c.icon || ''} ${c.label}</td>
-      <td>${c.icon || ''}</td><td>${data.tools.filter(t => t.cat === c.id).length}</td>
+      <td>${c.id}</td>
+      <td>${c.icon || ''} ${c.label}</td>
+      <td>${c.icon || ''}</td>
+      <td>${data.tools.filter(t => t.cat === c.id).length}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editCategory('${c.id}')">✏️</button></td>
     </tr>
   `).join('');
@@ -141,7 +141,7 @@ function renderUsersTable() {
       <td>${u.username}</td>
       <td>${u.role}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editUser('${u.username}')">✏️</button></td>
-    </tr>
+    </table>
   `).join('');
 }
 
@@ -157,9 +157,230 @@ function moveCategory(idx, dir) {
   renderCategoriesTable();
 }
 
-function editTool(id) { alert('Düzenleme: ' + id); }
-function editCategory(id) { alert('Düzenleme: ' + id); }
-function editUser(id) { alert('Düzenleme: ' + id); }
+// ==================== MODAL KONTROLLERİ (EKLENDİ) ====================
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// ----- TOOL MODAL -----
+function openToolModal(toolId = null) {
+  const modal = document.getElementById('toolModal');
+  const title = document.getElementById('toolModalTitle');
+  const catSelect = document.getElementById('toolCat');
+  
+  // Kategori seçeneklerini doldur
+  catSelect.innerHTML = '<option value="">Seçin</option>' + 
+    data.categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.label}</option>`).join('');
+  
+  // Toggle butonlarını sıfırla
+  const enabledBtn = document.getElementById('toolEnabled');
+  const isNewBtn = document.getElementById('toolIsNew');
+  const isTestBtn = document.getElementById('toolIsTest');
+  const isBestBtn = document.getElementById('toolIsBest');
+  
+  if (toolId) {
+    // Düzenleme modu
+    const tool = data.tools.find(t => t.id === toolId);
+    if (!tool) return;
+    title.innerText = '✏️ Araç Düzenle';
+    document.getElementById('toolId').value = tool.id;
+    document.getElementById('toolId').disabled = true;
+    document.getElementById('toolName').value = tool.name;
+    document.getElementById('toolUrl').value = tool.url;
+    document.getElementById('toolIcon').value = tool.icon || '';
+    catSelect.value = tool.cat;
+    enabledBtn.classList.toggle('on', tool.isEnabled !== false);
+    isNewBtn.classList.toggle('on', tool.isNew === true);
+    isTestBtn.classList.toggle('on', tool.isTest === true);
+    isBestBtn.classList.toggle('on', tool.isBest === true);
+  } else {
+    // Yeni araç modu
+    title.innerText = '+ Yeni Araç';
+    document.getElementById('toolId').disabled = false;
+    document.getElementById('toolId').value = '';
+    document.getElementById('toolName').value = '';
+    document.getElementById('toolUrl').value = '';
+    document.getElementById('toolIcon').value = '';
+    catSelect.value = '';
+    enabledBtn.classList.remove('on');
+    isNewBtn.classList.remove('on');
+    isTestBtn.classList.remove('on');
+    isBestBtn.classList.remove('on');
+    enabledBtn.classList.add('on'); // Varsayılan aktif
+  }
+  
+  // Modal içindeki toggle butonlarına tıklama olayı ekle
+  attachToggleClick([enabledBtn, isNewBtn, isTestBtn, isBestBtn]);
+  
+  modal.style.display = 'flex';
+}
+
+function attachToggleClick(buttons) {
+  buttons.forEach(btn => {
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      newBtn.classList.toggle('on');
+    });
+  });
+  // ID'leri tekrar al
+  document.getElementById('toolEnabled').addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('toolIsNew').addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('toolIsTest').addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('toolIsBest').addEventListener('click', (e) => e.stopPropagation());
+}
+
+function saveTool() {
+  const id = document.getElementById('toolId').value.trim();
+  const name = document.getElementById('toolName').value.trim();
+  const url = document.getElementById('toolUrl').value.trim();
+  const cat = document.getElementById('toolCat').value;
+  const icon = document.getElementById('toolIcon').value.trim();
+  const isEnabled = document.getElementById('toolEnabled').classList.contains('on');
+  const isNew = document.getElementById('toolIsNew').classList.contains('on');
+  const isTest = document.getElementById('toolIsTest').classList.contains('on');
+  const isBest = document.getElementById('toolIsBest').classList.contains('on');
+  
+  if (!id || !name || !url || !cat) {
+    alert('ID, Ad, URL ve Kategori zorunludur.');
+    return;
+  }
+  
+  const existing = data.tools.find(t => t.id === id);
+  if (existing && document.getElementById('toolId').disabled === false) {
+    alert('Bu ID ile bir araç zaten var.');
+    return;
+  }
+  
+  const toolData = { id, name, url, cat, icon, isEnabled, isNew, isTest, isBest };
+  
+  if (existing) {
+    // Güncelle
+    Object.assign(existing, toolData);
+  } else {
+    data.tools.push(toolData);
+  }
+  
+  renderToolsTable();
+  closeModal('toolModal');
+}
+
+// ----- CATEGORY MODAL -----
+function openCategoryModal(catId = null) {
+  const modal = document.getElementById('categoryModal');
+  const title = document.getElementById('categoryModalTitle');
+  
+  if (catId) {
+    const cat = data.categories.find(c => c.id === catId);
+    if (!cat) return;
+    title.innerText = '✏️ Kategori Düzenle';
+    document.getElementById('catId').value = cat.id;
+    document.getElementById('catId').disabled = true;
+    document.getElementById('catLabel').value = cat.label;
+    document.getElementById('catIcon').value = cat.icon || '';
+  } else {
+    title.innerText = '+ Yeni Kategori';
+    document.getElementById('catId').disabled = false;
+    document.getElementById('catId').value = '';
+    document.getElementById('catLabel').value = '';
+    document.getElementById('catIcon').value = '';
+  }
+  modal.style.display = 'flex';
+}
+
+function saveCategory() {
+  const id = document.getElementById('catId').value.trim();
+  const label = document.getElementById('catLabel').value.trim();
+  const icon = document.getElementById('catIcon').value.trim();
+  
+  if (!id || !label) {
+    alert('ID ve Etiket zorunludur.');
+    return;
+  }
+  
+  const existing = data.categories.find(c => c.id === id);
+  if (existing && document.getElementById('catId').disabled === false) {
+    alert('Bu ID ile bir kategori zaten var.');
+    return;
+  }
+  
+  if (existing) {
+    existing.label = label;
+    existing.icon = icon;
+  } else {
+    data.categories.push({ id, label, icon });
+  }
+  
+  renderCategoriesTable();
+  closeModal('categoryModal');
+}
+
+// ----- USER MODAL -----
+function openUserModal(username = null) {
+  const modal = document.getElementById('userModal');
+  const title = document.getElementById('userModalTitle');
+  
+  if (username) {
+    const user = data.users.find(u => u.username === username);
+    if (!user) return;
+    title.innerText = '✏️ Kullanıcı Düzenle';
+    document.getElementById('userUsername').value = user.username;
+    document.getElementById('userUsername').disabled = true;
+    document.getElementById('userRole').value = user.role;
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userPassword2').value = '';
+  } else {
+    title.innerText = '+ Yeni Kullanıcı';
+    document.getElementById('userUsername').disabled = false;
+    document.getElementById('userUsername').value = '';
+    document.getElementById('userRole').value = 'editor';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userPassword2').value = '';
+  }
+  modal.style.display = 'flex';
+}
+
+function saveUser() {
+  const username = document.getElementById('userUsername').value.trim();
+  const role = document.getElementById('userRole').value;
+  const password = document.getElementById('userPassword').value;
+  const password2 = document.getElementById('userPassword2').value;
+  
+  if (!username) {
+    alert('Kullanıcı adı zorunludur.');
+    return;
+  }
+  
+  const existing = data.users.find(u => u.username === username);
+  const isNew = !existing;
+  
+  if (isNew && !password) {
+    alert('Yeni kullanıcı için şifre girilmelidir.');
+    return;
+  }
+  
+  if (password !== password2) {
+    alert('Şifreler eşleşmiyor.');
+    return;
+  }
+  
+  if (existing) {
+    // Güncelleme
+    existing.role = role;
+    if (password) existing.password = password;
+  } else {
+    data.users.push({ username, role, password });
+  }
+  
+  renderUsersTable();
+  closeModal('userModal');
+}
+
+// Düzenleme butonlarını yeniden tanımla
+window.editTool = function(id) { openToolModal(id); };
+window.editCategory = function(id) { openCategoryModal(id); };
+window.editUser = function(username) { openUserModal(username); };
 
 // ==================== STATS ====================
 function loadStats() {
@@ -173,7 +394,6 @@ function clearStats() { localStorage.removeItem('qa_stats'); loadStats(); }
 async function saveToGitHub() {
   if (!data || !fileSha) { alert('Veri yüklenmedi'); return; }
   
-  // Toggle butonlarının durumunu oku
   data.maintenance = document.getElementById('maintToggle').classList.contains('on');
   data.maintenanceMessage = document.getElementById('maintMsg').value;
   data.announcement = {
@@ -216,7 +436,6 @@ async function loadCaseStats() {
       <div class="stat-card"><div class="number">${avgTime.toFixed(1)}</div><div>Ort. Çözüm (gün)</div></div>
     `;
     
-    // Son 7 gün trendi
     const last7 = [];
     for (let i = 6; i >= 0; i--) { let d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0); last7.push(d); }
     const trend = last7.map(day => ({
@@ -260,7 +479,6 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   } catch (err) { errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
 });
 
-// Sayfa yüklendiğinde token varsa doğrudan paneli göster
 document.addEventListener('DOMContentLoaded', () => {
   const token = sessionStorage.getItem('gh_token');
   if (token) {
