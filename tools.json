@@ -11,42 +11,50 @@
     {
       "id": "faq",
       "label": "Sıkça Sorulan Sorular",
-      "icon": "❓"
+      "icon": "❓",
+      "labelEn": "Sıkça Sorulan Sorular"
     },
     {
       "id": "bms",
       "label": "BMS Tools",
-      "icon": "❤️"
+      "icon": "❤️",
+      "labelEn": "BMS Tools"
     },
     {
       "id": "tp",
       "label": "TP Tools",
-      "icon": "🖥️"
+      "icon": "🖥️",
+      "labelEn": "TP Tools"
     },
     {
       "id": "qa",
       "label": "QA Tools",
-      "icon": "🔬"
+      "icon": "🔬",
+      "labelEn": "QA Tools"
     },
     {
       "id": "reports",
       "label": "Power BI Reports",
-      "icon": "📊"
+      "icon": "📊",
+      "labelEn": "Power BI Reports"
     },
     {
       "id": "office",
       "label": "Microsoft Office",
-      "icon": "📎"
+      "icon": "📎",
+      "labelEn": "Microsoft Office"
     },
     {
       "id": "google",
       "label": "Google Ürünleri",
-      "icon": "⚜️"
+      "icon": "⚜️",
+      "labelEn": "Google Ürünleri"
     },
     {
       "id": "portal",
       "label": "Portal",
-      "icon": "💭"
+      "icon": "💭",
+      "labelEn": "Portal"
     }
   ],
   "tools": [
@@ -59,7 +67,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://sebra.ccms.teleperformance.com/"
+      "url": "https://sebra.ccms.teleperformance.com/",
+      "nameEn": "BMS Home Page",
+      "order": 0
     },
     {
       "id": "mytp",
@@ -70,7 +80,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://teleperformance-mytp.sabacloud.com/"
+      "url": "https://teleperformance-mytp.sabacloud.com/",
+      "nameEn": "MYTP",
+      "order": 1
     },
     {
       "id": "ikon",
@@ -81,7 +93,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://ikon.teleperformance.com.tr/logo/corporate"
+      "url": "https://ikon.teleperformance.com.tr/logo/corporate",
+      "nameEn": "İKON (Yıllık İzin)",
+      "order": 2
     },
     {
       "id": "srvdesk",
@@ -92,7 +106,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://support.teleperformance.com/esc?id=ec_dashboard"
+      "url": "https://support.teleperformance.com/esc?id=ec_dashboard",
+      "nameEn": "Service Desk (Case)",
+      "order": 3
     },
     {
       "id": "peyk",
@@ -103,7 +119,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://peyk.kolaysoft.com.tr/login"
+      "url": "https://peyk.kolaysoft.com.tr/login",
+      "nameEn": "PEYK - Bordro Görüntüleme",
+      "order": 4
     },
     {
       "id": "random",
@@ -114,7 +132,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "randomizer.html"
+      "url": "randomizer.html",
+      "nameEn": "Randomizer",
+      "order": 5
     },
     {
       "id": "corel",
@@ -125,7 +145,9 @@
       "isTest": false,
       "isBest": true,
       "isEnabled": true,
-      "url": "corel.html"
+      "url": "corel.html",
+      "nameEn": "Correlation",
+      "order": 6
     },
     {
       "id": "csv",
@@ -136,7 +158,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "csvconverter.html"
+      "url": "csvconverter.html",
+      "nameEn": "Data CSV Converter",
+      "order": 7
     },
     {
       "id": "sampling",
@@ -147,7 +171,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "sampling.html"
+      "url": "sampling.html",
+      "nameEn": "BSH Dağıtım",
+      "order": 8
     },
     {
       "id": "trceviri",
@@ -158,7 +184,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "trendyolceviri.html"
+      "url": "trendyolceviri.html",
+      "nameEn": "Trendyol CSV Converter",
+      "order": 9
     },
     {
       "id": "powerbifb",
@@ -169,7 +197,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/"
+      "url": "https://app.powerbi.com/",
+      "nameEn": "Feedback Raporu",
+      "order": 10
     },
     {
       "id": "powerbidm",
@@ -180,7 +210,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/"
+      "url": "https://app.powerbi.com/",
+      "nameEn": "Domestic - Kalite Raporu",
+      "order": 11
     },
     {
       "id": "powerbiml",
@@ -191,7 +223,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/groups/me/reports/913d085a-39b0-47ba-8d86-93f7562967b5/ReportSection6e0f125c1a8e11c66787?experience=power-bi"
+      "url": "https://app.powerbi.com/groups/me/reports/913d085a-39b0-47ba-8d86-93f7562967b5/ReportSection6e0f125c1a8e11c66787?experience=power-bi",
+      "nameEn": "Multi Lingual - Kalite Raporu",
+      "order": 12
     },
     {
       "id": "powerpharos",
@@ -202,7 +236,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/groups/me/apps/41d62312-bcc5-4135-a533-27c99a17330b/reports/35f2923b-4391-420b-b20c-39a5fbbf71af/ReportSection?ctid=638fcbaf-ba4c-43e1-adae-5475c970fe10&experience=power-bi"
+      "url": "https://app.powerbi.com/groups/me/apps/41d62312-bcc5-4135-a533-27c99a17330b/reports/35f2923b-4391-420b-b20c-39a5fbbf71af/ReportSection?ctid=638fcbaf-ba4c-43e1-adae-5475c970fe10&experience=power-bi",
+      "nameEn": "Pharos",
+      "order": 13
     },
     {
       "id": "powerbitops",
@@ -213,7 +249,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/groups/me/reports/fa9a4773-1f17-4e70-8d61-c2abdd623f10/4ff2d5fd86b13526c481?experience=power-bi"
+      "url": "https://app.powerbi.com/groups/me/reports/fa9a4773-1f17-4e70-8d61-c2abdd623f10/4ff2d5fd86b13526c481?experience=power-bi",
+      "nameEn": "TOPS Report",
+      "order": 14
     },
     {
       "id": "powerbimgm",
@@ -224,7 +262,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://app.powerbi.com/groups/me/reports/5e8a5883-5b0c-468a-aa43-4eafb84a948b/ReportSection129752e63008ee0ccb20?experience=power-bi"
+      "url": "https://app.powerbi.com/groups/me/reports/5e8a5883-5b0c-468a-aa43-4eafb84a948b/ReportSection129752e63008ee0ccb20?experience=power-bi",
+      "nameEn": "Domestic - Management Report",
+      "order": 15
     },
     {
       "id": "excel",
@@ -235,7 +275,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://excel.cloud.microsoft/"
+      "url": "https://excel.cloud.microsoft/",
+      "nameEn": "Excel",
+      "order": 16
     },
     {
       "id": "ppt",
@@ -246,7 +288,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://powerpoint.cloud.microsoft/"
+      "url": "https://powerpoint.cloud.microsoft/",
+      "nameEn": "PowerPoint",
+      "order": 17
     },
     {
       "id": "word",
@@ -257,7 +301,9 @@
       "isTest": false,
       "isBest": false,
       "isEnabled": true,
-      "url": "https://word.cloud.microsoft/"
+      "url": "https://word.cloud.microsoft/",
+      "nameEn": "Word",
+      "order": 18
     },
     {
       "id": "kaliterapor",
@@ -268,7 +314,9 @@
       "isNew": false,
       "isTest": true,
       "isBest": false,
-      "url": "kaliterapor.html"
+      "url": "kaliterapor.html",
+      "nameEn": "Kalite Raporu Hazırla & Güncelle",
+      "order": 19
     },
     {
       "id": "bmsform",
@@ -279,7 +327,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://sebra.ccms.teleperformance.com/cgi-bin/console/form_configuration.pl"
+      "url": "https://sebra.ccms.teleperformance.com/cgi-bin/console/form_configuration.pl",
+      "nameEn": "BMS Form Oluşturma",
+      "order": 20
     },
     {
       "id": "bmsraw",
@@ -290,7 +340,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": true,
-      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/form.pl?frmTarget=MONITOR&form_type_ident=101&frmOption=EXPORT"
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/form.pl?frmTarget=MONITOR&form_type_ident=101&frmOption=EXPORT",
+      "nameEn": "BMS Raw Data",
+      "order": 21
     },
     {
       "id": "bsmcreatedcalib",
@@ -301,7 +353,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/console/calibration.pl"
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/console/calibration.pl",
+      "nameEn": "BMS Kalibrasyon Oluşturma",
+      "order": 22
     },
     {
       "id": "bmstops",
@@ -312,7 +366,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/tops.pl"
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/tops.pl",
+      "nameEn": "BMS TOPS Report",
+      "order": 23
     },
     {
       "id": "outlook",
@@ -323,7 +379,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "http://outlook.office.com/"
+      "url": "http://outlook.office.com/",
+      "nameEn": "Outlook Web",
+      "order": 24
     },
     {
       "id": "portaladmin",
@@ -334,7 +392,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "admin.html"
+      "url": "admin.html",
+      "nameEn": "Admin Paneli",
+      "order": 25
     },
     {
       "id": "portalcase",
@@ -345,7 +405,9 @@
       "isNew": false,
       "isTest": true,
       "isBest": false,
-      "url": "case.html"
+      "url": "case.html",
+      "nameEn": "Kalite Case Aç",
+      "order": 26
     },
     {
       "id": "casecoz",
@@ -356,7 +418,9 @@
       "isNew": false,
       "isTest": true,
       "isBest": false,
-      "url": "caseyonetim.html"
+      "url": "caseyonetim.html",
+      "nameEn": "Case Çözümle",
+      "order": 27
     },
     {
       "id": "gemini",
@@ -367,7 +431,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://gemini.google.com"
+      "url": "https://gemini.google.com",
+      "nameEn": "Gemini",
+      "order": 28
     },
     {
       "id": "gmail",
@@ -378,7 +444,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://workspace.google.com/gmail/"
+      "url": "https://workspace.google.com/gmail/",
+      "nameEn": "Gmail",
+      "order": 29
     },
     {
       "id": "spr",
@@ -389,7 +457,9 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "url": "https://docs.google.com/spreadsheets/u/0/"
+      "url": "https://docs.google.com/spreadsheets/u/0/",
+      "nameEn": "Spread Sheet (Excel)",
+      "order": 30
     },
     {
       "id": "faq",
@@ -400,7 +470,9 @@
       "isEnabled": true,
       "isNew": false,
       "isTest": false,
-      "isBest": false
+      "isBest": false,
+      "nameEn": "Portal El Kitabı",
+      "order": 31
     }
   ],
   "users": [
