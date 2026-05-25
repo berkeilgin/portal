@@ -339,20 +339,21 @@
         <div class="form-group"><label>Duyuru Metni</label><input type="text" id="annText" placeholder="Duyuru metni..."></div>
         <div class="form-group"><label>Duyuru Türü</label><select id="annType"><option value="info">Bilgi (mavi)</option><option value="success">Başarılı (yeşil)</option><option value="warn">Uyarı (sarı)</option><option value="danger">Acil (kırmızı)</option></select></div>
         <div class="form-group"><label>Telif Hakkı Metni</label><input type="text" id="copyrightInput" placeholder="© 2025 QA Portal. Tüm hakları saklıdır."></div>
-        <!-- SETTINGS TAB içinde, mevcut ayarların altına ekleyin -->
-<div class="panel" style="margin-top: 24px;">
-  <div class="admin-toolbar">
-    <h3>🎨 Tema Yönetimi</h3>
-    <button class="btn btn-primary" onclick="openThemeModal()">+ Yeni Tema</button>
-  </div>
-  <div class="table-wrapper">
-    <table id="themesTable">
-      <thead><tr><th>ID</th><th>İkon</th><th>Ad (TR)</th><th>Ad (EN)</th><th>İşlem</th></tr></thead>
-      <tbody id="themesTableBody"></tbody>
-    </table>
-  </div>
-</div>
       </div></div>
+
+      <!-- TEMA YÖNETİMİ PANELİ (EK) -->
+      <div class="panel" style="margin-top: 24px;">
+        <div class="admin-toolbar">
+          <h3>🎨 Tema Yönetimi</h3>
+          <button class="btn btn-primary" onclick="openThemeModal()">+ Yeni Tema</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="themesTable">
+            <thead><tr><th>ID</th><th>İkon</th><th>Ad (TR)</th><th>Ad (EN)</th><th>İşlem</th></thead>
+            <tbody id="themesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- STATS TAB -->
@@ -364,7 +365,7 @@
     <!-- USERS TAB -->
     <div class="tab-pane" id="tab-users">
       <div class="panel"><div class="admin-toolbar"><h3>👥 Kullanıcı Yönetimi</h3><button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button></div>
-      <div class="table-wrapper"><table><thead><tr><th>Kullanıcı Adı</th><th>Rol</th><th>İşlem</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
+      <div class="table-wrapper"><tr><thead> hilab<th>Kullanıcı Adı</th><th>Rol</th><th>İşlem</th> </thead><tbody id="usersTableBody"></tbody> </div></div>
     </div>
 
     <!-- UPLOADS TAB -->
@@ -424,7 +425,7 @@
   </div>
 </div>
 
-  <!-- Tema Düzenleme / Ekleme Modalı -->
+<!-- TEMA MODALI (EK) -->
 <div class="modal-overlay" id="themeModal" style="display: none;">
   <div class="modal" style="max-width: 700px;">
     <h3 id="themeModalTitle">Tema Düzenle</h3>
