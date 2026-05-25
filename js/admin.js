@@ -49,6 +49,7 @@ function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 function initToggles() {
   const maintToggle = document.getElementById('maintToggle');
   const annToggle = document.getElementById('annToggle');
+  if (!maintToggle || !annToggle) return;
   
   const newMaint = maintToggle.cloneNode(true);
   maintToggle.parentNode.replaceChild(newMaint, maintToggle);
@@ -65,7 +66,7 @@ function initToggles() {
   });
 }
 
-// ==================== LOAD DATA & RENDER SETTINGS ====================
+// ==================== LOAD DATA & RENDER ====================
 async function loadData() {
   try {
     const result = await ghGet('tools.json');
@@ -78,8 +79,8 @@ async function loadData() {
     
     const maintToggle = document.getElementById('maintToggle');
     const annToggle = document.getElementById('annToggle');
-    maintToggle.classList.toggle('on', data.maintenance === true);
-    annToggle.classList.toggle('on', data.announcement?.active === true);
+    if (maintToggle) maintToggle.classList.toggle('on', data.maintenance === true);
+    if (annToggle) annToggle.classList.toggle('on', data.announcement?.active === true);
     
     document.getElementById('maintMsg').value = data.maintenanceMessage || '';
     document.getElementById('annText').value = data.announcement?.text || '';
@@ -94,7 +95,6 @@ async function loadData() {
   }
 }
 
-// ==================== RENDER ====================
 function renderAll() {
   renderToolsTable();
   renderCategoriesTable();
@@ -157,14 +157,14 @@ function moveCategory(idx, dir) {
   renderCategoriesTable();
 }
 
-// ==================== MODAL KONTROLLERİ ====================
+// ==================== MODAL KONTROLLERİ (POPUP) ====================
 function closeModal(modalId) {
   document.getElementById(modalId).style.display = 'none';
 }
 
 // ----- TOOL MODAL -----
 function openToolModal(toolId = null) {
-  if (!data) { alert('Veri henüz yüklenmedi, lütfen bekleyin.'); return; }
+  if (!data) { alert('Veri henüz yüklenmedi.'); return; }
   
   const modal = document.getElementById('toolModal');
   const title = document.getElementById('toolModalTitle');
@@ -220,6 +220,14 @@ function attachToggleClick(buttons) {
       newBtn.classList.toggle('on');
     });
   });
+  const enabled = document.getElementById('toolEnabled');
+  const isNew = document.getElementById('toolIsNew');
+  const isTest = document.getElementById('toolIsTest');
+  const isBest = document.getElementById('toolIsBest');
+  if (enabled) enabled.addEventListener('click', (e) => e.stopPropagation());
+  if (isNew) isNew.addEventListener('click', (e) => e.stopPropagation());
+  if (isTest) isTest.addEventListener('click', (e) => e.stopPropagation());
+  if (isBest) isBest.addEventListener('click', (e) => e.stopPropagation());
 }
 
 function saveTool() {
@@ -247,12 +255,8 @@ function saveTool() {
   }
   
   const toolData = { id, name, url, cat, icon, isEnabled, isNew, isTest, isBest };
-  
-  if (existing) {
-    Object.assign(existing, toolData);
-  } else {
-    data.tools.push(toolData);
-  }
+  if (existing) Object.assign(existing, toolData);
+  else data.tools.push(toolData);
   
   renderToolsTable();
   closeModal('toolModal');
@@ -261,7 +265,6 @@ function saveTool() {
 // ----- CATEGORY MODAL -----
 function openCategoryModal(catId = null) {
   if (!data) { alert('Veri henüz yüklenmedi.'); return; }
-  
   const modal = document.getElementById('categoryModal');
   const title = document.getElementById('categoryModalTitle');
   
@@ -285,28 +288,15 @@ function openCategoryModal(catId = null) {
 
 function saveCategory() {
   if (!data) { alert('Veri yüklenmedi.'); return; }
-  
   const id = document.getElementById('catId').value.trim();
   const label = document.getElementById('catLabel').value.trim();
   const icon = document.getElementById('catIcon').value.trim();
   
-  if (!id || !label) {
-    alert('ID ve Etiket zorunludur.');
-    return;
-  }
-  
+  if (!id || !label) { alert('ID ve Etiket zorunludur.'); return; }
   const existing = data.categories.find(c => c.id === id);
-  if (existing && document.getElementById('catId').disabled === false) {
-    alert('Bu ID ile bir kategori zaten var.');
-    return;
-  }
-  
-  if (existing) {
-    existing.label = label;
-    existing.icon = icon;
-  } else {
-    data.categories.push({ id, label, icon });
-  }
+  if (existing && document.getElementById('catId').disabled === false) { alert('Bu ID ile bir kategori zaten var.'); return; }
+  if (existing) { existing.label = label; existing.icon = icon; }
+  else data.categories.push({ id, label, icon });
   
   renderCategoriesTable();
   closeModal('categoryModal');
@@ -315,7 +305,6 @@ function saveCategory() {
 // ----- USER MODAL -----
 function openUserModal(username = null) {
   if (!data) { alert('Veri henüz yüklenmedi.'); return; }
-  
   const modal = document.getElementById('userModal');
   const title = document.getElementById('userModalTitle');
   
@@ -341,36 +330,18 @@ function openUserModal(username = null) {
 
 function saveUser() {
   if (!data) { alert('Veri yüklenmedi.'); return; }
-  
   const username = document.getElementById('userUsername').value.trim();
   const role = document.getElementById('userRole').value;
   const password = document.getElementById('userPassword').value;
   const password2 = document.getElementById('userPassword2').value;
   
-  if (!username) {
-    alert('Kullanıcı adı zorunludur.');
-    return;
-  }
-  
+  if (!username) { alert('Kullanıcı adı zorunludur.'); return; }
   const existing = data.users.find(u => u.username === username);
   const isNew = !existing;
-  
-  if (isNew && !password) {
-    alert('Yeni kullanıcı için şifre girilmelidir.');
-    return;
-  }
-  
-  if (password !== password2) {
-    alert('Şifreler eşleşmiyor.');
-    return;
-  }
-  
-  if (existing) {
-    existing.role = role;
-    if (password) existing.password = password;
-  } else {
-    data.users.push({ username, role, password });
-  }
+  if (isNew && !password) { alert('Yeni kullanıcı için şifre girilmelidir.'); return; }
+  if (password !== password2) { alert('Şifreler eşleşmiyor.'); return; }
+  if (existing) { existing.role = role; if (password) existing.password = password; }
+  else data.users.push({ username, role, password });
   
   renderUsersTable();
   closeModal('userModal');
@@ -392,7 +363,6 @@ function clearStats() { localStorage.removeItem('qa_stats'); loadStats(); }
 // ==================== SAVE TO GITHUB ====================
 async function saveToGitHub() {
   if (!data || !fileSha) { alert('Veri yüklenmedi'); return; }
-  
   data.maintenance = document.getElementById('maintToggle').classList.contains('on');
   data.maintenanceMessage = document.getElementById('maintMsg').value;
   data.announcement = {
@@ -406,7 +376,7 @@ async function saveToGitHub() {
   btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
   try {
     await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, 'Admin güncelleme');
-    alert('✅ Kaydedildi! Değişikliklerin etkili olması için sayfa yenilenecek.');
+    alert('✅ Kaydedildi! Sayfa yenilenecek.');
     location.reload();
   } catch(e) { alert('Hata: ' + e.message); }
   btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
@@ -427,14 +397,12 @@ async function loadCaseStats() {
     let avgTime = 0;
     const times = cases.filter(c => c.resolutionTime).map(c => c.resolutionTime);
     if (times.length) avgTime = times.reduce((a,b)=>a+b,0)/times.length;
-    
     cards.innerHTML = `
       <div class="stat-card"><div class="number">${total}</div><div>Toplam Case</div></div>
       <div class="stat-card"><div class="number">${open}</div><div>Açık Case</div></div>
       <div class="stat-card"><div class="number">${resolved}</div><div>Çözülen</div></div>
       <div class="stat-card"><div class="number">${avgTime.toFixed(1)}</div><div>Ort. Çözüm (gün)</div></div>
     `;
-    
     const last7 = [];
     for (let i = 6; i >= 0; i--) { let d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0); last7.push(d); }
     const trend = last7.map(day => ({
@@ -449,7 +417,6 @@ async function loadCaseStats() {
         <div style="font-size:12px; font-weight:bold;">${t.count}</div>
       </div>
     `).join('')}</div>`;
-    
     details.innerHTML = `
       <div class="panel"><h3>📈 Son 7 Gün Trendi</h3>${trendHtml}</div>
       <div class="panel"><h3>📊 Durum Dağılımı</h3><div class="stats-grid">${['beklemede','sürüyor','çözüldü','reddedildi'].map(s => `<div class="stat-card"><div class="number">${cases.filter(c=>c.status===s).length}</div><div>${s}</div></div>`).join('')}</div></div>
