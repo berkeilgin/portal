@@ -66,16 +66,39 @@ function initToggles() {
   });
 }
 
+// ==================== VERİ DÖNÜŞÜMÜ (ESKİ YAPIYI YENİYE UYARLA) ====================
+function migrateData(rawData) {
+  // Kategoriler: labelEn yoksa label'i kopyala
+  if (rawData.categories) {
+    rawData.categories.forEach(cat => {
+      if (!cat.labelEn) cat.labelEn = cat.label;
+    });
+  }
+  // Araçlar: nameEn yoksa name'i kopyala, order yoksa index'e göre ata
+  if (rawData.tools) {
+    rawData.tools.forEach((tool, idx) => {
+      if (!tool.nameEn) tool.nameEn = tool.name;
+      if (tool.order === undefined) tool.order = idx;
+    });
+    // order'a göre sırala
+    rawData.tools.sort((a,b) => (a.order || 0) - (b.order || 0));
+  }
+  // Diğer alanlar
+  if (!rawData.copyrightText) rawData.copyrightText = '© 2025 QA Portal';
+  if (rawData.maintenance === undefined) rawData.maintenance = false;
+  if (!rawData.maintenanceMessage) rawData.maintenanceMessage = '';
+  if (!rawData.announcement) rawData.announcement = { active: false, text: '', type: 'info' };
+  if (!rawData.users) rawData.users = [];
+  return rawData;
+}
+
 // ==================== LOAD DATA & RENDER ====================
 async function loadData() {
   try {
     const result = await ghGet('tools.json');
     fileSha = result.sha;
-    data = JSON.parse(b64Decode(result.content));
-    if (!data.categories) data.categories = [];
-    if (!data.tools) data.tools = [];
-    if (!data.users) data.users = [];
-    if (!data.copyrightText) data.copyrightText = '© 2025 QA Portal';
+    let raw = JSON.parse(b64Decode(result.content));
+    data = migrateData(raw);
     
     const maintToggle = document.getElementById('maintToggle');
     const annToggle = document.getElementById('annToggle');
@@ -114,8 +137,18 @@ function renderToolsTable() {
   const tbody = document.getElementById('toolsTableBody');
   if (!tbody || !data) return;
   const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
-  tbody.innerHTML = data.tools.map(t => `
+  const searchTerm = (document.getElementById('searchTools')?.value || '').toLowerCase();
+  let filtered = data.tools.filter(t => t.name.toLowerCase().includes(searchTerm) || t.id.toLowerCase().includes(searchTerm));
+  // order'a göre sıralı (zaten sıralı)
+  tbody.innerHTML = filtered.map((t, idx) => {
+    const actualIndex = data.tools.findIndex(tt => tt.id === t.id);
+    return `
     <tr>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="moveTool(${actualIndex}, -1)" ${actualIndex === 0 ? 'disabled' : ''}>▲</button>
+        <button class="btn btn-ghost btn-sm" onclick="moveTool(${actualIndex}, 1)" ${actualIndex === data.tools.length-1 ? 'disabled' : ''}>▼</button>
+        ${actualIndex+1}
+      </td>
       <td><img src="logos/${t.icon}" style="width:24px;" onerror="this.src='logos/logo.png'"></td>
       <td>${t.name}<br><span style="font-size:10px">${t.id}</span></td>
       <td>${catMap[t.cat]?.icon || ''} ${catMap[t.cat]?.label || t.cat}</td>
@@ -126,7 +159,8 @@ function renderToolsTable() {
       <td><button class="toggle-switch ${t.isBest ? 'on' : ''}" onclick="toggleToolFlag('${t.id}','isBest',this)"></button></td>
       <td><button class="btn btn-ghost btn-sm" onclick="editTool('${t.id}')">✏️</button></td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function renderCategoriesTable() {
@@ -136,11 +170,12 @@ function renderCategoriesTable() {
     <tr>
       <td><button class="btn btn-ghost btn-sm" onclick="moveCategory(${i},-1)">▲</button> ${i+1}</td>
       <td>${c.id}</td>
-      <td>${c.icon || ''} ${c.label}</td>
+      <td>${c.label}</td>
+      <td>${c.labelEn || c.label}</td>
       <td>${c.icon || ''}</td>
       <td>${data.tools.filter(t => t.cat === c.id).length}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editCategory('${c.id}')">✏️</button></td>
-    </tr>
+    <tr>
   `).join('');
 }
 
@@ -166,6 +201,16 @@ function moveCategory(idx, dir) {
   if (newIdx < 0 || newIdx >= data.categories.length) return;
   [data.categories[idx], data.categories[newIdx]] = [data.categories[newIdx], data.categories[idx]];
   renderCategoriesTable();
+}
+
+// Araç sıralama
+function moveTool(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= data.tools.length) return;
+  [data.tools[idx], data.tools[newIdx]] = [data.tools[newIdx], data.tools[idx]];
+  // order alanlarını güncelle
+  data.tools.forEach((t, i) => { t.order = i; });
+  renderToolsTable();
 }
 
 // ==================== MODAL KONTROLLERİ (POPUP) ====================
@@ -197,7 +242,8 @@ function openToolModal(toolId = null) {
     title.innerText = '✏️ Araç Düzenle';
     document.getElementById('toolId').value = tool.id;
     document.getElementById('toolId').disabled = true;
-    document.getElementById('toolName').value = tool.name;
+    document.getElementById('toolName').value = tool.name || '';
+    document.getElementById('toolNameEn').value = tool.nameEn || '';
     document.getElementById('toolUrl').value = tool.url;
     document.getElementById('toolIcon').value = tool.icon || '';
     catSelect.value = tool.cat;
@@ -210,6 +256,7 @@ function openToolModal(toolId = null) {
     document.getElementById('toolId').disabled = false;
     document.getElementById('toolId').value = '';
     document.getElementById('toolName').value = '';
+    document.getElementById('toolNameEn').value = '';
     document.getElementById('toolUrl').value = '';
     document.getElementById('toolIcon').value = '';
     catSelect.value = '';
@@ -248,6 +295,7 @@ function saveTool() {
   
   const id = document.getElementById('toolId').value.trim();
   const name = document.getElementById('toolName').value.trim();
+  const nameEn = document.getElementById('toolNameEn').value.trim();
   const url = document.getElementById('toolUrl').value.trim();
   const cat = document.getElementById('toolCat').value;
   const icon = document.getElementById('toolIcon').value.trim();
@@ -257,7 +305,7 @@ function saveTool() {
   const isBest = document.getElementById('toolIsBest').classList.contains('on');
   
   if (!id || !name || !url || !cat) {
-    alert('ID, Ad, URL ve Kategori zorunludur.');
+    alert('ID, Ad (TR), URL ve Kategori zorunludur.');
     return;
   }
   
@@ -267,9 +315,16 @@ function saveTool() {
     return;
   }
   
-  const toolData = { id, name, url, cat, icon, isEnabled, isNew, isTest, isBest };
-  if (existing) Object.assign(existing, toolData);
-  else data.tools.push(toolData);
+  const newOrder = existing ? existing.order : data.tools.length;
+  const toolData = { id, name, nameEn: nameEn || name, url, cat, icon, isEnabled, isNew, isTest, isBest, order: newOrder };
+  if (existing) {
+    Object.assign(existing, toolData);
+  } else {
+    data.tools.push(toolData);
+  }
+  // order'ları yeniden sırala
+  data.tools.sort((a,b) => (a.order || 0) - (b.order || 0));
+  data.tools.forEach((t, i) => { t.order = i; });
   
   renderToolsTable();
   closeModal('toolModal');
@@ -288,13 +343,15 @@ function openCategoryModal(catId = null) {
     title.innerText = '✏️ Kategori Düzenle';
     document.getElementById('catId').value = cat.id;
     document.getElementById('catId').disabled = true;
-    document.getElementById('catLabel').value = cat.label;
+    document.getElementById('catLabel').value = cat.label || '';
+    document.getElementById('catLabelEn').value = cat.labelEn || '';
     document.getElementById('catIcon').value = cat.icon || '';
   } else {
     title.innerText = '+ Yeni Kategori';
     document.getElementById('catId').disabled = false;
     document.getElementById('catId').value = '';
     document.getElementById('catLabel').value = '';
+    document.getElementById('catLabelEn').value = '';
     document.getElementById('catIcon').value = '';
   }
   modal.style.display = 'flex';
@@ -304,13 +361,19 @@ function saveCategory() {
   if (!data) { alert('Veri yüklenmedi.'); return; }
   const id = document.getElementById('catId').value.trim();
   const label = document.getElementById('catLabel').value.trim();
+  const labelEn = document.getElementById('catLabelEn').value.trim();
   const icon = document.getElementById('catIcon').value.trim();
   
-  if (!id || !label) { alert('ID ve Etiket zorunludur.'); return; }
+  if (!id || !label) { alert('ID ve Etiket (TR) zorunludur.'); return; }
   const existing = data.categories.find(c => c.id === id);
   if (existing && document.getElementById('catId').disabled === false) { alert('Bu ID ile bir kategori zaten var.'); return; }
-  if (existing) { existing.label = label; existing.icon = icon; }
-  else data.categories.push({ id, label, icon });
+  if (existing) { 
+    existing.label = label; 
+    existing.labelEn = labelEn || label;
+    existing.icon = icon; 
+  } else {
+    data.categories.push({ id, label, labelEn: labelEn || label, icon });
+  }
   
   renderCategoriesTable();
   closeModal('categoryModal');
@@ -366,6 +429,7 @@ function saveUser() {
 window.editTool = function(id) { openToolModal(id); };
 window.editCategory = function(id) { openCategoryModal(id); };
 window.editUser = function(username) { openUserModal(username); };
+window.moveTool = moveTool;
 
 // ==================== STATS ====================
 function loadStats() {
