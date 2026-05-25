@@ -1,6 +1,501 @@
 {
-  "tools": [...],
-  "categories": [...],
+  "copyrightText": "© 2026 QA Portal. Tüm hakları saklıdır.",
+  "maintenance": false,
+  "maintenanceMessage": "Portal şu anda bakımda. Lütfen daha sonra tekrar deneyin.",
+  "announcement": {
+    "active": false,
+    "text": "Yeni özellikler eklendi! 🎉",
+    "type": "warn"
+  },
+  "categories": [
+    {
+      "id": "faq",
+      "label": "Sıkça Sorulan Sorular",
+      "icon": "❓",
+      "labelEn": "Frequently Asked Questions"
+    },
+    {
+      "id": "bms",
+      "label": "BMS Araçları",
+      "icon": "❤️",
+      "labelEn": "BMS Tools"
+    },
+    {
+      "id": "tp",
+      "label": "TP Araçları",
+      "icon": "🖥️",
+      "labelEn": "TP Tools"
+    },
+    {
+      "id": "qa",
+      "label": "QA Araçları",
+      "icon": "🔬",
+      "labelEn": "QA Tools"
+    },
+    {
+      "id": "reports",
+      "label": "Power BI Raproları",
+      "icon": "📊",
+      "labelEn": "Power BI Reports"
+    },
+    {
+      "id": "office",
+      "label": "Microsoft Office",
+      "icon": "📎",
+      "labelEn": "Microsoft Office"
+    },
+    {
+      "id": "google",
+      "label": "Google Ürünleri",
+      "icon": "⚜️",
+      "labelEn": "Google Products"
+    },
+    {
+      "id": "portal",
+      "label": "Portal Yönetimi",
+      "icon": "💭",
+      "labelEn": "Portal Management"
+    },
+    {
+      "id": "casedesk",
+      "label": "Destek Talebi Oluştur",
+      "labelEn": "Create a Support Request",
+      "icon": "🆘"
+    }
+  ],
+  "tools": [
+    {
+      "id": "bms",
+      "name": "BMS Ana Sayfa",
+      "icon": "tp_bms.png",
+      "cat": "bms",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://sebra.ccms.teleperformance.com/",
+      "nameEn": "BMS Home Page",
+      "order": 0
+    },
+    {
+      "id": "mytp",
+      "name": "MYTP",
+      "icon": "mytp.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://teleperformance-mytp.sabacloud.com/",
+      "nameEn": "MYTP",
+      "order": 1
+    },
+    {
+      "id": "ikon",
+      "name": "İKON (Yıllık İzin)",
+      "icon": "ikon.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://ikon.teleperformance.com.tr/logo/corporate",
+      "nameEn": "IKON (Annual Leave)",
+      "order": 2
+    },
+    {
+      "id": "srvdesk",
+      "name": "TP Destek Talebi Oluşturma",
+      "icon": "logo.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://support.teleperformance.com/esc?id=ec_dashboard",
+      "nameEn": "Creating a TP Support Request",
+      "order": 3
+    },
+    {
+      "id": "peyk",
+      "name": "PEYK - Bordro Görüntüleme",
+      "icon": "peyk.png",
+      "cat": "tp",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://peyk.kolaysoft.com.tr/login",
+      "nameEn": "PEYK - Payroll Viewing",
+      "order": 4
+    },
+    {
+      "id": "random",
+      "name": "Rastgele Çağrı Seçimi",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "randomizer.html",
+      "nameEn": "Random Call Selection",
+      "order": 5
+    },
+    {
+      "id": "corel",
+      "name": "Korelasyon",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": true,
+      "isEnabled": true,
+      "url": "corel.html",
+      "nameEn": "Correlation",
+      "order": 6
+    },
+    {
+      "id": "csv",
+      "name": "CSV Dönüştürücü",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "csvconverter.html",
+      "nameEn": "CSV Converter",
+      "order": 7
+    },
+    {
+      "id": "sampling",
+      "name": "BSH İçin Data Hazırlama",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "sampling.html",
+      "nameEn": "Data Preparation for BSH",
+      "order": 8
+    },
+    {
+      "id": "trceviri",
+      "name": "Trendyol İçin CSV Dönüştürücü",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "trendyolceviri.html",
+      "nameEn": "CSV Converter for Trendyol",
+      "order": 9
+    },
+    {
+      "id": "powerbifb",
+      "name": "Feedback Raporu",
+      "icon": "powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/",
+      "nameEn": "Feedback Report",
+      "order": 10
+    },
+    {
+      "id": "powerbidm",
+      "name": "Domestic - Kalite Raporu",
+      "icon": "powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/",
+      "nameEn": "Domestic - Quality Report",
+      "order": 11
+    },
+    {
+      "id": "powerbiml",
+      "name": "Multi Lingual - Kalite Raporu",
+      "icon": "powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/913d085a-39b0-47ba-8d86-93f7562967b5/ReportSection6e0f125c1a8e11c66787?experience=power-bi",
+      "nameEn": "Multi Lingual - Quality Report",
+      "order": 12
+    },
+    {
+      "id": "powerpharos",
+      "name": "Pharos",
+      "icon": "pharos.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/apps/41d62312-bcc5-4135-a533-27c99a17330b/reports/35f2923b-4391-420b-b20c-39a5fbbf71af/ReportSection?ctid=638fcbaf-ba4c-43e1-adae-5475c970fe10&experience=power-bi",
+      "nameEn": "Pharos",
+      "order": 13
+    },
+    {
+      "id": "powerbitops",
+      "name": "TOPS Raporları",
+      "icon": "powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/fa9a4773-1f17-4e70-8d61-c2abdd623f10/4ff2d5fd86b13526c481?experience=power-bi",
+      "nameEn": "TOPS Report",
+      "order": 14
+    },
+    {
+      "id": "powerbimgm",
+      "name": "Domestic - Yönetim Raporları",
+      "icon": "powerbi.png",
+      "cat": "reports",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://app.powerbi.com/groups/me/reports/5e8a5883-5b0c-468a-aa43-4eafb84a948b/ReportSection129752e63008ee0ccb20?experience=power-bi",
+      "nameEn": "Domestic - Management Report",
+      "order": 15
+    },
+    {
+      "id": "excel",
+      "name": "Excel",
+      "icon": "excel.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://excel.cloud.microsoft/",
+      "nameEn": "Excel",
+      "order": 16
+    },
+    {
+      "id": "ppt",
+      "name": "PowerPoint",
+      "icon": "powerpoint.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://powerpoint.cloud.microsoft/",
+      "nameEn": "PowerPoint",
+      "order": 17
+    },
+    {
+      "id": "word",
+      "name": "Word",
+      "icon": "word.png",
+      "cat": "office",
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "isEnabled": true,
+      "url": "https://word.cloud.microsoft/",
+      "nameEn": "Word",
+      "order": 18
+    },
+    {
+      "id": "kaliterapor",
+      "name": "Kalite Raporu Hazırla & Güncelle",
+      "icon": "logo.png",
+      "cat": "qa",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "url": "kaliterapor.html",
+      "nameEn": "Prepare & Update Quality Reports",
+      "order": 19
+    },
+    {
+      "id": "bmsform",
+      "name": "BMS Form Oluşturma",
+      "icon": "tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/cgi-bin/console/form_configuration.pl",
+      "nameEn": "Create a Form BMS",
+      "order": 20
+    },
+    {
+      "id": "bmsraw",
+      "name": "BMS Raw Data (Kalite Datası)",
+      "icon": "tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": true,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/form.pl?frmTarget=MONITOR&form_type_ident=101&frmOption=EXPORT",
+      "nameEn": "BMS Raw Data",
+      "order": 21
+    },
+    {
+      "id": "bsmcreatedcalib",
+      "name": "BMS Kalibrasyon Oluşturma",
+      "icon": "tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/console/calibration.pl",
+      "nameEn": "Creating BMS Calibration",
+      "order": 22
+    },
+    {
+      "id": "bmstops",
+      "name": "BMS TOPS Rapor",
+      "icon": "tp_bms.png",
+      "cat": "bms",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://sebra.ccms.teleperformance.com/ccms-bin/report/tops.pl",
+      "nameEn": "BMS TOPS Report",
+      "order": 23
+    },
+    {
+      "id": "outlook",
+      "name": "Outlook Web",
+      "icon": "out.png",
+      "cat": "office",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "http://outlook.office.com/",
+      "nameEn": "Outlook Web",
+      "order": 24
+    },
+    {
+      "id": "portaladmin",
+      "name": "Portal Yönetim Aracı",
+      "icon": "admin.png",
+      "cat": "portal",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "admin.html",
+      "nameEn": "Portal Management Tool",
+      "order": 25
+    },
+    {
+      "id": "portalcase",
+      "name": "Destek Talebi Oluşturma",
+      "icon": "logo.png",
+      "cat": "casedesk",
+      "isEnabled": false,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "url": "case.html",
+      "nameEn": "Creating a Support Request",
+      "order": 26
+    },
+    {
+      "id": "casecoz",
+      "name": "Destek Talebi Çözümle",
+      "icon": "logo.png",
+      "cat": "casedesk",
+      "isEnabled": false,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "url": "caseyonetim.html",
+      "nameEn": "Resolve Support Request",
+      "order": 27
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "icon": "gemini.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://gemini.google.com",
+      "nameEn": "Gemini",
+      "order": 28
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "icon": "ggmail.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://workspace.google.com/gmail/",
+      "nameEn": "Gmail",
+      "order": 29
+    },
+    {
+      "id": "spr",
+      "name": "Spread Sheet (Excel)",
+      "icon": "gspread.png",
+      "cat": "google",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "url": "https://docs.google.com/spreadsheets/u/0/",
+      "nameEn": "Spread Sheet (Excel)",
+      "order": 30
+    },
+    {
+      "id": "faq",
+      "name": "Portal El Kitabı",
+      "url": "faq.html",
+      "cat": "faq",
+      "icon": "logo.png",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false,
+      "nameEn": "Portal El Kitabı",
+      "order": 31
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "salt": "28896315444b4832135bc38473099db4",
+      "hash": "6cf020c35a9f60e709d34f75823fc56437d125ac843ed561a19676d87df2362c",
+      "role": "admin"
+    },
+    {
+      "username": "remziakat",
+      "salt": "a5b38ec595d3442c78393829d8ef2d03",
+      "hash": "bfb674cbaa921614d130b9a22847fbe4c88fa2d5b66af44351dd1d13ff418da9",
+      "role": "editor"
+    }
+  ]
+}
   "themes": [
     {
       "id": "grey",
