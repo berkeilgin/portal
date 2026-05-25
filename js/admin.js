@@ -141,7 +141,7 @@ function renderUsersTable() {
       <td>${u.username}</td>
       <td>${u.role}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editUser('${u.username}')">✏️</button></td>
-    </table>
+    </tr>
   `).join('');
 }
 
@@ -157,29 +157,28 @@ function moveCategory(idx, dir) {
   renderCategoriesTable();
 }
 
-// ==================== MODAL KONTROLLERİ (EKLENDİ) ====================
+// ==================== MODAL KONTROLLERİ ====================
 function closeModal(modalId) {
   document.getElementById(modalId).style.display = 'none';
 }
 
 // ----- TOOL MODAL -----
 function openToolModal(toolId = null) {
+  if (!data) { alert('Veri henüz yüklenmedi, lütfen bekleyin.'); return; }
+  
   const modal = document.getElementById('toolModal');
   const title = document.getElementById('toolModalTitle');
   const catSelect = document.getElementById('toolCat');
   
-  // Kategori seçeneklerini doldur
   catSelect.innerHTML = '<option value="">Seçin</option>' + 
     data.categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.label}</option>`).join('');
   
-  // Toggle butonlarını sıfırla
   const enabledBtn = document.getElementById('toolEnabled');
   const isNewBtn = document.getElementById('toolIsNew');
   const isTestBtn = document.getElementById('toolIsTest');
   const isBestBtn = document.getElementById('toolIsBest');
   
   if (toolId) {
-    // Düzenleme modu
     const tool = data.tools.find(t => t.id === toolId);
     if (!tool) return;
     title.innerText = '✏️ Araç Düzenle';
@@ -194,7 +193,6 @@ function openToolModal(toolId = null) {
     isTestBtn.classList.toggle('on', tool.isTest === true);
     isBestBtn.classList.toggle('on', tool.isBest === true);
   } else {
-    // Yeni araç modu
     title.innerText = '+ Yeni Araç';
     document.getElementById('toolId').disabled = false;
     document.getElementById('toolId').value = '';
@@ -206,12 +204,10 @@ function openToolModal(toolId = null) {
     isNewBtn.classList.remove('on');
     isTestBtn.classList.remove('on');
     isBestBtn.classList.remove('on');
-    enabledBtn.classList.add('on'); // Varsayılan aktif
+    enabledBtn.classList.add('on');
   }
   
-  // Modal içindeki toggle butonlarına tıklama olayı ekle
   attachToggleClick([enabledBtn, isNewBtn, isTestBtn, isBestBtn]);
-  
   modal.style.display = 'flex';
 }
 
@@ -224,14 +220,11 @@ function attachToggleClick(buttons) {
       newBtn.classList.toggle('on');
     });
   });
-  // ID'leri tekrar al
-  document.getElementById('toolEnabled').addEventListener('click', (e) => e.stopPropagation());
-  document.getElementById('toolIsNew').addEventListener('click', (e) => e.stopPropagation());
-  document.getElementById('toolIsTest').addEventListener('click', (e) => e.stopPropagation());
-  document.getElementById('toolIsBest').addEventListener('click', (e) => e.stopPropagation());
 }
 
 function saveTool() {
+  if (!data) { alert('Veri yüklenmedi.'); return; }
+  
   const id = document.getElementById('toolId').value.trim();
   const name = document.getElementById('toolName').value.trim();
   const url = document.getElementById('toolUrl').value.trim();
@@ -256,7 +249,6 @@ function saveTool() {
   const toolData = { id, name, url, cat, icon, isEnabled, isNew, isTest, isBest };
   
   if (existing) {
-    // Güncelle
     Object.assign(existing, toolData);
   } else {
     data.tools.push(toolData);
@@ -268,6 +260,8 @@ function saveTool() {
 
 // ----- CATEGORY MODAL -----
 function openCategoryModal(catId = null) {
+  if (!data) { alert('Veri henüz yüklenmedi.'); return; }
+  
   const modal = document.getElementById('categoryModal');
   const title = document.getElementById('categoryModalTitle');
   
@@ -290,6 +284,8 @@ function openCategoryModal(catId = null) {
 }
 
 function saveCategory() {
+  if (!data) { alert('Veri yüklenmedi.'); return; }
+  
   const id = document.getElementById('catId').value.trim();
   const label = document.getElementById('catLabel').value.trim();
   const icon = document.getElementById('catIcon').value.trim();
@@ -318,6 +314,8 @@ function saveCategory() {
 
 // ----- USER MODAL -----
 function openUserModal(username = null) {
+  if (!data) { alert('Veri henüz yüklenmedi.'); return; }
+  
   const modal = document.getElementById('userModal');
   const title = document.getElementById('userModalTitle');
   
@@ -342,6 +340,8 @@ function openUserModal(username = null) {
 }
 
 function saveUser() {
+  if (!data) { alert('Veri yüklenmedi.'); return; }
+  
   const username = document.getElementById('userUsername').value.trim();
   const role = document.getElementById('userRole').value;
   const password = document.getElementById('userPassword').value;
@@ -366,7 +366,6 @@ function saveUser() {
   }
   
   if (existing) {
-    // Güncelleme
     existing.role = role;
     if (password) existing.password = password;
   } else {
@@ -377,7 +376,7 @@ function saveUser() {
   closeModal('userModal');
 }
 
-// Düzenleme butonlarını yeniden tanımla
+// Düzenleme butonlarını global yap
 window.editTool = function(id) { openToolModal(id); };
 window.editCategory = function(id) { openCategoryModal(id); };
 window.editUser = function(username) { openUserModal(username); };
