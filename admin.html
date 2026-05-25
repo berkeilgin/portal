@@ -339,6 +339,19 @@
         <div class="form-group"><label>Duyuru Metni</label><input type="text" id="annText" placeholder="Duyuru metni..."></div>
         <div class="form-group"><label>Duyuru Türü</label><select id="annType"><option value="info">Bilgi (mavi)</option><option value="success">Başarılı (yeşil)</option><option value="warn">Uyarı (sarı)</option><option value="danger">Acil (kırmızı)</option></select></div>
         <div class="form-group"><label>Telif Hakkı Metni</label><input type="text" id="copyrightInput" placeholder="© 2025 QA Portal. Tüm hakları saklıdır."></div>
+        <!-- SETTINGS TAB içinde, mevcut ayarların altına ekleyin -->
+<div class="panel" style="margin-top: 24px;">
+  <div class="admin-toolbar">
+    <h3>🎨 Tema Yönetimi</h3>
+    <button class="btn btn-primary" onclick="openThemeModal()">+ Yeni Tema</button>
+  </div>
+  <div class="table-wrapper">
+    <table id="themesTable">
+      <thead><tr><th>ID</th><th>İkon</th><th>Ad (TR)</th><th>Ad (EN)</th><th>İşlem</th></tr></thead>
+      <tbody id="themesTableBody"></tbody>
+    </table>
+  </div>
+</div>
       </div></div>
     </div>
 
@@ -408,6 +421,27 @@
     <div class="form-group"><label>Şifre</label><input type="password" id="userPassword" placeholder="Değiştirmek için yazın"></div>
     <div class="form-group"><label>Şifre (tekrar)</label><input type="password" id="userPassword2"></div>
     <div class="row-actions"><button class="btn btn-ghost" onclick="closeModal('userModal')">İptal</button><button class="btn btn-primary" onclick="saveUser()">Kaydet</button></div>
+  </div>
+</div>
+
+  <!-- Tema Düzenleme / Ekleme Modalı -->
+<div class="modal-overlay" id="themeModal" style="display: none;">
+  <div class="modal" style="max-width: 700px;">
+    <h3 id="themeModalTitle">Tema Düzenle</h3>
+    <div class="grid-2">
+      <div class="form-group"><label>ID (slug)</label><input type="text" id="themeId" placeholder="ornek-tema"></div>
+      <div class="form-group"><label>İkon (emoji)</label><input type="text" id="themeIcon" placeholder="🌈"></div>
+      <div class="form-group"><label>Ad (TR)</label><input type="text" id="themeNameTr" placeholder="Gri"></div>
+      <div class="form-group"><label>Ad (EN)</label><input type="text" id="themeNameEn" placeholder="Grey"></div>
+    </div>
+    <hr>
+    <h4>Renk Değişkenleri</h4>
+    <div class="grid-2" id="colorFields"></div>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="closeModal('themeModal')">İptal</button>
+      <button class="btn btn-primary" onclick="saveTheme()">Kaydet</button>
+      <button class="btn btn-danger" id="deleteThemeBtn" style="display:none;" onclick="deleteTheme()">Sil</button>
+    </div>
   </div>
 </div>
 
