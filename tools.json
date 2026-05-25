@@ -341,8 +341,8 @@
       "name": "Kalite Case Aç",
       "icon": "logo.png",
       "cat": "portal",
-      "isEnabled": true,
-      "isNew": true,
+      "isEnabled": false,
+      "isNew": false,
       "isTest": true,
       "isBest": false,
       "url": "case.html"
@@ -352,9 +352,9 @@
       "name": "Case Çözümle",
       "icon": "logo.png",
       "cat": "portal",
-      "isEnabled": true,
+      "isEnabled": false,
       "isNew": false,
-      "isTest": false,
+      "isTest": true,
       "isBest": false,
       "url": "caseyonetim.html"
     },
@@ -393,7 +393,7 @@
     },
     {
       "id": "faq",
-      "name": "Portal El Kitapçığı",
+      "name": "Portal El Kitabı",
       "url": "faq.html",
       "cat": "faq",
       "icon": "logo.png",
