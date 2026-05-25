@@ -100,12 +100,12 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://ikon.teleperformance.com.tr/logo/corporate",
-      "nameEn": "İKON (Yıllık İzin)",
+      "nameEn": "IKON (Annual Leave)",
       "order": 2
     },
     {
       "id": "srvdesk",
-      "name": "Service Desk (Case)",
+      "name": "TP Destek Talebi Oluşturma",
       "icon": "logo.png",
       "cat": "tp",
       "isNew": false,
@@ -113,7 +113,7 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://support.teleperformance.com/esc?id=ec_dashboard",
-      "nameEn": "Service Desk (Case)",
+      "nameEn": "Creating a TP Support Request",
       "order": 3
     },
     {
@@ -126,12 +126,12 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://peyk.kolaysoft.com.tr/login",
-      "nameEn": "PEYK - Bordro Görüntüleme",
+      "nameEn": "PEYK - Payroll Viewing",
       "order": 4
     },
     {
       "id": "random",
-      "name": "Randomizer",
+      "name": "Rastgele Çağrı Seçimi",
       "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
@@ -139,12 +139,12 @@
       "isBest": false,
       "isEnabled": true,
       "url": "randomizer.html",
-      "nameEn": "Randomizer",
+      "nameEn": "Random Call Selection",
       "order": 5
     },
     {
       "id": "corel",
-      "name": "Correlation",
+      "name": "Korelasyon",
       "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
@@ -157,7 +157,7 @@
     },
     {
       "id": "csv",
-      "name": "Data CSV Converter",
+      "name": "CSV Dönüştürücü",
       "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
@@ -165,12 +165,12 @@
       "isBest": false,
       "isEnabled": true,
       "url": "csvconverter.html",
-      "nameEn": "Data CSV Converter",
+      "nameEn": "CSV Converter",
       "order": 7
     },
     {
       "id": "sampling",
-      "name": "BSH Dağıtım",
+      "name": "BSH İçin Data Hazırlama",
       "icon": "logo.png",
       "cat": "qa",
       "isNew": false,
@@ -178,12 +178,12 @@
       "isBest": false,
       "isEnabled": true,
       "url": "sampling.html",
-      "nameEn": "BSH Dağıtım",
+      "nameEn": "Data Preparation for BSH",
       "order": 8
     },
     {
       "id": "trceviri",
-      "name": "Trendyol CSV Converter",
+      "name": "Trendyol İçin CSV Dönüştürücü",
       "icon": "logo.png",
       "cat": "qa",
       "isNew": true,
@@ -191,7 +191,7 @@
       "isBest": false,
       "isEnabled": true,
       "url": "trendyolceviri.html",
-      "nameEn": "Trendyol CSV Converter",
+      "nameEn": "CSV Converter for Trendyol",
       "order": 9
     },
     {
@@ -204,7 +204,7 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://app.powerbi.com/",
-      "nameEn": "Feedback Raporu",
+      "nameEn": "Feedback Report",
       "order": 10
     },
     {
@@ -217,7 +217,7 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://app.powerbi.com/",
-      "nameEn": "Domestic - Kalite Raporu",
+      "nameEn": "Domestic - Quality Report",
       "order": 11
     },
     {
@@ -230,7 +230,7 @@
       "isBest": false,
       "isEnabled": true,
       "url": "https://app.powerbi.com/groups/me/reports/913d085a-39b0-47ba-8d86-93f7562967b5/ReportSection6e0f125c1a8e11c66787?experience=power-bi",
-      "nameEn": "Multi Lingual - Kalite Raporu",
+      "nameEn": "Multi Lingual - Quality Report",
       "order": 12
     },
     {
@@ -248,7 +248,7 @@
     },
     {
       "id": "powerbitops",
-      "name": "TOPS Report",
+      "name": "TOPS Raporları",
       "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
@@ -261,7 +261,7 @@
     },
     {
       "id": "powerbimgm",
-      "name": "Domestic - Management Report",
+      "name": "Domestic - Yönetim Raporları",
       "icon": "powerbi.png",
       "cat": "reports",
       "isNew": false,
@@ -321,7 +321,7 @@
       "isTest": true,
       "isBest": false,
       "url": "kaliterapor.html",
-      "nameEn": "Kalite Raporu Hazırla & Güncelle",
+      "nameEn": "Prepare & Update Quality Reports",
       "order": 19
     },
     {
@@ -334,12 +334,12 @@
       "isTest": false,
       "isBest": false,
       "url": "https://sebra.ccms.teleperformance.com/cgi-bin/console/form_configuration.pl",
-      "nameEn": "BMS Form Oluşturma",
+      "nameEn": "Create a Form BMS",
       "order": 20
     },
     {
       "id": "bmsraw",
-      "name": "BMS Raw Data",
+      "name": "BMS Raw Data (Kalite Datası)",
       "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
@@ -360,12 +360,12 @@
       "isTest": false,
       "isBest": false,
       "url": "https://sebra.ccms.teleperformance.com/ccms-bin/console/calibration.pl",
-      "nameEn": "BMS Kalibrasyon Oluşturma",
+      "nameEn": "Creating BMS Calibration",
       "order": 22
     },
     {
       "id": "bmstops",
-      "name": "BMS TOPS Report",
+      "name": "BMS TOPS Rapor",
       "icon": "tp_bms.png",
       "cat": "bms",
       "isEnabled": true,
@@ -391,7 +391,7 @@
     },
     {
       "id": "portaladmin",
-      "name": "Admin Paneli",
+      "name": "Portal Yönetim Aracı",
       "icon": "admin.png",
       "cat": "portal",
       "isEnabled": true,
@@ -399,33 +399,33 @@
       "isTest": false,
       "isBest": false,
       "url": "admin.html",
-      "nameEn": "Admin Paneli",
+      "nameEn": "Portal Management Tool",
       "order": 25
     },
     {
       "id": "portalcase",
-      "name": "Kalite Case Aç",
+      "name": "Destek Talebi Oluşturma",
       "icon": "logo.png",
-      "cat": "portal",
+      "cat": "casedesk",
       "isEnabled": false,
       "isNew": false,
       "isTest": true,
       "isBest": false,
       "url": "case.html",
-      "nameEn": "Kalite Case Aç",
+      "nameEn": "Creating a Support Request",
       "order": 26
     },
     {
       "id": "casecoz",
-      "name": "Case Çözümle",
+      "name": "Destek Talebi Çözümle",
       "icon": "logo.png",
-      "cat": "portal",
+      "cat": "casedesk",
       "isEnabled": false,
       "isNew": false,
       "isTest": true,
       "isBest": false,
       "url": "caseyonetim.html",
-      "nameEn": "Case Çözümle",
+      "nameEn": "Resolve Support Request",
       "order": 27
     },
     {
