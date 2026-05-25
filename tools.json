@@ -390,6 +390,17 @@
       "isTest": false,
       "isBest": false,
       "url": "https://docs.google.com/spreadsheets/u/0/"
+    },
+    {
+      "id": "faq",
+      "name": "Portal El Kitapçığı",
+      "url": "faq.html",
+      "cat": "faq",
+      "icon": "logo.png",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": false,
+      "isBest": false
     }
   ],
   "users": [
