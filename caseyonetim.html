@@ -123,21 +123,17 @@
     <!-- Kullanıcılar Tab -->
     <div id="usersTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button><div class="table-wrapper" style="margin-top:16px"><table><thead><tr><th>ID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
 
-    <!-- Mail Ayarları Tab (2 template ID) -->
-    <div id="mailTab" class="panel" style="display:none">
-      <div class="form-group"><label>🔑 EmailJS Public Key</label><input type="text" id="emailjsPublicKey" class="form-input" placeholder="Public Key"></div>
-      <div class="form-group"><label>🛠️ EmailJS Service ID</label><input type="text" id="emailjsServiceId" class="form-input" placeholder="service_xxx"></div>
-      <div class="form-group"><label>📨 Admin/CC Template ID</label><input type="text" id="emailjsAdminTemplateId" class="form-input" placeholder="template_xxx (genel bildirim)"></div>
-      <div class="form-group"><label>👤 Sorumlu Kişi Template ID</label><input type="text" id="emailjsResponsibleTemplateId" class="form-input" placeholder="template_xxx (sorumluya özel)"></div>
-      <div class="form-group"><label>📬 Alıcı E-posta (Admin)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
-      <div class="form-group"><label>📎 CC E-posta (birden fazla için virgül kullanın)</label><input type="text" id="ccEmail" class="form-input" placeholder="cc1@mail.com, cc2@mail.com"></div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">💾 Kaydet</button><button class="btn btn-ghost" onclick="testEmail()">✉️ Test Maili Gönder</button></div>
-      <div id="mailStatus" style="margin-top:12px"></div>
-    </div>
+<!-- Mail Ayarları Tab (mevcut içerik) -->
+<div id="mailTab" class="panel" style="display:none">
+  <div class="form-group"><label>📬 Alıcı E-posta (Admin)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
+  <div class="form-group"><label>📎 CC E-posta (birden fazla için virgül kullanın)</label><input type="text" id="ccEmail" class="form-input" placeholder="cc1@mail.com, cc2@mail.com"></div>
+  <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">💾 Kaydet</button></div>
+  <div id="mailStatus" style="margin-top:12px"></div>
+</div>
 
     <!-- İstatistikler Tab -->
     <div id="statsTab" class="panel" style="display:none">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><h3>Çözüm Performansı</h3><button class="btn btn-primary export-btn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><h3>Çözüm Performansı</h3><button class="btn btn-primary export-btn" id="exportStatsBtn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button>
       <div class="chart-container"><canvas id="statsChart"></canvas></div>
       <div id="statsTable" style="margin-top:20px; overflow-x:auto"><table style="width:100%"><thead><tr><th>Çözen Kişi</th><th>Çözülen Case Sayısı</th><th>Toplam Süre (dk)</th><th>Ortalama Süre (dk)</th></tr></thead><tbody id="statsTableBody"></tbody></table></div>
     </div>
