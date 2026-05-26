@@ -498,9 +498,9 @@
   "themes": [
     {
       "id": "grey",
-      "nameTr": "Gri",
-      "nameEn": "Grey",
       "icon": "🌓",
+      "nameTr": "ABC",
+      "nameEn": "Grey",
       "colors": {
         "bg": "#1f1f28",
         "surface": "#272734",
