@@ -11,9 +11,6 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Email ayarları (Firestore'dan yüklenecek)
-let emailSettings = { adminEmail: '', ccEmails: [] };
-
 // ==================== YARDIMCI FONKSİYONLAR ====================
 function escapeHtml(str) {
   if (!str) return '';
@@ -27,51 +24,7 @@ function escapeHtml(str) {
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// ==================== PHP İLE MAİL GÖNDERME ====================
-window.sendMailWithPHP = async function(emailData) {
-  try {
-    // Byethost'taki PHP dosyasının tam URL'si (kendi domaininle değiştir)
-    const response = await fetch('https://seninsite.byethost.com/send_mail.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(emailData)
-    });
-    const result = await response.json();
-    if (result.success) {
-      console.log('✅ Mail gönderildi:', result.message);
-    } else {
-      console.error('❌ Mail hatası:', result.message);
-    }
-    return result;
-  } catch (error) {
-    console.error('🌐 Bağlantı hatası:', error);
-    return { success: false, message: error.message };
-  }
-};
-
-// Yeni case oluşturulduğunda admin ve CC'ye bildirim
-async function sendNewCaseNotification(caseId, caseData) {
-  if (!emailSettings.adminEmail) return;
-  const mailData = {
-    to_email: emailSettings.adminEmail,
-    cc_emails: emailSettings.ccEmails,
-    subject: `Yeni Case Oluşturuldu: ${caseId}`,
-    message: `Kullanıcı: ${caseData.fullname} (${caseData.email})\nKonu ID: ${caseData.topicId}\nBaşlık: ${caseData.title}\nAçıklama: ${caseData.description}`
-  };
-  return sendMailWithPHP(mailData);
-}
-
-// Durum güncellendiğinde çözen kişiye mail
-async function sendStatusUpdateEmailPHP(caseId, caseData, resolverEmail) {
-  if (!resolverEmail) return;
-  const mailData = {
-    to_email: resolverEmail,
-    subject: `Case Durumu Güncellendi: ${caseId}`,
-    message: `Case ID: ${caseId}\nDurum: ${caseData.status}\nBaşlık: ${caseData.title}\nAçıklama: ${caseData.description.substring(0, 200)}`
-  };
-  return sendMailWithPHP(mailData);
-}
+window.closeModal = closeModal;
 
 // ==================== VERİ YÜKLEME ====================
 let topicsCache = null;
@@ -89,6 +42,27 @@ async function loadUsers() {
   usersCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   return usersCache;
 }
+
+// ==================== PHP İLE MAIL GÖNDERME ====================
+window.sendMailWithPHP = async function(emailData) {
+  try {
+    const response = await fetch('https://seninsite.byethost.com/send_mail.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(emailData)
+    });
+    const result = await response.json();
+    if (result.success) {
+      console.log('✅ Mail gönderildi:', result.message);
+    } else {
+      console.error('❌ Mail hatası:', result.message);
+    }
+    return result;
+  } catch (error) {
+    console.error('🌐 Bağlantı hatası:', error);
+    return { success: false, message: error.message };
+  }
+};
 
 // ==================== TAB GÖSTERİMİ ====================
 function showTab(tabName) {
@@ -262,13 +236,11 @@ window.saveCaseDetail = async function(caseId) {
   
   await db.collection('cases').doc(caseId).update(updateData);
   
+  // Eğer durum çözüldü veya reddedildi ise ve daha önce mail gönderilmemişse mail at
   const doc = await db.collection('cases').doc(caseId).get();
   const caseData = doc.data();
   if ((newStatus === 'çözüldü' || newStatus === 'reddedildi') && !caseData.notificationSent) {
-    const resolverUser = usersCache?.find(u => u.id === newResolvedBy);
-    if (resolverUser && resolverUser.email) {
-      await sendStatusUpdateEmailPHP(caseId, caseData, resolverUser.email);
-    }
+    await sendStatusUpdateEmailPHP(caseId, caseData);
     await db.collection('cases').doc(caseId).update({ notificationSent: true });
   }
   
@@ -328,10 +300,6 @@ document.getElementById('saveTopicBtn').onclick = async () => {
   }
   closeModal('topicModal');
   renderTopics();
-  // Topic filtrelerini güncelle
-  const topics = await loadTopics();
-  const topicSelect = document.getElementById('topicFilter');
-  topicSelect.innerHTML = '<option value="">Tüm Konular</option>' + topics.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
 };
 
 window.editTopic = (id) => openTopicModal(id);
@@ -343,8 +311,7 @@ async function renderUsers() {
   tbody.innerHTML = users.map(u => `
     <tr>
       <td>${u.id}</td>
-      <td>${escapeHtml(u.username)}</td>
-      <td>${escapeHtml(u.email)}</td>
+      <td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.email)}</td>
       <td>${u.role || 'user'}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">✏️</button></td>
     </tr>
@@ -385,10 +352,12 @@ document.getElementById('saveUserEditBtn').onclick = async () => {
   if (editingUserId) {
     await db.collection('caseUsers').doc(editingUserId).update({ username, email, role });
     if (password) {
-      // Firebase Auth şifre değiştirme işlemi için ayrıca bir fonksiyon gerekir. Burada atlıyoruz.
-      alert('Şifre değiştirme için Firebase Authentication üzerinden işlem yapmalısınız.');
+      // Şifre değişimi için Firebase Auth kullanıcısının güncellenmesi gerekir.
+      // Bu işlem için admin SDK gerektiğinden burada atlıyoruz.
+      alert('Şifre değiştirmek için Firebase Console üzerinden yapınız.');
     }
   } else {
+    // Yeni kullanıcı oluştur (Firebase Auth + Firestore)
     try {
       const userCred = await auth.createUserWithEmailAndPassword(email, password);
       await db.collection('caseUsers').doc(userCred.user.uid).set({ username, email, role });
@@ -416,11 +385,8 @@ async function renderStats() {
     }
   });
   
-  const users = await loadUsers();
-  const userMap = Object.fromEntries(users.map(u => [u.id, u.username]));
-  
   const statsArray = Object.entries(resolverStats).map(([id, stat]) => ({
-    resolverName: userMap[id] || id,
+    resolverId: id,
     count: stat.count,
     totalMinutes: stat.totalMinutes,
     avgMinutes: stat.count ? (stat.totalMinutes / stat.count).toFixed(1) : 0
@@ -429,7 +395,7 @@ async function renderStats() {
   const tbody = document.getElementById('statsTableBody');
   tbody.innerHTML = statsArray.map(s => `
     <tr>
-      <td>${s.resolverName}</td>
+      <td>${s.resolverId}</td>
       <td>${s.count}</td>
       <td>${s.totalMinutes}</td>
       <td>${s.avgMinutes}</td>
@@ -441,7 +407,7 @@ async function renderStats() {
   statsChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: statsArray.map(s => s.resolverName),
+      labels: statsArray.map(s => s.resolverId),
       datasets: [
         { label: 'Çözülen Case Sayısı', data: statsArray.map(s => s.count), backgroundColor: 'var(--accent2)' },
         { label: 'Ortalama Süre (dk)', data: statsArray.map(s => s.avgMinutes), backgroundColor: 'var(--accent)' }
@@ -464,22 +430,51 @@ function exportToExcel() {
   XLSX.writeFile(wb, `case_performans_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-// ==================== MAIL AYARLARI (FİRESTORE) ====================
+// ==================== MAIL AYARLARI ====================
+let mailConfig = { adminEmail: '', ccEmails: [] };
 async function loadMailSettings() {
   const doc = await db.collection('settings').doc('emailConfig').get();
   if (doc.exists) {
-    emailSettings = doc.data();
-    document.getElementById('adminNotifyEmail').value = emailSettings.adminEmail || '';
-    document.getElementById('ccEmail').value = (emailSettings.ccEmails || []).join(', ');
+    mailConfig = doc.data();
+    document.getElementById('emailjsPublicKey').value = mailConfig.publicKey || '';
+    document.getElementById('emailjsServiceId').value = mailConfig.serviceId || '';
+    document.getElementById('emailjsAdminTemplateId').value = mailConfig.adminTemplateId || '';
+    document.getElementById('emailjsResponsibleTemplateId').value = mailConfig.responsibleTemplateId || '';
+    document.getElementById('adminNotifyEmail').value = mailConfig.adminEmail || '';
+    document.getElementById('ccEmail').value = (mailConfig.ccEmails || []).join(', ');
   }
 }
 
 async function saveMailSettings() {
-  const adminEmail = document.getElementById('adminNotifyEmail').value.trim();
-  const ccEmails = document.getElementById('ccEmail').value.split(',').map(e => e.trim()).filter(e => e);
-  emailSettings = { adminEmail, ccEmails };
-  await db.collection('settings').doc('emailConfig').set(emailSettings);
+  const config = {
+    publicKey: document.getElementById('emailjsPublicKey').value.trim(),
+    serviceId: document.getElementById('emailjsServiceId').value.trim(),
+    adminTemplateId: document.getElementById('emailjsAdminTemplateId').value.trim(),
+    responsibleTemplateId: document.getElementById('emailjsResponsibleTemplateId').value.trim(),
+    adminEmail: document.getElementById('adminNotifyEmail').value.trim(),
+    ccEmails: document.getElementById('ccEmail').value.split(',').map(e => e.trim()).filter(e => e)
+  };
+  await db.collection('settings').doc('emailConfig').set(config);
+  mailConfig = config;
   document.getElementById('mailStatus').innerHTML = '<div class="status-bar success">✅ Ayarlar kaydedildi.</div>';
+  setTimeout(() => document.getElementById('mailStatus').innerHTML = '', 3000);
+}
+
+async function testEmail() {
+  if (!mailConfig.adminEmail) {
+    document.getElementById('mailStatus').innerHTML = '<div class="status-bar error">❌ Lütfen önce alıcı e-posta adresini kaydedin.</div>';
+    return;
+  }
+  const result = await window.sendMailWithPHP({
+    to_email: mailConfig.adminEmail,
+    subject: 'Test Maili',
+    message: 'Bu bir test mesajıdır. PHP mail sistemi çalışıyor.'
+  });
+  if (result.success) {
+    document.getElementById('mailStatus').innerHTML = '<div class="status-bar success">✅ Test maili gönderildi.</div>';
+  } else {
+    document.getElementById('mailStatus').innerHTML = `<div class="status-bar error">❌ Hata: ${result.message}</div>`;
+  }
   setTimeout(() => document.getElementById('mailStatus').innerHTML = '', 3000);
 }
 
@@ -492,11 +487,11 @@ auth.onAuthStateChanged(async (user) => {
       document.getElementById('adminPanel').style.display = 'block';
       document.getElementById('adminRoleBadge').innerText = 'ADMIN';
       await loadMailSettings();
-      // Konu filtrelerini doldur
+      renderCases();
+      // Topic filtrelerini doldur
       const topics = await loadTopics();
       const topicSelect = document.getElementById('topicFilter');
       topicSelect.innerHTML = '<option value="">Tüm Konular</option>' + topics.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
-      renderCases();
       showTab('cases');
     } else {
       auth.signOut();
@@ -520,4 +515,16 @@ document.getElementById('adminLoginBtn').onclick = async () => {
 
 document.getElementById('logoutBtn').onclick = () => auth.signOut();
 document.getElementById('refreshBtn').onclick = () => renderCases();
-document.getElementById('exportStatsBtn').onclick = () => exportToExcel();
+
+// Global fonksiyonları window'a bağla
+window.sendMailWithPHP = sendMailWithPHP;
+window.showTab = showTab;
+window.filterCases = filterCases;
+window.openCaseDetail = openCaseDetail;
+window.addNote = addNote;
+window.saveCaseDetail = saveCaseDetail;
+window.editTopic = editTopic;
+window.editUser = editUser;
+window.saveMailSettings = saveMailSettings;
+window.testEmail = testEmail;
+window.exportToExcel = exportToExcel;
