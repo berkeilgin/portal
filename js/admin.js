@@ -19,6 +19,7 @@ const caseDb = firebase.firestore();
 // ==================== GLOBAL STATE ====================
 let data = null, fileSha = null, currentUser = null;
 let githubToken = null;
+let categoryChart = null;
 
 // ==================== GITHUB HELPERS ====================
 function getToken() { return githubToken || sessionStorage.getItem('gh_token') || ''; }
@@ -47,7 +48,73 @@ async function ghPut(path, content, sha, message) {
 function b64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 
-// ==================== TOGGLE BUTTONLARINI BAŞLAT ====================
+// ==================== UPLOAD FONKSİYONLARI ====================
+let uploadFilesList = [];
+
+function initUpload() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  if (!dropZone || !fileInput) return;
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  });
+  fileInput.addEventListener('change', (e) => {
+    handleFiles(Array.from(e.target.files));
+  });
+}
+
+function handleFiles(files) {
+  const imageFiles = files.filter(f => f.type.startsWith('image/'));
+  uploadFilesList = imageFiles;
+  const preview = document.getElementById('uploadPreview');
+  preview.innerHTML = imageFiles.map(file => `
+    <div class="upload-thumb">
+      <img src="${URL.createObjectURL(file)}">
+      <span>${file.name}</span>
+    </div>
+  `).join('');
+  document.getElementById('uploadBtn').disabled = imageFiles.length === 0;
+}
+
+async function uploadFiles() {
+  if (!uploadFilesList.length) return;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Yükleniyor...';
+  const statusDiv = document.getElementById('uploadStatus');
+  statusDiv.innerHTML = '';
+  
+  for (const file of uploadFilesList) {
+    try {
+      const reader = new FileReader();
+      const content = await new Promise((resolve) => {
+        reader.onload = (e) => resolve(btoa(e.target.result));
+        reader.readAsBinaryString(file);
+      });
+      const path = `logos/${file.name}`;
+      await ghPut(path, content, null, `Upload ${file.name}`);
+      statusDiv.innerHTML += `<div>✅ ${file.name} yüklendi.</div>`;
+    } catch (err) {
+      statusDiv.innerHTML += `<div>❌ ${file.name} yüklenemedi: ${err.message}</div>`;
+    }
+  }
+  btn.disabled = false;
+  btn.textContent = '⬆️ GitHub\'a Yükle';
+  uploadFilesList = [];
+  document.getElementById('uploadPreview').innerHTML = '';
+}
+
+// ==================== TOGGLE BUTTONLARI ====================
 function initToggles() {
   const maintToggle = document.getElementById('maintToggle');
   const annToggle = document.getElementById('annToggle');
@@ -117,7 +184,6 @@ async function loadData() {
     if (saveBtn) saveBtn.disabled = false;
     
     renderAll();
-    
     if (window.initThemes) window.initThemes(data);
     
   } catch(e) {
@@ -142,7 +208,7 @@ function renderToolsTable() {
   const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   const searchTerm = (document.getElementById('searchTools')?.value || '').toLowerCase();
   let filtered = data.tools.filter(t => t.name.toLowerCase().includes(searchTerm) || t.id.toLowerCase().includes(searchTerm));
-  tbody.innerHTML = filtered.map((t, idx) => {
+  tbody.innerHTML = filtered.map((t) => {
     const actualIndex = data.tools.findIndex(tt => tt.id === t.id);
     return `
     <tr>
@@ -390,15 +456,76 @@ window.editCategory = function(id) { openCategoryModal(id); };
 window.editUser = function(username) { openUserModal(username); };
 window.moveTool = moveTool;
 
-// ==================== STATS ====================
+// ==================== DETAYLI STATS ====================
 function loadStats() {
+  if (!data) return;
+  const statsRaw = JSON.parse(localStorage.getItem('qa_stats') || '{}');
+  const total = Object.values(statsRaw).reduce((a,b)=>a+b,0);
+  
   const statsContainer = document.getElementById('statsCards');
-  if (!statsContainer) return;
-  const stats = JSON.parse(localStorage.getItem('qa_stats') || '{}');
-  const total = Object.values(stats).reduce((a,b)=>a+b,0);
-  statsContainer.innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div>`;
+  if (statsContainer) {
+    statsContainer.innerHTML = `<div class="stat-card"><div class="number">${total}</div><div>Toplam Açılış</div></div>`;
+  }
+  
+  // Kategori bazlı toplamlar
+  const catTotals = {};
+  data.categories.forEach(cat => { catTotals[cat.id] = 0; });
+  data.tools.forEach(tool => {
+    const count = statsRaw[tool.id] || 0;
+    if (catTotals[tool.cat] !== undefined) catTotals[tool.cat] += count;
+  });
+  
+  const catLabels = [];
+  const catData = [];
+  for (const [catId, count] of Object.entries(catTotals)) {
+    const cat = data.categories.find(c => c.id === catId);
+    if (cat && count > 0) {
+      catLabels.push(cat.icon + ' ' + (localStorage.getItem('qa_lang') === 'en' ? (cat.labelEn || cat.label) : cat.label));
+      catData.push(count);
+    }
+  }
+  
+  const ctx = document.getElementById('categoryChart')?.getContext('2d');
+  if (ctx) {
+    if (categoryChart) categoryChart.destroy();
+    categoryChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: catLabels, datasets: [{ label: 'Tıklanma Sayısı', data: catData, backgroundColor: 'var(--accent2)', borderColor: 'var(--accent)', borderWidth: 1 }] },
+      options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+    });
+  }
+  
+  // En çok tıklanan 10 araç
+  const toolStats = data.tools.map(tool => ({ id: tool.id, name: tool.name, nameEn: tool.nameEn, cat: tool.cat, count: statsRaw[tool.id] || 0 }));
+  toolStats.sort((a,b) => b.count - a.count);
+  const top10 = toolStats.slice(0,10);
+  const topListDiv = document.getElementById('topToolsList');
+  if (topListDiv) {
+    topListDiv.innerHTML = top10.map((t, i) => {
+      const lang = localStorage.getItem('qa_lang') === 'en' ? t.nameEn : t.name;
+      return `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--border);"><span><strong>${i+1}.</strong> ${lang}</span><span>${t.count} kez</span></div>`;
+    }).join('');
+  }
+  
+  // Tüm araçların tablosu
+  const tbody = document.getElementById('toolsStatsBody');
+  if (tbody) {
+    tbody.innerHTML = toolStats.map(t => {
+      const percent = total ? ((t.count / total) * 100).toFixed(1) : '0.0';
+      const lang = localStorage.getItem('qa_lang') === 'en' ? t.nameEn : t.name;
+      const cat = data.categories.find(c => c.id === t.cat);
+      const catName = cat ? (localStorage.getItem('qa_lang') === 'en' ? (cat.labelEn || cat.label) : cat.label) : t.cat;
+      return `<tr><td>${lang}</td><td>${catName}</td><td>${t.count}</td><td>${percent}%</td></tr>`;
+    }).join('');
+  }
 }
-function clearStats() { localStorage.removeItem('qa_stats'); loadStats(); }
+
+function clearStats() {
+  if (confirm('Tüm istatistikler sıfırlansın mı?')) {
+    localStorage.removeItem('qa_stats');
+    loadStats();
+  }
+}
 
 // ==================== SAVE TO GITHUB ====================
 async function saveToGitHub() {
@@ -464,12 +591,12 @@ async function loadCaseStats() {
   } catch(e) { cards.innerHTML = '<div class="status-bar err">Yüklenemedi</div>'; }
 }
 
-// ==================== TEMA YÖNETİMİ (Renk seçicili) ====================
+// ==================== TEMA YÖNETİMİ ====================
 function renderThemesTable() {
   const tbody = document.getElementById('themesTableBody');
   if (!tbody || !data || !data.themes) return;
   tbody.innerHTML = data.themes.map((t) => `
-    <tr>
+    <table>
       <td>${t.id}</td>
       <td>${t.icon || ''}</td>
       <td>${t.nameTr || ''}</td>
@@ -479,7 +606,6 @@ function renderThemesTable() {
   `).join('');
 }
 
-// Renk değerini hex'e çeviren yardımcı fonksiyon
 function rgbToHex(color) {
   if (!color) return '#000000';
   if (color.startsWith('#')) return color;
@@ -513,7 +639,6 @@ function editTheme(themeId) {
     </div>
   `).join('');
 
-  // Renk seçici değişince text alanını ve preview'ı güncelle
   container.querySelectorAll('input[type="color"]').forEach(picker => {
     picker.addEventListener('input', (e) => {
       const key = picker.dataset.colorKey;
@@ -524,7 +649,6 @@ function editTheme(themeId) {
       if (preview) preview.style.backgroundColor = hex;
     });
   });
-  // Text alanı değişince color picker'ı ve preview'ı güncelle
   container.querySelectorAll('.color-text').forEach(text => {
     text.addEventListener('input', (e) => {
       const key = text.dataset.colorKey;
@@ -680,6 +804,7 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById('adminPanel').style.display = 'block';
         document.getElementById('roleBadge').innerHTML = userDoc.data().role === 'admin' ? 'ADMIN' : 'EDITOR';
         initToggles();
+        initUpload();
         await loadData();
       } else {
         await auth.signOut();
@@ -707,8 +832,14 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (activeTab) activeTab.classList.add('active');
     btn.classList.add('active');
     if (tabId === 'caseStats') loadCaseStats();
+    if (tabId === 'stats') loadStats();
   });
 });
 
 const searchTools = document.getElementById('searchTools');
 if (searchTools) searchTools.addEventListener('input', () => renderToolsTable());
+
+// Sayfa yüklendiğinde upload özelliğini başlat (giriş yoksa bile çalışmaz, ama zararı yok)
+document.addEventListener('DOMContentLoaded', () => {
+  initUpload();
+});
