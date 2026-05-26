@@ -13,13 +13,15 @@ const firebaseConfig = {
   appId: "1:381220130397:web:97124d8836681bc62c07b4"
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const caseDb = firebase.firestore();
 
 // ==================== GLOBAL STATE ====================
 let data = null, fileSha = null, currentUser = null;
+let githubToken = null;
 
 // ==================== GITHUB HELPERS ====================
-function getToken() { return sessionStorage.getItem('gh_token') || ''; }
+function getToken() { return githubToken || sessionStorage.getItem('gh_token') || ''; }
 function apiBase() { return `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents`; }
 
 async function ghGet(path) {
@@ -45,7 +47,7 @@ async function ghPut(path, content, sha, message) {
 function b64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64Decode(str) { return decodeURIComponent(escape(atob(str))); }
 
-// ==================== TOGGLE BUTONLARINI BAŞLAT ====================
+// ==================== TOGGLE BUTTONLARINI BAŞLAT ====================
 function initToggles() {
   const maintToggle = document.getElementById('maintToggle');
   const annToggle = document.getElementById('annToggle');
@@ -66,29 +68,26 @@ function initToggles() {
   });
 }
 
-// ==================== VERİ DÖNÜŞÜMÜ (ESKİ YAPIYI YENİYE UYARLA) ====================
+// ==================== VERİ DÖNÜŞÜMÜ ====================
 function migrateData(rawData) {
-  // Kategoriler: labelEn yoksa label'i kopyala
   if (rawData.categories) {
     rawData.categories.forEach(cat => {
       if (!cat.labelEn) cat.labelEn = cat.label;
     });
   }
-  // Araçlar: nameEn yoksa name'i kopyala, order yoksa index'e göre ata
   if (rawData.tools) {
     rawData.tools.forEach((tool, idx) => {
       if (!tool.nameEn) tool.nameEn = tool.name;
       if (tool.order === undefined) tool.order = idx;
     });
-    // order'a göre sırala
     rawData.tools.sort((a,b) => (a.order || 0) - (b.order || 0));
   }
-  // Diğer alanlar
   if (!rawData.copyrightText) rawData.copyrightText = '© 2025 QA Portal';
   if (rawData.maintenance === undefined) rawData.maintenance = false;
   if (!rawData.maintenanceMessage) rawData.maintenanceMessage = '';
   if (!rawData.announcement) rawData.announcement = { active: false, text: '', type: 'info' };
   if (!rawData.users) rawData.users = [];
+  if (!rawData.themes) rawData.themes = [];
   return rawData;
 }
 
@@ -118,6 +117,9 @@ async function loadData() {
     if (saveBtn) saveBtn.disabled = false;
     
     renderAll();
+    
+    if (window.initThemes) window.initThemes(data);
+    
   } catch(e) {
     console.error(e);
     const statusMsg = document.getElementById('statusMsg');
@@ -130,6 +132,7 @@ function renderAll() {
   renderToolsTable();
   renderCategoriesTable();
   renderUsersTable();
+  renderThemesTable();
   loadStats();
 }
 
@@ -139,7 +142,6 @@ function renderToolsTable() {
   const catMap = Object.fromEntries(data.categories.map(c => [c.id, c]));
   const searchTerm = (document.getElementById('searchTools')?.value || '').toLowerCase();
   let filtered = data.tools.filter(t => t.name.toLowerCase().includes(searchTerm) || t.id.toLowerCase().includes(searchTerm));
-  // order'a göre sıralı (zaten sıralı)
   tbody.innerHTML = filtered.map((t, idx) => {
     const actualIndex = data.tools.findIndex(tt => tt.id === t.id);
     return `
@@ -175,7 +177,7 @@ function renderCategoriesTable() {
       <td>${c.icon || ''}</td>
       <td>${data.tools.filter(t => t.cat === c.id).length}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editCategory('${c.id}')">✏️</button></td>
-    <tr>
+    </tr>
   `).join('');
 }
 
@@ -203,17 +205,15 @@ function moveCategory(idx, dir) {
   renderCategoriesTable();
 }
 
-// Araç sıralama
 function moveTool(idx, dir) {
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= data.tools.length) return;
   [data.tools[idx], data.tools[newIdx]] = [data.tools[newIdx], data.tools[idx]];
-  // order alanlarını güncelle
   data.tools.forEach((t, i) => { t.order = i; });
   renderToolsTable();
 }
 
-// ==================== MODAL KONTROLLERİ (POPUP) ====================
+// ==================== MODAL KONTROLLERİ ====================
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.style.display = 'none';
@@ -222,26 +222,20 @@ function closeModal(modalId) {
 // ----- TOOL MODAL -----
 function openToolModal(toolId = null) {
   if (!data) { alert('Veri henüz yüklenmedi.'); return; }
-  
   const modal = document.getElementById('toolModal');
   const title = document.getElementById('toolModalTitle');
   const catSelect = document.getElementById('toolCat');
   if (!modal || !title || !catSelect) return;
-  
-  catSelect.innerHTML = '<option value="">Seçin</option>' + 
-    data.categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.label}</option>`).join('');
-  
+  catSelect.innerHTML = '<option value="">Seçin</option>' + data.categories.map(c => `<option value="${c.id}">${c.icon || ''} ${c.label}</option>`).join('');
   const enabledBtn = document.getElementById('toolEnabled');
   const isNewBtn = document.getElementById('toolIsNew');
   const isTestBtn = document.getElementById('toolIsTest');
   const isBestBtn = document.getElementById('toolIsBest');
-  
   if (toolId) {
     const tool = data.tools.find(t => t.id === toolId);
     if (!tool) return;
     title.innerText = '✏️ Araç Düzenle';
-    document.getElementById('toolId').value = tool.id;
-    document.getElementById('toolId').disabled = true;
+    document.getElementById('toolId').value = tool.id; document.getElementById('toolId').disabled = true;
     document.getElementById('toolName').value = tool.name || '';
     document.getElementById('toolNameEn').value = tool.nameEn || '';
     document.getElementById('toolUrl').value = tool.url;
@@ -265,7 +259,6 @@ function openToolModal(toolId = null) {
     if (isTestBtn) isTestBtn.classList.remove('on');
     if (isBestBtn) isBestBtn.classList.remove('on');
   }
-  
   attachToggleClick([enabledBtn, isNewBtn, isTestBtn, isBestBtn]);
   modal.style.display = 'flex';
 }
@@ -275,10 +268,7 @@ function attachToggleClick(buttons) {
     if (!btn) return;
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      newBtn.classList.toggle('on');
-    });
+    newBtn.addEventListener('click', (e) => { e.stopPropagation(); newBtn.classList.toggle('on'); });
   });
   const enabled = document.getElementById('toolEnabled');
   const isNew = document.getElementById('toolIsNew');
@@ -292,7 +282,6 @@ function attachToggleClick(buttons) {
 
 function saveTool() {
   if (!data) { alert('Veri yüklenmedi.'); return; }
-  
   const id = document.getElementById('toolId').value.trim();
   const name = document.getElementById('toolName').value.trim();
   const nameEn = document.getElementById('toolNameEn').value.trim();
@@ -303,29 +292,15 @@ function saveTool() {
   const isNew = document.getElementById('toolIsNew').classList.contains('on');
   const isTest = document.getElementById('toolIsTest').classList.contains('on');
   const isBest = document.getElementById('toolIsBest').classList.contains('on');
-  
-  if (!id || !name || !url || !cat) {
-    alert('ID, Ad (TR), URL ve Kategori zorunludur.');
-    return;
-  }
-  
+  if (!id || !name || !url || !cat) { alert('ID, Ad (TR), URL ve Kategori zorunludur.'); return; }
   const existing = data.tools.find(t => t.id === id);
-  if (existing && document.getElementById('toolId').disabled === false) {
-    alert('Bu ID ile bir araç zaten var.');
-    return;
-  }
-  
+  if (existing && document.getElementById('toolId').disabled === false) { alert('Bu ID ile bir araç zaten var.'); return; }
   const newOrder = existing ? existing.order : data.tools.length;
   const toolData = { id, name, nameEn: nameEn || name, url, cat, icon, isEnabled, isNew, isTest, isBest, order: newOrder };
-  if (existing) {
-    Object.assign(existing, toolData);
-  } else {
-    data.tools.push(toolData);
-  }
-  // order'ları yeniden sırala
+  if (existing) Object.assign(existing, toolData);
+  else data.tools.push(toolData);
   data.tools.sort((a,b) => (a.order || 0) - (b.order || 0));
   data.tools.forEach((t, i) => { t.order = i; });
-  
   renderToolsTable();
   closeModal('toolModal');
 }
@@ -336,13 +311,11 @@ function openCategoryModal(catId = null) {
   const modal = document.getElementById('categoryModal');
   const title = document.getElementById('categoryModalTitle');
   if (!modal || !title) return;
-  
   if (catId) {
     const cat = data.categories.find(c => c.id === catId);
     if (!cat) return;
     title.innerText = '✏️ Kategori Düzenle';
-    document.getElementById('catId').value = cat.id;
-    document.getElementById('catId').disabled = true;
+    document.getElementById('catId').value = cat.id; document.getElementById('catId').disabled = true;
     document.getElementById('catLabel').value = cat.label || '';
     document.getElementById('catLabelEn').value = cat.labelEn || '';
     document.getElementById('catIcon').value = cat.icon || '';
@@ -363,18 +336,11 @@ function saveCategory() {
   const label = document.getElementById('catLabel').value.trim();
   const labelEn = document.getElementById('catLabelEn').value.trim();
   const icon = document.getElementById('catIcon').value.trim();
-  
   if (!id || !label) { alert('ID ve Etiket (TR) zorunludur.'); return; }
   const existing = data.categories.find(c => c.id === id);
   if (existing && document.getElementById('catId').disabled === false) { alert('Bu ID ile bir kategori zaten var.'); return; }
-  if (existing) { 
-    existing.label = label; 
-    existing.labelEn = labelEn || label;
-    existing.icon = icon; 
-  } else {
-    data.categories.push({ id, label, labelEn: labelEn || label, icon });
-  }
-  
+  if (existing) { existing.label = label; existing.labelEn = labelEn || label; existing.icon = icon; }
+  else data.categories.push({ id, label, labelEn: labelEn || label, icon });
   renderCategoriesTable();
   closeModal('categoryModal');
 }
@@ -385,23 +351,19 @@ function openUserModal(username = null) {
   const modal = document.getElementById('userModal');
   const title = document.getElementById('userModalTitle');
   if (!modal || !title) return;
-  
   if (username) {
     const user = data.users.find(u => u.username === username);
     if (!user) return;
     title.innerText = '✏️ Kullanıcı Düzenle';
-    document.getElementById('userUsername').value = user.username;
-    document.getElementById('userUsername').disabled = true;
+    document.getElementById('userUsername').value = user.username; document.getElementById('userUsername').disabled = true;
     document.getElementById('userRole').value = user.role;
-    document.getElementById('userPassword').value = '';
-    document.getElementById('userPassword2').value = '';
+    document.getElementById('userPassword').value = ''; document.getElementById('userPassword2').value = '';
   } else {
     title.innerText = '+ Yeni Kullanıcı';
     document.getElementById('userUsername').disabled = false;
     document.getElementById('userUsername').value = '';
     document.getElementById('userRole').value = 'editor';
-    document.getElementById('userPassword').value = '';
-    document.getElementById('userPassword2').value = '';
+    document.getElementById('userPassword').value = ''; document.getElementById('userPassword2').value = '';
   }
   modal.style.display = 'flex';
 }
@@ -412,7 +374,6 @@ function saveUser() {
   const role = document.getElementById('userRole').value;
   const password = document.getElementById('userPassword').value;
   const password2 = document.getElementById('userPassword2').value;
-  
   if (!username) { alert('Kullanıcı adı zorunludur.'); return; }
   const existing = data.users.find(u => u.username === username);
   const isNew = !existing;
@@ -420,12 +381,10 @@ function saveUser() {
   if (password !== password2) { alert('Şifreler eşleşmiyor.'); return; }
   if (existing) { existing.role = role; if (password) existing.password = password; }
   else data.users.push({ username, role, password });
-  
   renderUsersTable();
   closeModal('userModal');
 }
 
-// Düzenleme butonlarını global yap
 window.editTool = function(id) { openToolModal(id); };
 window.editCategory = function(id) { openCategoryModal(id); };
 window.editUser = function(username) { openUserModal(username); };
@@ -452,19 +411,14 @@ async function saveToGitHub() {
     type: document.getElementById('annType').value
   };
   data.copyrightText = document.getElementById('copyrightInput').value;
-  
   const btn = document.getElementById('saveBtn');
-  if (btn) {
-    btn.disabled = true; btn.innerHTML = 'Kaydediliyor...';
-  }
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Kaydediliyor...'; }
   try {
     await ghPut('tools.json', b64Encode(JSON.stringify(data, null, 2)), fileSha, 'Admin güncelleme');
     alert('✅ Kaydedildi! Sayfa yenilenecek.');
     location.reload();
   } catch(e) { alert('Hata: ' + e.message); }
-  if (btn) {
-    btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla';
-  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '💾 Kaydet & Yayınla'; }
 }
 
 // ==================== CASE STATS ====================
@@ -510,67 +464,7 @@ async function loadCaseStats() {
   } catch(e) { cards.innerHTML = '<div class="status-bar err">Yüklenemedi</div>'; }
 }
 
-// ==================== LOGIN ====================
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const token = document.getElementById('githubToken').value.trim();
-  const errorDiv = document.getElementById('loginError');
-  if (!token) { if (errorDiv) errorDiv.textContent = 'Token girin'; return; }
-  if (errorDiv) errorDiv.textContent = '';
-  sessionStorage.setItem('gh_token', token);
-  try {
-    const res = await fetch('https://api.github.com/user', { headers: { 'Authorization': `Bearer ${token}` } });
-    if (!res.ok) throw new Error('Geçersiz token');
-    const userData = await res.json();
-    sessionStorage.setItem('qa_user', JSON.stringify({ username: userData.login, role: 'admin' }));
-    const loginScreen = document.getElementById('loginScreen');
-    const adminPanel = document.getElementById('adminPanel');
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'block';
-    currentUser = { username: userData.login, role: 'admin' };
-    const roleBadge = document.getElementById('roleBadge');
-    if (roleBadge) roleBadge.innerHTML = 'ADMIN';
-    initToggles();
-    await loadData();
-  } catch (err) { if (errorDiv) errorDiv.textContent = 'Giriş başarısız: ' + err.message; sessionStorage.removeItem('gh_token'); }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  const token = sessionStorage.getItem('gh_token');
-  if (token) {
-    const loginScreen = document.getElementById('loginScreen');
-    const adminPanel = document.getElementById('adminPanel');
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'block';
-    currentUser = { username: 'admin', role: 'admin' };
-    const roleBadge = document.getElementById('roleBadge');
-    if (roleBadge) roleBadge.innerHTML = 'ADMIN';
-    initToggles();
-    loadData().catch(() => {
-      if (loginScreen) loginScreen.style.display = 'block';
-      if (adminPanel) adminPanel.style.display = 'none';
-      sessionStorage.removeItem('gh_token');
-    });
-  }
-});
-
-// Tab geçişleri
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabId = btn.dataset.tab;
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    const activeTab = document.getElementById(`tab-${tabId}`);
-    if (activeTab) activeTab.classList.add('active');
-    btn.classList.add('active');
-    if (tabId === 'caseStats') loadCaseStats();
-  });
-});
-
-// Search
-const searchTools = document.getElementById('searchTools');
-if (searchTools) searchTools.addEventListener('input', () => renderToolsTable());
-
-// ==================== TEMA YÖNETİMİ ====================
+// ==================== TEMA YÖNETİMİ (Renk seçicili) ====================
 function renderThemesTable() {
   const tbody = document.getElementById('themesTableBody');
   if (!tbody || !data || !data.themes) return;
@@ -583,6 +477,17 @@ function renderThemesTable() {
       <td><button class="btn btn-ghost btn-sm" onclick="editTheme('${t.id}')">✏️</button></td>
     </tr>
   `).join('');
+}
+
+// Renk değerini hex'e çeviren yardımcı fonksiyon
+function rgbToHex(color) {
+  if (!color) return '#000000';
+  if (color.startsWith('#')) return color;
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (match) {
+    return '#' + ((1 << 24) + (parseInt(match[1]) << 16) + (parseInt(match[2]) << 8) + parseInt(match[3])).toString(16).slice(1);
+  }
+  return '#000000';
 }
 
 function editTheme(themeId) {
@@ -600,9 +505,36 @@ function editTheme(themeId) {
   container.innerHTML = Object.keys(colors).map(key => `
     <div class="form-group">
       <label>${key}</label>
-      <input type="text" data-color-key="${key}" value="${colors[key]}">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="color" data-color-key="${key}" value="${rgbToHex(colors[key])}" style="width: 50px; height: 35px; padding: 0; border: 1px solid var(--border); background: var(--surface);">
+        <input type="text" class="color-text" data-color-key="${key}" value="${colors[key]}" style="flex: 1; font-family: monospace;">
+        <div class="color-preview" style="background-color: ${colors[key]}; width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);"></div>
+      </div>
     </div>
   `).join('');
+
+  // Renk seçici değişince text alanını ve preview'ı güncelle
+  container.querySelectorAll('input[type="color"]').forEach(picker => {
+    picker.addEventListener('input', (e) => {
+      const key = picker.dataset.colorKey;
+      const hex = picker.value;
+      const textInput = container.querySelector(`.color-text[data-color-key="${key}"]`);
+      const preview = picker.parentElement.querySelector('.color-preview');
+      if (textInput) textInput.value = hex;
+      if (preview) preview.style.backgroundColor = hex;
+    });
+  });
+  // Text alanı değişince color picker'ı ve preview'ı güncelle
+  container.querySelectorAll('.color-text').forEach(text => {
+    text.addEventListener('input', (e) => {
+      const key = text.dataset.colorKey;
+      const val = text.value;
+      const picker = container.querySelector(`input[type="color"][data-color-key="${key}"]`);
+      const preview = text.parentElement.querySelector('.color-preview');
+      if (picker) picker.value = val;
+      if (preview) preview.style.backgroundColor = val;
+    });
+  });
 
   document.getElementById('deleteThemeBtn').style.display = 'inline-block';
   document.getElementById('deleteThemeBtn').onclick = () => deleteTheme(theme.id);
@@ -621,9 +553,35 @@ function openThemeModal() {
   container.innerHTML = Object.keys(defaultColors).map(key => `
     <div class="form-group">
       <label>${key}</label>
-      <input type="text" data-color-key="${key}" value="${defaultColors[key]}">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="color" data-color-key="${key}" value="${rgbToHex(defaultColors[key])}" style="width: 50px; height: 35px; padding: 0; border: 1px solid var(--border); background: var(--surface);">
+        <input type="text" class="color-text" data-color-key="${key}" value="${defaultColors[key]}" style="flex: 1; font-family: monospace;">
+        <div class="color-preview" style="background-color: ${defaultColors[key]}; width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);"></div>
+      </div>
     </div>
   `).join('');
+  
+  container.querySelectorAll('input[type="color"]').forEach(picker => {
+    picker.addEventListener('input', (e) => {
+      const key = picker.dataset.colorKey;
+      const hex = picker.value;
+      const textInput = container.querySelector(`.color-text[data-color-key="${key}"]`);
+      const preview = picker.parentElement.querySelector('.color-preview');
+      if (textInput) textInput.value = hex;
+      if (preview) preview.style.backgroundColor = hex;
+    });
+  });
+  container.querySelectorAll('.color-text').forEach(text => {
+    text.addEventListener('input', (e) => {
+      const key = text.dataset.colorKey;
+      const val = text.value;
+      const picker = container.querySelector(`input[type="color"][data-color-key="${key}"]`);
+      const preview = text.parentElement.querySelector('.color-preview');
+      if (picker) picker.value = val;
+      if (preview) preview.style.backgroundColor = val;
+    });
+  });
+  
   document.getElementById('deleteThemeBtn').style.display = 'none';
   document.getElementById('themeModal').style.display = 'flex';
 }
@@ -636,7 +594,7 @@ function saveTheme() {
   if (!id || !nameTr) { alert('ID ve TR ad zorunlu'); return; }
 
   const colors = {};
-  document.querySelectorAll('#colorFields input[data-color-key]').forEach(inp => {
+  document.querySelectorAll('#colorFields .color-text').forEach(inp => {
     colors[inp.dataset.colorKey] = inp.value;
   });
 
@@ -663,9 +621,94 @@ function deleteTheme(themeId) {
   closeModal('themeModal');
 }
 
-// Fonksiyonları global yap
 window.renderThemesTable = renderThemesTable;
 window.editTheme = editTheme;
 window.openThemeModal = openThemeModal;
 window.saveTheme = saveTheme;
 window.deleteTheme = deleteTheme;
+
+// ==================== FIREBASE LOGIN ====================
+async function loginWithFirebase(email, password) {
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+    const userDoc = await firebase.firestore().collection('adminUsers').doc(user.uid).get();
+    if (!userDoc.exists) throw new Error('Yetkisiz kullanıcı.');
+    const userData = userDoc.data();
+    githubToken = userData.githubToken;
+    if (!githubToken) throw new Error('GitHub token bulunamadı.');
+    sessionStorage.setItem('gh_token', githubToken);
+    sessionStorage.setItem('qa_user', JSON.stringify({ username: user.email, role: userData.role || 'editor' }));
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    document.getElementById('roleBadge').innerHTML = userData.role === 'admin' ? 'ADMIN' : 'EDITOR';
+    initToggles();
+    await loadData();
+    return true;
+  } catch (error) {
+    console.error(error);
+    let errorMsg = 'Giriş başarısız: ';
+    switch (error.code) {
+      case 'auth/user-not-found': errorMsg += 'Kullanıcı bulunamadı.'; break;
+      case 'auth/wrong-password': errorMsg += 'Hatalı şifre.'; break;
+      case 'auth/invalid-email': errorMsg += 'Geçersiz email.'; break;
+      default: errorMsg += error.message;
+    }
+    document.getElementById('loginError').textContent = errorMsg;
+    return false;
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorDiv = document.getElementById('loginError');
+  if (!email || !password) { errorDiv.textContent = 'Email ve şifre giriniz.'; return; }
+  errorDiv.textContent = '';
+  await loginWithFirebase(email, password);
+});
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    try {
+      const userDoc = await firebase.firestore().collection('adminUsers').doc(user.uid).get();
+      if (userDoc.exists) {
+        githubToken = userDoc.data().githubToken;
+        sessionStorage.setItem('gh_token', githubToken);
+        sessionStorage.setItem('qa_user', JSON.stringify({ username: user.email, role: userDoc.data().role || 'editor' }));
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('roleBadge').innerHTML = userDoc.data().role === 'admin' ? 'ADMIN' : 'EDITOR';
+        initToggles();
+        await loadData();
+      } else {
+        await auth.signOut();
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('adminPanel').style.display = 'none';
+      }
+    } catch (err) {
+      await auth.signOut();
+      document.getElementById('loginScreen').style.display = 'block';
+      document.getElementById('adminPanel').style.display = 'none';
+    }
+  } else {
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('adminPanel').style.display = 'none';
+  }
+});
+
+// Tab geçişleri
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.tab;
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const activeTab = document.getElementById(`tab-${tabId}`);
+    if (activeTab) activeTab.classList.add('active');
+    btn.classList.add('active');
+    if (tabId === 'caseStats') loadCaseStats();
+  });
+});
+
+const searchTools = document.getElementById('searchTools');
+if (searchTools) searchTools.addEventListener('input', () => renderToolsTable());
