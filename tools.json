@@ -579,6 +579,27 @@
         "accent3": "#ff6b6b",
         "accent4": "#f4a261"
       }
+    },
+    {
+      "id": "tem",
+      "icon": "❤️",
+      "nameTr": "TEst",
+      "nameEn": "test1",
+      "colors": {
+        "bg": "#1f1f28",
+        "surface": "#272734",
+        "card": "#2e2e3e",
+        "card2": "#35354a",
+        "border": "rgba(255,255,255,0.09)",
+        "border2": "rgba(255,255,255,0.17)",
+        "text": "#e2e2f0",
+        "muted": "#8888aa",
+        "muted2": "#48486a",
+        "accent": "#06d6a0",
+        "accent2": "#7c6dfa",
+        "accent3": "#ff6b6b",
+        "accent4": "#f4a261"
+      }
     }
   ]
 }
