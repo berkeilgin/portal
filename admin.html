@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/components.css">
 <style>
-/* Admin özel stiller (mevcut stiller aynen korunacak, uzunluk nedeniyle kısaltıldı, ancak siz mevcut stilleri aynen bırakın) */
+/* Admin özel stiller + modal stilleri (eksikse) */
 .admin-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
@@ -39,16 +39,20 @@
 .upload-thumb { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; width: 80px; text-align: center; }
 .upload-thumb img { width: 40px; height: 40px; object-fit: contain; }
 .upload-thumb span { font-size: 10px; display: block; margin-top: 4px; word-break: break-all; }
+/* Login ekranı */
 #loginScreen { max-width: 400px; margin: 80px auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; }
 #loginScreen h2 { margin-bottom: 24px; color: var(--accent2); }
 .small-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
 .loading-spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal overlay (enterprise tarzı) */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal { background: var(--card); border-radius: 20px; padding: 28px; max-width: 700px; width: 90%; border: 1px solid var(--border); box-shadow: 0 20px 35px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+.modal { background: var(--card); border-radius: 20px; padding: 28px; max-width: 750px; width: 90%; border: 1px solid var(--border); box-shadow: 0 20px 35px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
 .modal h3 { margin-top: 0; margin-bottom: 20px; font-size: 24px; }
 .full { grid-column: span 2; }
 .footer { display: flex; justify-content: space-between; align-items: center; }
+/* Sticky tablo başlığı */
 .table-wrapper { overflow-x: auto; position: relative; }
 .table-wrapper thead th { position: sticky; top: 0; background: var(--card); z-index: 10; backdrop-filter: blur(4px); border-bottom: 2px solid var(--border); }
 .color-preview { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border); display: inline-block; vertical-align: middle; margin-left: 8px; }
@@ -81,11 +85,16 @@
   </div>
 
   <div class="main">
+    <!-- Durum çubuğu -->
     <div class="panel" style="margin-bottom: 20px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-      <div class="status" id="statusBar"><span class="dot" style="background: var(--accent2);"></span><span id="statusMsg">Yükleniyor...</span></div>
+      <div class="status" id="statusBar">
+        <span class="dot" style="background: var(--accent2);"></span>
+        <span id="statusMsg">Yükleniyor...</span>
+      </div>
       <div><span class="badge" id="roleBadge">ADMIN</span></div>
     </div>
 
+    <!-- Sekmeler -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="tools">🛠 Araçlar</button>
       <button class="tab-btn" data-tab="categories">📂 Kategoriler</button>
@@ -102,14 +111,14 @@
         <div class="admin-toolbar"><h3>🛠 Araç Yönetimi</h3><button class="btn btn-primary" onclick="openToolModal()">+ Yeni Araç</button></div>
         <input type="text" id="searchTools" placeholder="🔍 Araç ara..." style="width:100%; margin-bottom:16px; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text);">
         <div class="chips" id="catFilterChips"></div>
-        <div class="table-wrapper"><table id="toolsTable"><thead><tr><th>Sıra</th><th>İkon</th><th>Ad / ID</th><th>Kategori</th><th>URL</th><th>Aktif</th><th>NEW</th><th>TEST</th><th>BEST</th><th>İşlem</th></thead><tbody id="toolsTableBody"></tbody></table></div>
+        <div class="table-wrapper"><table id="toolsTable"><thead><tr><th>Sıra</th><th>İkon</th><th>Ad / ID</th><th>Kategori</th><th>URL</th><th>Aktif</th><th>NEW</th><th>TEST</th><th>BEST</th><th>İşlem</th></tr></thead><tbody id="toolsTableBody"></tbody></table></div>
       </div>
     </div>
 
     <!-- CATEGORIES TAB -->
     <div class="tab-pane" id="tab-categories">
       <div class="panel"><div class="admin-toolbar"><h3>📂 Kategori Yönetimi</h3><button class="btn btn-primary" onclick="openCategoryModal()">+ Yeni Kategori</button></div>
-      <div class="table-wrapper"><table id="categoriesTable"><thead><tr><th>Sıra</th><th>ID</th><th>Etiket (TR)</th><th>Etiket (EN)</th><th>İkon</th><th>Araç Sayısı</th><th>İşlem</th></thead><tbody id="categoriesTableBody"></tbody></table></div></div>
+      <div class="table-wrapper"><table id="categoriesTable"><thead><tr><th>Sıra</th><th>ID</th><th>Etiket (TR)</th><th>Etiket (EN)</th><th>İkon</th><th>Araç Sayısı</th><th>İşlem</th></tr></thead><tbody id="categoriesTableBody"></tbody></table></div></div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -124,10 +133,18 @@
         <div class="form-group"><label>Telif Hakkı Metni</label><input type="text" id="copyrightInput" placeholder="© 2025 QA Portal. Tüm hakları saklıdır."></div>
       </div></div>
 
-      <!-- TEMA YÖNETİMİ -->
+      <!-- TEMA YÖNETİMİ PANELİ -->
       <div class="panel" style="margin-top: 24px;">
-        <div class="admin-toolbar"><h3>🎨 Tema Yönetimi</h3><button class="btn btn-primary" onclick="openThemeModal()">+ Yeni Tema</button></div>
-        <div class="table-wrapper"><table id="themesTable"><thead><tr><th>ID</th><th>İkon</th><th>Ad (TR)</th><th>Ad (EN)</th><th>İşlem</th></thead><tbody id="themesTableBody"></tbody></table></div>
+        <div class="admin-toolbar">
+          <h3>🎨 Tema Yönetimi</h3>
+          <button class="btn btn-primary" onclick="openThemeModal()">+ Yeni Tema</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="themesTable">
+            <thead><tr><th>ID</th><th>İkon</th><th>Ad (TR)</th><th>Ad (EN)</th><th>İşlem</th></thead>
+            <tbody id="themesTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -161,7 +178,7 @@
   <footer class="footer"><div class="copyright-text"></div></footer>
 </div>
 
-<!-- MODALLAR -->
+<!-- MODAL'LAR -->
 <div class="modal-overlay" id="toolModal" style="display: none;">
   <div class="modal"><h3 id="toolModalTitle">+ Araç Ekle</h3>
     <div class="grid-2">
