@@ -46,7 +46,7 @@ async function loadUsers() {
 // ==================== PHP İLE MAIL GÖNDERME ====================
 window.sendMailWithPHP = async function(emailData) {
   try {
-    const response = await fetch('https://seninsite.byethost.com/send_mail.php', {
+    const response = await fetch('http://www.berkeilgin.byethost7.com/send_mail.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData)
