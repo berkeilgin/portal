@@ -9,11 +9,10 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/components.css">
-<!-- Chart.js ve Excel (SheetJS) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
-/* Modal ve diğer stiller (aynı, değişmedi) */
+/* Aynı stiller (kısaltmak için eklemedim, mevcut dosyandaki stiller aynen kalabilir) */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; }
 .modal-overlay.open { display: flex; }
 .modal { background: var(--surface); border-radius: 16px; max-width: 650px; width: 90%; padding: 20px; border: 1px solid var(--border); max-height: 80vh; overflow-y: auto; }
@@ -31,39 +30,14 @@
 .topic-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
 .note-item { background: var(--card2); border-radius: 8px; padding: 8px; margin-top: 6px; font-size: 12px; }
 .admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.notification-badge { background: var(--accent3); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: bold; margin-left: 8px; cursor: pointer; }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 .chart-container { max-width: 800px; margin: 20px auto; }
 .export-btn { margin: 10px 0; background: #2e7d32; }
-  /* Profesyonel modal içi stiller */
-.info-group {
-  margin-bottom: 12px;
-}
-.info-group label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: var(--muted);
-  letter-spacing: 0.5px;
-  display: block;
-  margin-bottom: 4px;
-}
-.info-group .info-value {
-  font-size: 14px;
-  color: var(--text);
-  word-break: break-word;
-}
-.full-width {
-  grid-column: 1 / -1;
-}
-.info-group hr {
-  margin: 12px 0;
-}
-#caseDetailContent {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
+.info-group { margin-bottom: 12px; }
+.info-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+.info-group .info-value { font-size: 14px; color: var(--text); word-break: break-word; }
+.full-width { grid-column: 1 / -1; }
+#caseDetailContent { max-height: 70vh; overflow-y: auto; padding-right: 4px; }
 </style>
 </head>
 <body class="grey">
@@ -91,7 +65,6 @@
       <div class="toolbar-left" style="display:flex; gap:8px;">
         <button class="btn btn-ghost" id="refreshBtn">🔄 Yenile</button>
         <button class="btn btn-ghost" onclick="window.location.href='case.html'">🏠 Portal'a Dön</button>
-        <div id="newCaseAlert" style="display:inline-block"></div>
       </div>
       <div><span id="adminRoleBadge" class="badge badge-new">ADMIN</span></div>
     </div>
@@ -121,19 +94,19 @@
     <div id="topicsTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openTopicModal()">+ Yeni Konu Ekle</button><div id="topicsList" style="margin-top:16px"></div></div>
 
     <!-- Kullanıcılar Tab -->
-    <div id="usersTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button><div class="table-wrapper" style="margin-top:16px"><table><thead><tr><th>ID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
+    <div id="usersTab" class="panel" style="display:none"><button class="btn btn-primary" onclick="openUserModal()">+ Yeni Kullanıcı</button><div class="table-wrapper" style="margin-top:16px"><table><thead><tr><th>UID</th><th>Kullanıcı Adı</th><th>E-posta</th><th>Rol</th><th>İşlem</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div>
 
-<!-- Mail Ayarları Tab (mevcut içerik) -->
-<div id="mailTab" class="panel" style="display:none">
-  <div class="form-group"><label>📬 Alıcı E-posta (Admin)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
-  <div class="form-group"><label>📎 CC E-posta (birden fazla için virgül kullanın)</label><input type="text" id="ccEmail" class="form-input" placeholder="cc1@mail.com, cc2@mail.com"></div>
-  <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">💾 Kaydet</button></div>
-  <div id="mailStatus" style="margin-top:12px"></div>
-</div>
+    <!-- Mail Ayarları Tab -->
+    <div id="mailTab" class="panel" style="display:none">
+      <div class="form-group"><label>🔑 Alıcı E-posta (Admin)</label><input type="email" id="adminNotifyEmail" class="form-input" placeholder="admin@example.com"></div>
+      <div class="form-group"><label>📎 CC E-posta (virgülle ayırın)</label><input type="text" id="ccEmail" class="form-input" placeholder="cc1@mail.com, cc2@mail.com"></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="saveMailSettings()">💾 Kaydet</button><button class="btn btn-ghost" onclick="testEmail()">✉️ Test Maili Gönder</button></div>
+      <div id="mailStatus" style="margin-top:12px"></div>
+    </div>
 
     <!-- İstatistikler Tab -->
     <div id="statsTab" class="panel" style="display:none">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><h3>Çözüm Performansı</h3><button class="btn btn-primary export-btn" id="exportStatsBtn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><h3>Çözüm Performansı</h3><button class="btn btn-primary export-btn" onclick="exportToExcel()">📎 Excel'e Aktar (DK bazında)</button></div>
       <div class="chart-container"><canvas id="statsChart"></canvas></div>
       <div id="statsTable" style="margin-top:20px; overflow-x:auto"><table style="width:100%"><thead><tr><th>Çözen Kişi</th><th>Çözülen Case Sayısı</th><th>Toplam Süre (dk)</th><th>Ortalama Süre (dk)</th></tr></thead><tbody id="statsTableBody"></tbody></table></div>
     </div>
