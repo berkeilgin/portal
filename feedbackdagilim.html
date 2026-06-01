@@ -1,0 +1,766 @@
+<!-- feedbackdagilim.html -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Feedback Dağılım - Kontrol Paneli</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14' font-size='14'>📊</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+            font-size: 32px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 25px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            min-width: 100px;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card.error .value {
+            color: #dc3545;
+        }
+
+        .stat-card.success .value {
+            color: #28a745;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 2px dashed #ddd;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area.drag-over {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .upload-area i {
+            font-size: 60px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 5px;
+        }
+
+        .upload-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            background: #6c757d;
+        }
+
+        .reset-btn:hover {
+            background: #5a6268;
+        }
+
+        /* Preview Table */
+        .preview-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            overflow-x: auto;
+            display: none;
+        }
+
+        .preview-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .data-table .error-row {
+            background: #fff5f5;
+        }
+
+        .error-badge {
+            background: #dc3545;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        .valid-badge {
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        .link-btn {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 12px;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .link-btn:hover {
+            background: #5a67d8;
+        }
+
+        /* Error List */
+        .error-list {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .error-list h3 {
+            color: #dc3545;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-list ul {
+            list-style: none;
+        }
+
+        .error-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .error-list a {
+            color: #667eea;
+            text-decoration: none;
+            margin-left: 15px;
+        }
+
+        /* Step Info */
+        .step-info {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .step-info h4 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .step-info .ident-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .stats {
+                justify-content: center;
+            }
+            .data-table {
+                font-size: 11px;
+            }
+            .data-table th, .data-table td {
+                padding: 6px 4px;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading i {
+            font-size: 40px;
+            color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>
+            <i class="fas fa-chart-pie"></i>
+            Feedback Dağılım - Kontrol Paneli
+        </h1>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Toplam Kayıt</div>
+                <div class="value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card error">
+                <div class="label">Hatalı Kayıt</div>
+                <div class="value" id="errorCount">0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="label">Geçerli Kayıt</div>
+                <div class="value" id="validCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="upload-area" id="uploadArea">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <h3>CSV Dosyası Yükleyin</h3>
+        <p>Sürükle & Bırak veya tıklayarak seçin</p>
+        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        <button class="upload-btn" id="selectFileBtn"><i class="fas fa-folder-open"></i> Dosya Seç</button>
+        <button class="upload-btn reset-btn" id="resetBtn"><i class="fas fa-sync-alt"></i> Sıfırla</button>
+        <div class="file-info" id="fileInfo"></div>
+    </div>
+
+    <div class="loading" id="loading">
+        <i class="fas fa-spinner"></i>
+        <p>Dosya işleniyor...</p>
+    </div>
+
+    <div class="step-info" id="stepInfo">
+        <h4><i class="fas fa-link"></i> Step 1 - Dinamik Linkler (Ident kolonuna göre)</h4>
+        <div class="ident-list" id="identList"></div>
+    </div>
+
+    <div class="preview-section" id="previewSection">
+        <h3><i class="fas fa-table"></i> CSV Önizleme ve Doğrulama</h3>
+        <div style="overflow-x: auto;">
+            <table class="data-table" id="dataTable">
+                <thead id="tableHeader"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="error-list" id="errorList">
+        <h3><i class="fas fa-exclamation-triangle"></i> Monitoring ID Hataları</h3>
+        <ul id="errorItems"></ul>
+    </div>
+</div>
+
+<script>
+    // Expected headers (19 başlık)
+    const EXPECTED_HEADERS = [
+        "Monitoring ID", "Ident", "Ad Soyad", "Departman", "Pozisyon",
+        "Tarih", "Değerlendirme Türü", "Puan", "Yorum", "Güçlü Yönler",
+        "Gelişim Alanları", "Aksiyon Maddesi", "Sorumlu", "Son Tarih",
+        "Durum", "Grup", "Proje", "Yönetici", "Notlar"
+    ];
+
+    let currentData = [];
+    let currentHeaders = [];
+
+    // DOM Elements
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const loading = document.getElementById('loading');
+    const previewSection = document.getElementById('previewSection');
+    const errorList = document.getElementById('errorList');
+    const stepInfo = document.getElementById('stepInfo');
+    const totalCountSpan = document.getElementById('totalCount');
+    const errorCountSpan = document.getElementById('errorCount');
+    const validCountSpan = document.getElementById('validCount');
+    const tableHeader = document.getElementById('tableHeader');
+    const tableBody = document.getElementById('tableBody');
+    const errorItems = document.getElementById('errorItems');
+    const identList = document.getElementById('identList');
+    const fileInfo = document.getElementById('fileInfo');
+
+    // Validation function for Monitoring ID
+    function validateMonitoringId(value) {
+        if (value === null || value === undefined || value === '') {
+            return { valid: false, reason: 'Boş değer' };
+        }
+        const strValue = String(value).trim();
+        if (strValue === '') {
+            return { valid: false, reason: 'Boşluk içeriyor' };
+        }
+        // Numerik kontrol
+        if (!/^\d+$/.test(strValue)) {
+            return { valid: false, reason: 'Numerik değer içermiyor' };
+        }
+        // 8 haneli kontrol
+        if (strValue.length !== 8) {
+            return { valid: false, reason: `${strValue.length} haneli (8 haneli olmalı)` };
+        }
+        return { valid: true, reason: '' };
+    }
+
+    // Generate dynamic link from Ident
+    function generateLink(ident) {
+        if (!ident || ident.trim() === '') return '#';
+        const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
+        return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident.trim())}&frmOption=OPTION`;
+    }
+
+    // Parse CSV
+    function parseCSV(text) {
+        const lines = text.split(/\r?\n/);
+        if (lines.length === 0) return { headers: [], data: [] };
+        
+        // Parse headers (ilk satır)
+        const headers = parseCSVLine(lines[0]);
+        
+        // Parse data
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            const row = parseCSVLine(lines[i]);
+            if (row.length > 0) {
+                data.push(row);
+            }
+        }
+        
+        return { headers, data };
+    }
+
+    function parseCSVLine(line) {
+        const result = [];
+        let inQuotes = false;
+        let current = '';
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        
+        // Remove quotes from each field
+        return result.map(field => {
+            if (field.startsWith('"') && field.endsWith('"')) {
+                return field.slice(1, -1);
+            }
+            return field;
+        });
+    }
+
+    // Process and validate data
+    function processData(headers, data) {
+        // Find column indices
+        const monitoringIdx = headers.findIndex(h => h === 'Monitoring ID');
+        const identIdx = headers.findIndex(h => h === 'Ident');
+        
+        if (monitoringIdx === -1) {
+            alert('Hata: "Monitoring ID" kolonu bulunamadı!');
+            return false;
+        }
+        
+        const validatedData = [];
+        const errors = [];
+        
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            const monitoringValue = monitoringIdx < row.length ? row[monitoringIdx] : '';
+            const identValue = identIdx < row.length && identIdx !== -1 ? row[identIdx] : '';
+            
+            const validation = validateMonitoringId(monitoringValue);
+            
+            validatedData.push({
+                rowIndex: i + 1,
+                originalRow: row,
+                monitoringId: monitoringValue,
+                ident: identValue,
+                valid: validation.valid,
+                errorReason: validation.reason,
+                headers: headers
+            });
+            
+            if (!validation.valid) {
+                errors.push({
+                    row: i + 1,
+                    monitoringId: monitoringValue,
+                    reason: validation.reason,
+                    ident: identValue
+                });
+            }
+        }
+        
+        return { validatedData, errors, monitoringIdx, identIdx };
+    }
+
+    // Render UI
+    function renderResults(validatedData, errors, monitoringIdx, identIdx, headers) {
+        const total = validatedData.length;
+        const errorCount = errors.length;
+        const validCount = total - errorCount;
+        
+        totalCountSpan.textContent = total;
+        errorCountSpan.textContent = errorCount;
+        validCountSpan.textContent = validCount;
+        
+        // Render table headers
+        tableHeader.innerHTML = '';
+        const headerRow = document.createElement('tr');
+        headers.forEach((header, idx) => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            if (header === 'Monitoring ID') {
+                th.style.backgroundColor = '#dc3545';
+                th.style.minWidth = '120px';
+            }
+            if (header === 'Ident') {
+                th.style.minWidth = '150px';
+            }
+            headerRow.appendChild(th);
+        });
+        // Add status column
+        const statusTh = document.createElement('th');
+        statusTh.textContent = 'Durum';
+        statusTh.style.backgroundColor = '#28a745';
+        headerRow.appendChild(statusTh);
+        tableHeader.appendChild(headerRow);
+        
+        // Render table body
+        tableBody.innerHTML = '';
+        validatedData.forEach(item => {
+            const row = document.createElement('tr');
+            if (!item.valid) {
+                row.classList.add('error-row');
+            }
+            
+            // Show all columns
+            headers.forEach((header, idx) => {
+                const td = document.createElement('td');
+                let cellValue = idx < item.originalRow.length ? item.originalRow[idx] : '';
+                
+                if (header === 'Monitoring ID' && !item.valid) {
+                    td.innerHTML = `<span class="error-badge">${escapeHtml(cellValue) || '(boş)'}</span>`;
+                } else if (header === 'Ident' && cellValue) {
+                    const link = generateLink(cellValue);
+                    td.innerHTML = `<a href="${link}" target="_blank" class="link-btn"><i class="fas fa-external-link-alt"></i> ${escapeHtml(cellValue)}</a>`;
+                } else {
+                    td.textContent = cellValue;
+                }
+                row.appendChild(td);
+            });
+            
+            // Status column
+            const statusTd = document.createElement('td');
+            if (item.valid) {
+                statusTd.innerHTML = '<span class="valid-badge"><i class="fas fa-check"></i> Geçerli</span>';
+            } else {
+                statusTd.innerHTML = `<span class="error-badge"><i class="fas fa-times"></i> Hata: ${item.errorReason}</span>`;
+            }
+            row.appendChild(statusTd);
+            tableBody.appendChild(row);
+        });
+        
+        // Render error list with links
+        errorItems.innerHTML = '';
+        if (errors.length > 0) {
+            errors.forEach(err => {
+                const li = document.createElement('li');
+                let identLink = '';
+                if (err.ident && err.ident.trim()) {
+                    const link = generateLink(err.ident);
+                    identLink = `<a href="${link}" target="_blank"><i class="fas fa-link"></i> Ident: ${escapeHtml(err.ident)}</a>`;
+                }
+                li.innerHTML = `<i class="fas fa-bug"></i> <strong>Satır ${err.row}</strong> - Monitoring ID: "${escapeHtml(err.monitoringId)}" - Hata: ${err.reason} ${identLink}`;
+                errorItems.appendChild(li);
+            });
+            errorList.style.display = 'block';
+        } else {
+            errorList.style.display = 'none';
+        }
+        
+        // Render Step 1 - Ident list with links
+        identList.innerHTML = '';
+        const uniqueIdents = [...new Set(validatedData.map(item => item.ident).filter(id => id && id.trim()))];
+        if (uniqueIdents.length > 0) {
+            uniqueIdents.forEach(ident => {
+                const link = generateLink(ident);
+                const badge = document.createElement('a');
+                badge.href = link;
+                badge.target = '_blank';
+                badge.className = 'link-btn';
+                badge.style.padding = '8px 15px';
+                badge.innerHTML = `<i class="fas fa-link"></i> ${escapeHtml(ident)}`;
+                identList.appendChild(badge);
+            });
+            stepInfo.style.display = 'block';
+        } else {
+            stepInfo.style.display = 'none';
+        }
+        
+        // Show preview section
+        previewSection.style.display = 'block';
+        
+        // Scroll to results
+        previewSection.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    
+    // Main file processing
+    function processFile(file) {
+        if (!file) return;
+        
+        loading.style.display = 'block';
+        previewSection.style.display = 'none';
+        errorList.style.display = 'none';
+        stepInfo.style.display = 'none';
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const text = e.target.result;
+                const { headers, data } = parseCSV(text);
+                
+                // Check for 19 headers
+                if (headers.length < 19) {
+                    alert(`Uyarı: Beklenen 19 başlık, bulunan: ${headers.length}\nBeklenen: ${EXPECTED_HEADERS.join(', ')}`);
+                }
+                
+                currentHeaders = headers;
+                const { validatedData, errors, monitoringIdx, identIdx } = processData(headers, data);
+                currentData = validatedData;
+                
+                renderResults(validatedData, errors, monitoringIdx, identIdx, headers);
+                
+                fileInfo.innerHTML = `<i class="fas fa-check-circle"></i> Yüklenen dosya: ${file.name} - ${validatedData.length} kayıt bulundu`;
+                fileInfo.style.color = '#28a745';
+            } catch (err) {
+                console.error(err);
+                alert('Dosya işlenirken hata oluştu: ' + err.message);
+                fileInfo.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hata: ${err.message}`;
+                fileInfo.style.color = '#dc3545';
+            } finally {
+                loading.style.display = 'none';
+            }
+        };
+        
+        reader.onerror = function() {
+            alert('Dosya okunamadı!');
+            loading.style.display = 'none';
+        };
+        
+        reader.readAsText(file, 'UTF-8');
+    }
+    
+    // Drag & Drop handlers
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.csv')) {
+            processFile(file);
+        } else {
+            alert('Lütfen geçerli bir CSV dosyası yükleyin!');
+        }
+    });
+    
+    uploadArea.addEventListener('click', (e) => {
+        if (e.target === uploadArea || e.target.closest('.upload-area') === uploadArea) {
+            fileInput.click();
+        }
+    });
+    
+    selectFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            processFile(e.target.files[0]);
+        }
+    });
+    
+    resetBtn.addEventListener('click', () => {
+        currentData = [];
+        currentHeaders = [];
+        fileInput.value = '';
+        totalCountSpan.textContent = '0';
+        errorCountSpan.textContent = '0';
+        validCountSpan.textContent = '0';
+        previewSection.style.display = 'none';
+        errorList.style.display = 'none';
+        stepInfo.style.display = 'none';
+        fileInfo.innerHTML = '';
+        tableHeader.innerHTML = '';
+        tableBody.innerHTML = '';
+        errorItems.innerHTML = '';
+        identList.innerHTML = '';
+    });
+    
+    // Prevent click propagation on buttons inside upload area
+    document.querySelectorAll('.upload-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.stopPropagation());
+    });
+    
+    // Initial info
+    console.log('Feedback Dağılım aracı hazır - Beklenen 19 başlık');
+</script>
+</body>
+</html>
