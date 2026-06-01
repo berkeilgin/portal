@@ -3,22 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Feedback Dağılım - Kontrol Paneli">
-    <title>Feedback Dağılım | Kontrol Paneli</title>
+    <meta name="description" content="Feedback Dağılım - Kalite Kontrol ve Değerlendirme Sistemi">
+    <title>Feedback Dağılım | Kalite Kontrol Sistemi</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/css/feedbackdagilim.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        /* Feedback Dağılım Ek Stiller */
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 10px 0;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            min-width: 120px;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        .stat-box.error .stat-value { color: #fd4239; }
+        .stat-box.success .stat-value { color: #28a745; }
+        
+        .upload-container {
+            width: 100%;
+        }
+        .upload-area {
+            text-align: center;
+            padding: 30px;
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .upload-area.drag-over {
+            border-color: #009dd0;
+            background: #e8f4f8;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #009dd0;
+            margin-bottom: 15px;
+        }
+        .upload-area h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .required-info {
+            font-size: 12px;
+            color: #fd4239;
+            margin: 10px 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .file-info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #28a745;
+        }
+        
+        .loading-cell {
+            text-align: center;
+            padding: 30px !important;
+        }
+        .loading-cell i {
+            font-size: 24px;
+            color: #009dd0;
+            margin-right: 8px;
+        }
+        
+        .step1-cell {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+        .step-header {
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .ident-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .ident-link {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 12px;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ident-link:hover {
+            background: rgba(255,255,255,0.35);
+            color: white;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 800px;
+        }
+        .data-table th {
+            background: #009dd0;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .data-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .data-table tr:hover { background: #f5f5f5; }
+        .data-table .error-row { background: #fff5f5; }
+        
+        .error-badge {
+            background: #fd4239;
+            color: white;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 11px;
+            display: inline-block;
+        }
+        .valid-badge {
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 11px;
+            display: inline-block;
+        }
+        
+        .error-header {
+            color: #fd4239;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .error-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error-list a { margin-left: 15px; }
+        
+        .teleperformance-footer {
+            text-align: center;
+            font-size: 11px;
+            color: #696A6D;
+            padding: 8px 20px;
+            background: #f3f3f3;
+            border-bottom: 3px solid #fd4239;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+        .teleperformance-footer a {
+            color: #009dd0;
+            text-decoration: none;
+        }
+        .teleperformance-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media only screen and (max-width: 700px) {
+            .stats-container { flex-direction: column; align-items: center; }
+            .stat-box { width: 80%; }
+            .button-group { flex-direction: column; align-items: center; }
+            .btn { width: 80%; justify-content: center; }
+        }
+    </style>
 </head>
 <body>
 <div class="pg red">
     <div class="pg_cont">
         <div class="logo_container">
-            <table class="logo-tbl" width="50%" cellspacing="0" cellpadding="0" border="0" align="center">
+            <table width="50%" cellspacing="0" cellpadding="0" border="0" align="center">
                 <tbody>
                     <tr align="center">
                         <td align="center" class="bh">
                             <i class="fas fa-chart-line"></i> Feedback Dağılım Sistemi
-                        </td>
+                         </td>
                     </tr>
                 </tbody>
             </table>
@@ -30,53 +238,43 @@
                     <td valign="top" style="position: relative;">
                         <div class="uq_cd">v1.0</div>
                         
-                        <!-- Ana İçerik -->
-                        <table class="content-table" width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tbody>
-                                <tr>
-                                    <td class="eu_h">
-                                        <i class="a_i"></i>
-                                        Feedback Dağılım - CSV Kontrol Paneli
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="hr"><hr></td>
-                                </tr>
+                                <tr><td class="eu_h"><i class="a_i"></i>Feedback Dağılım - CSV Kontrol Paneli</td></tr>
+                                <tr><td class="hr"><hr></td></tr>
                                 
                                 <!-- İstatistikler -->
                                 <tr>
-                                    <td class="stats-container">
-                                        <div class="stat-box">
-                                            <div class="stat-label">Toplam Kayıt</div>
-                                            <div class="stat-value" id="totalCount">0</div>
-                                        </div>
-                                        <div class="stat-box error-box">
-                                            <div class="stat-label">Hatalı Monitoring ID</div>
-                                            <div class="stat-value" id="errorCount">0</div>
-                                        </div>
-                                        <div class="stat-box success-box">
-                                            <div class="stat-label">Geçerli Monitoring ID</div>
-                                            <div class="stat-value" id="validCount">0</div>
+                                    <td class="eu_co">
+                                        <div class="stats-container">
+                                            <div class="stat-box">
+                                                <div class="stat-label">Toplam Kayıt</div>
+                                                <div class="stat-value" id="totalCount">0</div>
+                                            </div>
+                                            <div class="stat-box error">
+                                                <div class="stat-label">Hatalı Monitoring ID</div>
+                                                <div class="stat-value" id="errorCount">0</div>
+                                            </div>
+                                            <div class="stat-box success">
+                                                <div class="stat-label">Geçerli Monitoring ID</div>
+                                                <div class="stat-value" id="validCount">0</div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
                                 
-                                <!-- Dosya Yükleme Alanı -->
+                                <!-- Dosya Yükleme -->
                                 <tr>
-                                    <td class="eu_co upload-cell">
-                                        <div class="upload-container" id="uploadContainer">
+                                    <td class="eu_co">
+                                        <div class="upload-container">
                                             <div class="upload-area" id="uploadArea">
                                                 <i class="fas fa-cloud-upload-alt upload-icon"></i>
                                                 <h3>CSV Dosyası Yükleyin</h3>
                                                 <p>Sürükleyip bırakın veya tıklayarak seçin</p>
                                                 <p class="required-info">Zorunlu kolonlar: "Ident" ve "Monitoring ID"</p>
                                                 <div class="button-group">
-                                                    <button type="button" class="btn btn-primary" id="selectFileBtn">
-                                                        <i class="fas fa-folder-open"></i> Dosya Seç
-                                                    </button>
-                                                    <button type="button" class="btn btn-secondary" id="resetBtn">
-                                                        <i class="fas fa-sync-alt"></i> Sıfırla
-                                                    </button>
+                                                    <button type="button" class="btn" id="selectFileBtn"><i class="fas fa-folder-open"></i> Dosya Seç</button>
+                                                    <button type="button" class="btn" id="resetBtn" style="background:#6c757d; border-color:#6c757d;"><i class="fas fa-sync-alt"></i> Sıfırla</button>
                                                 </div>
                                                 <input type="file" id="fileInput" accept=".csv" style="display: none;">
                                                 <div class="file-info" id="fileInfo"></div>
@@ -87,32 +285,21 @@
                                 
                                 <!-- Yükleniyor -->
                                 <tr id="loadingRow" style="display: none;">
-                                    <td class="eu_co loading-cell">
-                                        <i class="fas fa-spinner fa-spin"></i> Dosya işleniyor...
-                                    </td>
+                                    <td class="eu_co loading-cell"><i class="fas fa-spinner fa-spin"></i> Dosya işleniyor...</td>
                                 </tr>
                                 
                                 <!-- Step 1 - Ident Linkleri -->
                                 <tr id="step1Row" style="display: none;">
                                     <td class="eu_co step1-cell">
-                                        <div class="step-header">
-                                            <i class="fas fa-link"></i> 
-                                            <strong>Step 1 - Dinamik Linkler (Ident kolonuna göre)</strong>
-                                        </div>
+                                        <div class="step-header"><i class="fas fa-link"></i> Step 1 - Dinamik Linkler (Ident kolonuna göre)</div>
                                         <div class="ident-buttons" id="identButtons"></div>
                                     </td>
                                 </tr>
                                 
-                                <!-- Tablo Başlığı -->
-                                <tr id="tableHeaderRow" style="display: none;">
-                                    <td class="eu_co table-header-cell">
-                                        <i class="fas fa-table"></i> CSV Önizleme ve Doğrulama
-                                    </td>
-                                </tr>
-                                
                                 <!-- Tablo -->
+                                <tr id="tableHeaderRow" style="display: none;"><td class="eu_co" style="font-weight:bold; padding-bottom:0;"><i class="fas fa-table"></i> CSV Önizleme ve Doğrulama</td></tr>
                                 <tr id="tableRow" style="display: none;">
-                                    <td class="eu_co table-cell">
+                                    <td class="eu_co" style="padding-top:0;">
                                         <div class="table-wrapper">
                                             <table class="data-table" id="dataTable">
                                                 <thead id="tableHeader"></thead>
@@ -124,23 +311,18 @@
                                 
                                 <!-- Hata Listesi -->
                                 <tr id="errorListRow" style="display: none;">
-                                    <td class="eu_co error-cell">
-                                        <div class="error-header">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            Monitoring ID Hataları (8 haneli numerik olmalı)
-                                        </div>
+                                    <td class="eu_co">
+                                        <div class="error-header"><i class="fas fa-exclamation-triangle"></i> Monitoring ID Hataları (8 haneli numerik olmalı)</div>
                                         <ul class="error-list" id="errorList"></ul>
                                     </td>
                                 </tr>
                                 
+                                <!-- Footer - Teleperformance -->
                                 <tr>
-                                    <td class="eu_co fo">
+                                    <td class="teleperformance-footer">
                                         <i class="fas fa-headset"></i> Yardım mı gerekiyor? 
                                         <a href="mailto:it-security_engineering@emea.teleperformance.com">it-security_engineering@emea.teleperformance.com</a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="eu_co st">
+                                        <br><br>
                                         <span class="s_img"></span>
                                         Teleperformance - Feedback Dağılım ve Kalite Kontrol Sistemi
                                     </td>
