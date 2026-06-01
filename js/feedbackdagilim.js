@@ -414,7 +414,7 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (Raporlama) - DÜZELTİLMİŞ + RAW DATA ====================
+// ==================== STEP 3 (Raporlama) - DÜZELTİLMİŞ + HATA AYIKLAMA ====================
 let reportMainData = [];
 let reportHistory = { DM: [], ML: [], DONUSUM: [] };
 let currentReportView = 'proje';
@@ -435,17 +435,31 @@ const reportTabKisi = document.getElementById('reportTabKisi');
 // Yükleme: Görüşme listesi (Monitoring ID, Ident, client_name, FeedbackCreatorName, CheckListCreated)
 async function loadMainForReport(file) {
   if (!file) return;
+  console.log('loadMainForReport başladı, dosya:', file.name);
   showLoader('Step3', true);
   try {
     const buffer = await file.arrayBuffer();
+    console.log('Dosya okundu, buffer uzunluğu:', buffer.byteLength);
     const wb = XLSX.read(buffer, { type: 'array' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
     let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    console.log('Satır sayısı:', rows.length);
     if (!rows.length) throw new Error('Dosya boş');
     const cols = Object.keys(rows[0]);
     console.log('Step3 - Mevcut sütunlar:', cols);
     
-    // findColumnName globalde tanımlı
+    // findColumnName globalde tanımlı (STEP1'de var)
+    if (typeof findColumnName === 'undefined') {
+      // Yedek tanım
+      window.findColumnName = function(columns, possibleNames) {
+        const lower = columns.map(c => String(c).trim().toLowerCase());
+        for (let name of possibleNames) {
+          const idx = lower.indexOf(name.toLowerCase());
+          if (idx !== -1) return columns[idx];
+        }
+        return null;
+      };
+    }
     const monCol = findColumnName(cols, ['Monitoring ID','monitoring id','MonitoringId', 'MonitoringID']);
     const identCol = findColumnName(cols, ['Ident','ident','ID','Id']);
     const clientCol = findColumnName(cols, ['client_name','client name','Client Name', 'clientname']);
@@ -456,7 +470,6 @@ async function loadMainForReport(file) {
     if (!clientCol) throw new Error(`'client_name' sütunu bulunamadı. Mevcut: ${cols.join(', ')}`);
     if (!fbCol) throw new Error(`'FeedbackCreatorName' sütunu bulunamadı. Mevcut: ${cols.join(', ')}`);
     
-    // CheckListCreated sütununu bul (isteğe bağlı, yoksa tüm satırları al)
     const checkCol = cols.find(c => c.toLowerCase().includes('checklistcreated'));
     reportMainData = rows.filter(r => {
       if (!checkCol) return true;
@@ -468,15 +481,15 @@ async function loadMainForReport(file) {
       client_name: String(r[clientCol] || '').trim(),
       feedbackCreatorName: String(r[fbCol] || '').trim()
     }));
+    console.log('Filtrelenmiş kayıt sayısı (CheckListCreated=0):', reportMainData.length);
     mainStatusStep3.innerHTML = `✅ ${reportMainData.length} kayıt (CheckListCreated=0) yüklendi.`;
     mainStatusStep3.style.color = 'var(--accent)';
     
-    // Eğer geçmiş de yüklüyse otomatik rapor oluştur
     if (reportMainData.length && (reportHistory.DM.length || reportHistory.ML.length || reportHistory.DONUSUM.length)) {
       generateReport();
     }
   } catch (err) {
-    console.error(err);
+    console.error('loadMainForReport hatası:', err);
     mainStatusStep3.innerHTML = `❌ Hata: ${err.message}`;
     reportMainData = [];
   } finally {
@@ -487,17 +500,18 @@ async function loadMainForReport(file) {
 // Geçmiş JSON yükleme
 function loadHistoryForReport(file) {
   if (!file) return;
+  console.log('loadHistoryForReport başladı, dosya:', file.name);
   showLoader('Step3', true);
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const parsed = JSON.parse(e.target.result);
+      console.log('JSON parsed, içerik:', Object.keys(parsed));
       if (parsed && typeof parsed === 'object' && 
           Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
         reportHistory = parsed;
         historyStatusStep3.innerHTML = `✅ Geçmiş yüklendi (DM: ${reportHistory.DM.length}, ML: ${reportHistory.ML.length}, Dönüşüm: ${reportHistory.DONUSUM.length} hafta)`;
         historyStatusStep3.style.color = 'var(--accent)';
-        // Eğer görüşme listesi de yüklüyse otomatik rapor oluştur
         if (reportMainData.length) {
           generateReport();
         }
@@ -505,13 +519,15 @@ function loadHistoryForReport(file) {
         throw new Error('JSON yapısı hatalı (DM, ML, DONUSUM eksik)');
       }
     } catch (err) {
+      console.error('JSON parse hatası:', err);
       historyStatusStep3.innerHTML = `❌ Geçersiz JSON: ${err.message}`;
       reportHistory = { DM: [], ML: [], DONUSUM: [] };
     } finally {
       showLoader('Step3', false);
     }
   };
-  reader.onerror = () => {
+  reader.onerror = (err) => {
+    console.error('Dosya okuma hatası:', err);
     historyStatusStep3.innerHTML = `❌ Dosya okunamadı`;
     showLoader('Step3', false);
   };
@@ -520,6 +536,7 @@ function loadHistoryForReport(file) {
 
 // Rapor oluşturma (görünüme göre)
 function generateReport() {
+  console.log('generateReport çağrıldı, reportMainData uzunluğu:', reportMainData.length);
   if (!reportMainData.length) {
     alert('Lütfen önce görüşme listesini yükleyin (Step3 - Görüşme Listesi).');
     return;
@@ -535,8 +552,9 @@ function generateReport() {
       }
     }
   }
+  console.log('Dağıtılmış ident sayısı:', distributedIdents.size);
   
-  // Rapor verisi: hangi görünüm?
+  // Rapor verisi
   if (currentReportView === 'proje') {
     const projMap = new Map();
     for (let rec of reportMainData) {
@@ -589,7 +607,7 @@ function renderReportTable(headers, rows) {
   reportHeader.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
   reportBody.innerHTML = rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
   if (rows.length === 0) {
-    reportBody.innerHTML = '<tr><td colspan="10">Henüz veri yok</td></tr>';
+    reportBody.innerHTML = '<td><td colspan="10">Henüz veri yok</td></tr>';
   }
 }
 
@@ -619,7 +637,7 @@ function exportReportExcel() {
   const ws1 = XLSX.utils.json_to_sheet(rows);
   XLSX.utils.book_append_sheet(workbook, ws1, sheetName);
   
-  // 2. RAW DATA: Tüm dağıtım geçmişi detaylı (her bir dağıtım satırı)
+  // 2. RAW DATA: Tüm dağıtım geçmişi detaylı
   const rawData = [];
   for (let g of ['DM', 'ML', 'DONUSUM']) {
     const groupName = g === 'DM' ? 'DM' : (g === 'ML' ? 'ML' : 'Dönüşüm');
@@ -646,7 +664,7 @@ function exportReportExcel() {
   const ws2 = XLSX.utils.json_to_sheet(rawData);
   XLSX.utils.book_append_sheet(workbook, ws2, 'RAW_Dagıtım_Detay');
   
-  // 3. Görüşme listesi (CheckListCreated=0) raw data
+  // 3. Görüşme listesi raw data
   const interviewData = reportMainData.map(rec => ({
     'Monitoring ID': rec.monitoringId,
     'Ident': rec.ident,
@@ -679,14 +697,18 @@ function setupDropStep3(dropId, inputId, loadFunc) {
   const drop = document.getElementById(dropId);
   const inp = document.getElementById(inputId);
   if (!drop || !inp) return;
-  drop.addEventListener('click', () => inp.click());
-  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
-  drop.addEventListener('drop', e => {
+  // Temizlik için önceki event'leri kaldır (opsiyonel)
+  drop.replaceWith(drop.cloneNode(true));
+  const newDrop = document.getElementById(dropId);
+  const newInp = document.getElementById(inputId);
+  newDrop.addEventListener('click', () => newInp.click());
+  newDrop.addEventListener('dragover', e => { e.preventDefault(); newDrop.classList.add('drag'); });
+  newDrop.addEventListener('dragleave', () => newDrop.classList.remove('drag'));
+  newDrop.addEventListener('drop', e => {
     e.preventDefault();
-    drop.classList.remove('drag');
+    newDrop.classList.remove('drag');
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      inp.files = e.dataTransfer.files;
+      newInp.files = e.dataTransfer.files;
       loadFunc(e.dataTransfer.files[0]);
     }
   });
