@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Dağılım — Kişi-Proje Dağıtım Aracı (Step 2)</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="css/theme.css">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.header-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+.btn {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 1.25rem;
+  border-radius: 2rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-ghost {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: var(--border);
+}
+.btn-primary {
+  background: var(--accent2);
+  color: white;
+  border: none;
+}
+.btn-primary:hover {
+  filter: brightness(0.9);
+}
+.main {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 2rem;
+}
+.pt {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.pt em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sdesc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  border-left: 3px solid var(--accent2);
+  padding-left: 1rem;
+}
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.upload-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+.upload-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.file-drop {
+  border: 2px dashed var(--border2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.2s;
+  margin-bottom: 0.75rem;
+}
+.file-drop:hover, .file-drop.drag {
+  border-color: var(--accent2);
+  background: rgba(124,109,250,0.05);
+}
+.upload-status {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: monospace;
+}
+.badge-success { color: var(--accent); }
+.badge-error { color: var(--accent3); }
+.week-selector {
+  background: var(--bg);
+  padding: 1rem;
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.history-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.table-wrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+th, td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  background: var(--bg);
+  font-weight: 600;
+}
+.loader-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 1rem 0;
+  display: none;
+}
+.loader-bar.visible { display: block; }
+.loader-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  width: 40%;
+  animation: slide 1s infinite;
+}
+@keyframes slide {
+  0% { transform: translateX(-150%); }
+  100% { transform: translateX(350%); }
+}
+.footer {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+}
+.theme-switch { display: flex; gap: 0.5rem; }
+.theme-btn {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: var(--text);
+}
+.theme-btn.active {
+  background: var(--accent2);
+  color: white;
+}
+@media (max-width: 680px) {
+  .upload-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">📊 FeedbackDağılım — Step 2 (Kişi-Proje Dağıtımı)</div>
+  <div class="header-controls">
+    <div class="theme-switch"></div>
+    <button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button>
+    <button class="btn btn-ghost" onclick="window.location.href='FeedbackDagilim.html'">◀ Step 1</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <div class="pt">Kişi-Proje Bazlı <em>Homojen Dağıtım</em></div>
+    <div class="sdesc">
+      Haftalık hedef: 1.hafta=3, 2.hafta=2, 3.hafta=3, 4.hafta=2 (Toplam 10).<br>
+      Silinenler listesi ile ident eşleşenler dağıtılmaz. Geçmiş dağıtımlar localStorage’da saklanır, dışa/içe aktarabilirsiniz.
+    </div>
+
+    <!-- Dosya yükleme -->
+    <div class="upload-grid">
+      <div class="upload-card">
+        <h3>📞 1. Görüşme Listesi</h3>
+        <div class="file-drop" id="dropMain">
+          <input type="file" id="mainFileInput" accept=".xlsx,.xls,.csv">
+          <div>📂 Sürükle veya tıkla</div>
+          <div style="font-size:0.7rem; margin-top:4px;">(Excel/CSV, sütunlar: FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated)</div>
+        </div>
+        <div class="upload-status" id="mainStatus">Henüz yüklenmedi</div>
+      </div>
+      <div class="upload-card">
+        <h3>🗑️ 2. Silinenler Listesi</h3>
+        <div class="file-drop" id="dropDeleted">
+          <input type="file" id="deletedFileInput" accept=".csv,.xlsx,.xls">
+          <div>📂 Sürükle veya tıkla</div>
+          <div style="font-size:0.7rem;">(CSV/Excel, 'Ident' sütunu zorunlu)</div>
+        </div>
+        <div class="upload-status" id="deletedStatus">Henüz yüklenmedi</div>
+      </div>
+    </div>
+
+    <!-- Hafta ve geçmiş yönetimi -->
+    <div class="week-selector">
+      <label>📅 Dağıtım Haftası: 
+        <select id="weekSelect">
+          <option value="1">1. Hafta (hedef 3)</option>
+          <option value="2">2. Hafta (hedef 2)</option>
+          <option value="3">3. Hafta (hedef 3)</option>
+          <option value="4">4. Hafta (hedef 2)</option>
+        </select>
+      </label>
+      <div class="history-bar">
+        <button class="btn btn-ghost" id="exportHistoryBtn">💾 Geçmişi Dışa Aktar</button>
+        <button class="btn btn-ghost" id="importHistoryBtn">📂 Geçmişi İçe Aktar</button>
+        <input type="file" id="historyImportInput" accept=".json" style="display:none;">
+        <button class="btn btn-ghost" id="clearHistoryBtn">🗑️ Geçmişi Temizle</button>
+      </div>
+    </div>
+
+    <!-- Dağıtım butonları -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+      <button class="btn btn-primary" id="calculateBtn">📐 Dağıtımı Hesapla (Önizleme)</button>
+      <button class="btn btn-primary" id="confirmBtn" disabled>✅ Dağıtımı Onayla & Excel İndir</button>
+    </div>
+
+    <!-- Önizleme tablosu -->
+    <div id="previewArea" style="display: none;">
+      <h3>📋 Bu hafta dağıtılacak kayıtlar (Önizleme)</h3>
+      <div class="table-wrapper">
+        <table id="previewTable">
+          <thead><tr><th>FeedbackCreatorName</th><th>client_name</th><th>emp_monitor_ident</th><th>Monitor Link</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="loader-bar" id="loaderBar"><div class="loader-bar-inner"></div></div>
+  </div>
+</div>
+<footer class="footer">Step 2 • Dağıtım algoritması - kişi/proje bazlı, silinenler filtresi, geçmiş takibi</footer>
+
+<script src="js/theme.js"></script>
+<script>
+// ==================== STATE ====================
+let mainData = [];          // tüm görüşme kayıtları (CheckListCreated = 0 filtrelenecek)
+let deletedIdents = new Set(); // silinen ident seti
+let distributionHistory = [];  // geçmiş dağıtımlar (her hafta için dağıtılan ident listesi + kişi/proje bilgisi)
+let currentPreview = [];       // hesaplanan bu hafta dağıtılacak kayıtlar (object array)
+let currentWeek = 1;
+
+// Hedef kümülatif: hafta1:3, hafta2:5, hafta3:8, hafta4:10
+const CUM_TARGET = {1:3, 2:5, 3:8, 4:10};
+
+// ==================== DOM ====================
+const mainFileInput = document.getElementById('mainFileInput');
+const deletedFileInput = document.getElementById('deletedFileInput');
+const mainStatus = document.getElementById('mainStatus');
+const deletedStatus = document.getElementById('deletedStatus');
+const weekSelect = document.getElementById('weekSelect');
+const exportHistoryBtn = document.getElementById('exportHistoryBtn');
+const importHistoryBtn = document.getElementById('importHistoryBtn');
+const historyImportInput = document.getElementById('historyImportInput');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const calculateBtn = document.getElementById('calculateBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+const previewArea = document.getElementById('previewArea');
+const previewBody = document.getElementById('previewBody');
+const loaderBar = document.getElementById('loaderBar');
+
+// Yardımcı fonksiyonlar
+function showLoader(show) {
+  loaderBar.classList.toggle('visible', show);
+}
+
+function buildMonitorLink(ident) {
+  if (!ident) return '#';
+  return `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`;
+}
+
+// Geçmişi localStorage'a kaydet
+function saveHistory() {
+  localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistory));
+}
+
+// Geçmişi yükle
+function loadHistory() {
+  const stored = localStorage.getItem('fb_distribution_history');
+  if (stored) {
+    try {
+      distributionHistory = JSON.parse(stored);
+    } catch(e) { distributionHistory = []; }
+  } else {
+    distributionHistory = [];
+  }
+}
+
+// Geçmişte dağıtılmış ident'leri set olarak döndür
+function getDistributedIdents() {
+  const set = new Set();
+  distributionHistory.forEach(entry => {
+    if (entry.distributedIdents) {
+      entry.distributedIdents.forEach(id => set.add(id));
+    }
+  });
+  return set;
+}
+
+// Belirli bir haftaya kadar (dahil) dağıtılmış ident sayısını (kişi-proje bazlı) hesapla
+function getCumulativeCountsUpToWeek(week) {
+  // döndürülecek map: key = `${FeedbackCreatorName}|${client_name}`
+  const counts = new Map();
+  for (let w = 1; w <= week; w++) {
+    const weekData = distributionHistory.find(h => h.week === w);
+    if (weekData && weekData.assignments) {
+      weekData.assignments.forEach(ass => {
+        const key = `${ass.FeedbackCreatorName}|${ass.client_name}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    }
+  }
+  return counts;
+}
+
+// Dağıtılabilir kayıtları filtrele (CheckListCreated=0, silinenlerde değil, daha önce dağıtılmamış)
+function getAvailableRecords() {
+  const distributedIdents = getDistributedIdents();
+  return mainData.filter(rec => {
+    // CheckListCreated kontrolü: 0 veya '0' veya false
+    const cls = rec.CheckListCreated;
+    const isZero = (cls === 0 || cls === '0' || cls === 0.0 || String(cls).trim() === '0');
+    if (!isZero) return false;
+    const ident = String(rec.emp_monitor_ident || '');
+    if (deletedIdents.has(ident)) return false;
+    if (distributedIdents.has(ident)) return false;
+    return true;
+  });
+}
+
+// Dağıtım algoritması
+function calculateDistribution(week) {
+  const available = getAvailableRecords();
+  if (available.length === 0) return [];
+
+  // Kişi-proje bazında kümülatif dağıtılmış sayılar (önceki haftalar)
+  const cumulativeBefore = getCumulativeCountsUpToWeek(week - 1);
+  // hedef kümülatif sayı
+  const targetCum = CUM_TARGET[week];
+  
+  // Bu hafta için dağıtılması gereken ek miktar = max(0, targetCum - şu ana kadar dağıtılan)
+  // Ama kişi-proje bazlı ayrı ayrı hesaplama yapacağız. Her (kişi, proje) için ayrı hedef 10.
+  // Farklı projeler bağımsız. Yani her (kişi, proje) çifti kendi 10'luk hedefine ulaşmaya çalışır.
+  // Önce mevcut tüm (kişi, proje) çiftlerini bulalım (available içinden).
+  const personProjectMap = new Map(); // key -> list of records
+  available.forEach(rec => {
+    const key = `${rec.FeedbackCreatorName}|${rec.client_name}`;
+    if (!personProjectMap.has(key)) personProjectMap.set(key, []);
+    personProjectMap.get(key).push(rec);
+  });
+  
+  // Her bir çift için şu ana kadar dağıtılan sayı
+  const assignedSoFar = new Map(); // key -> count
+  for (let [key, _] of personProjectMap) {
+    assignedSoFar.set(key, cumulativeBefore.get(key) || 0);
+  }
+  
+  // İhtiyaç duyulan sayı = 10 - şu ana kadar dağıtılan, ancak mevcut kayıt sayısından fazla olamaz
+  // Bu hafta dağıtılacak kayıtları seç
+  const selectedRecords = [];
+  // Öncelik sırası: en düşük tamamlanma oranına sahip olanlar (Fairness)
+  let needMap = new Map();
+  for (let [key, records] of personProjectMap) {
+    let done = assignedSoFar.get(key) || 0;
+    let need = Math.min(10 - done, records.length);
+    if (need > 0) needMap.set(key, need);
+  }
+  
+  // Rastgele seçim ama her (key) için ihtiyaç kadar kayıt seç
+  for (let [key, need] of needMap) {
+    const records = personProjectMap.get(key);
+    // rastgele need adet seç (karıştır)
+    const shuffled = [...records];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const selected = shuffled.slice(0, need);
+    selectedRecords.push(...selected);
+  }
+  
+  return selectedRecords;
+}
+
+// Önizleme göster
+function previewDistribution() {
+  const week = parseInt(weekSelect.value);
+  currentWeek = week;
+  const selected = calculateDistribution(week);
+  currentPreview = selected;
+  
+  if (selected.length === 0) {
+    previewArea.style.display = 'block';
+    previewBody.innerHTML = '<tr><td colspan="4">Bu hafta için dağıtılacak uygun kayıt bulunamadı.</td></tr>';
+    confirmBtn.disabled = true;
+    return;
+  }
+  
+  // Tabloyu doldur
+  previewBody.innerHTML = '';
+  selected.forEach(rec => {
+    const row = previewBody.insertRow();
+    row.insertCell(0).textContent = rec.FeedbackCreatorName || '';
+    row.insertCell(1).textContent = rec.client_name || '';
+    row.insertCell(2).textContent = rec.emp_monitor_ident || '';
+    const linkCell = row.insertCell(3);
+    const a = document.createElement('a');
+    a.href = buildMonitorLink(rec.emp_monitor_ident);
+    a.target = '_blank';
+    a.textContent = '🔗 Link';
+    a.className = 'link-btn';
+    a.style.color = 'var(--accent2)';
+    linkCell.appendChild(a);
+  });
+  previewArea.style.display = 'block';
+  confirmBtn.disabled = false;
+}
+
+// Onayla ve Excel oluştur, geçmişe ekle
+async function confirmAndExport() {
+  if (currentPreview.length === 0) {
+    alert('Önce dağıtım hesaplamalısınız.');
+    return;
+  }
+  showLoader(true);
+  try {
+    // Geçmişe ekle
+    const week = currentWeek;
+    const newHistoryEntry = {
+      week: week,
+      date: new Date().toISOString(),
+      distributedIdents: currentPreview.map(r => String(r.emp_monitor_ident)),
+      assignments: currentPreview.map(r => ({
+        FeedbackCreatorName: r.FeedbackCreatorName,
+        client_name: r.client_name,
+        emp_monitor_ident: r.emp_monitor_ident
+      }))
+    };
+    // Aynı hafta varsa üzerine yaz (genelde olmaz ama emniyet)
+    const existingIndex = distributionHistory.findIndex(h => h.week === week);
+    if (existingIndex >= 0) {
+      distributionHistory[existingIndex] = newHistoryEntry;
+    } else {
+      distributionHistory.push(newHistoryEntry);
+    }
+    saveHistory();
+    
+    // Excel oluştur: her proje (client_name) için ayrı sheet
+    const sheets = {};
+    // Grupla
+    const grouped = new Map(); // client_name -> array of records
+    currentPreview.forEach(rec => {
+      const proj = rec.client_name || 'Tanımsız Proje';
+      if (!grouped.has(proj)) grouped.set(proj, []);
+      grouped.get(proj).push({
+        'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
+        'Operasyon': rec.client_name,
+        'Monitor Ident': rec.emp_monitor_ident,
+        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident)
+      });
+    });
+    
+    const workbook = XLSX.utils.book_new();
+    for (let [proj, rows] of grouped.entries()) {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(workbook, ws, proj.substring(0, 31)); // sheet adı kısıtı
+    }
+    // Ek olarak dağıtım raporu sheet'i
+    const reportRows = currentPreview.map(r => ({
+      'Kişi': r.FeedbackCreatorName,
+      'Proje': r.client_name,
+      'Ident': r.emp_monitor_ident,
+      'Hafta': week
+    }));
+    const reportSheet = XLSX.utils.json_to_sheet(reportRows);
+    XLSX.utils.book_append_sheet(workbook, reportSheet, 'Dağıtım_Raporu');
+    
+    const fileName = `Hafta${week}_Dagilim_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    
+    alert(`Dağıtım başarıyla kaydedildi ve Excel oluşturuldu. Toplam ${currentPreview.length} kayıt dağıtıldı.`);
+    // Önizlemeyi temizle, butonu devre dışı bırak
+    confirmBtn.disabled = true;
+    // İsteğe bağlı: preview alanını temizle
+    previewArea.style.display = 'none';
+    currentPreview = [];
+  } catch (err) {
+    console.error(err);
+    alert('Dağıtım kaydedilirken hata: ' + err.message);
+  } finally {
+    showLoader(false);
+  }
+}
+
+// Dosya yükleme: Görüşme Listesi
+async function loadMainFile(file) {
+  showLoader(true);
+  try {
+    const data = await readFileAsWorkbook(file);
+    const sheet = data.Sheets[data.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if (!rows.length) throw new Error('Dosya boş');
+    // Sütun adlarını normalize et
+    const requiredCols = ['FeedbackCreatorName', 'client_name', 'emp_monitor_ident', 'CheckListCreated'];
+    const firstRow = rows[0];
+    const missing = requiredCols.filter(c => !(c in firstRow));
+    if (missing.length) {
+      throw new Error(`Gerekli sütunlar eksik: ${missing.join(', ')}. Mevcut: ${Object.keys(firstRow).join(', ')}`);
+    }
+    mainData = rows.filter(r => {
+      const cls = r.CheckListCreated;
+      return (cls === 0 || cls === '0' || cls === 0.0);
+    });
+    mainStatus.innerHTML = `✅ ${mainData.length} kayıt (CheckListCreated=0) yüklendi. Toplam satır: ${rows.length}`;
+    mainStatus.style.color = 'var(--accent)';
+  } catch (err) {
+    mainStatus.innerHTML = `❌ Hata: ${err.message}`;
+    mainStatus.style.color = 'var(--accent3)';
+    mainData = [];
+  } finally {
+    showLoader(false);
+  }
+}
+
+// Silinenler dosyası
+async function loadDeletedFile(file) {
+  showLoader(true);
+  try {
+    const data = await readFileAsWorkbook(file);
+    const sheet = data.Sheets[data.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    if (!rows.length) throw new Error('Silinenler dosyası boş');
+    // Ident sütununu bul (case-insensitive)
+    const cols = Object.keys(rows[0]);
+    const identCol = cols.find(c => c.toLowerCase() === 'ident');
+    if (!identCol) throw new Error(`'Ident' sütunu bulunamadı. Mevcut: ${cols.join(', ')}`);
+    deletedIdents.clear();
+    rows.forEach(r => {
+      const val = r[identCol];
+      if (val) deletedIdents.add(String(val).trim());
+    });
+    deletedStatus.innerHTML = `✅ ${deletedIdents.size} benzersiz ident silinenler listesinde.`;
+    deletedStatus.style.color = 'var(--accent)';
+  } catch (err) {
+    deletedStatus.innerHTML = `❌ Hata: ${err.message}`;
+    deletedStatus.style.color = 'var(--accent3)';
+    deletedIdents.clear();
+  } finally {
+    showLoader(false);
+  }
+}
+
+function readFileAsWorkbook(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      resolve(workbook);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// Geçmiş dışa/içe aktar
+function exportHistory() {
+  const dataStr = JSON.stringify(distributionHistory, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `feedback_history_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importHistory(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (Array.isArray(imported)) {
+        distributionHistory = imported;
+        saveHistory();
+        alert('Geçmiş başarıyla içe aktarıldı.');
+      } else {
+        throw new Error('Geçersiz format');
+      }
+    } catch (err) {
+      alert('Geçmiş içe aktarılamadı: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearHistory() {
+  if (confirm('Geçmişteki tüm dağıtım verileri silinecek. Devam etmek istediğinize emin misiniz?')) {
+    distributionHistory = [];
+    saveHistory();
+    alert('Geçmiş temizlendi.');
+  }
+}
+
+// Event listeners
+mainFileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadMainFile(e.target.files[0]);
+});
+deletedFileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadDeletedFile(e.target.files[0]);
+});
+// Sürükle bırak
+function setupDrop(dropId, fileInputId, loadFunc) {
+  const drop = document.getElementById(dropId);
+  const inp = document.getElementById(fileInputId);
+  drop.addEventListener('click', () => inp.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+    if (e.dataTransfer.files[0]) {
+      inp.files = e.dataTransfer.files;
+      loadFunc(e.dataTransfer.files[0]);
+    }
+  });
+}
+setupDrop('dropMain', 'mainFileInput', loadMainFile);
+setupDrop('dropDeleted', 'deletedFileInput', loadDeletedFile);
+
+calculateBtn.addEventListener('click', () => {
+  if (!mainData.length) { alert('Lütfen önce görüşme listesini yükleyin.'); return; }
+  previewDistribution();
+});
+confirmBtn.addEventListener('click', confirmAndExport);
+exportHistoryBtn.addEventListener('click', exportHistory);
+importHistoryBtn.addEventListener('click', () => historyImportInput.click());
+historyImportInput.addEventListener('change', e => {
+  if (e.target.files[0]) importHistory(e.target.files[0]);
+});
+clearHistoryBtn.addEventListener('click', clearHistory);
+
+loadHistory();
+</script>
+</body>
+</html>
