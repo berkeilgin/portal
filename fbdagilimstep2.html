@@ -11,305 +11,245 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-style@0.8.13/dist/xlsxstyle.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* (Stiller aynı, kısaltmak için tekrar yazmıyorum, yukarıdaki stillerin aynısını kullanabiliriz. Ancak dosya boyutu artmasın diye kopyalamıyorum, aynı stiller çalışır. */
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; line-height:1.5; transition:.2s; }
-.header { display:flex; justify-content:space-between; padding:1rem 2rem; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; gap:1rem; }
-.logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.5rem; background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-.header-controls { display:flex; gap:0.75rem; align-items:center; }
-.btn { border:none; background:transparent; padding:0.5rem 1.25rem; border-radius:2rem; font-weight:500; font-size:0.875rem; cursor:pointer; transition:.2s; display:inline-flex; align-items:center; gap:0.5rem; }
-.btn-ghost { background:var(--card2); border:1px solid var(--border); color:var(--text); }
-.btn-ghost:hover { background:var(--border); }
-.btn-primary { background:var(--accent2); color:white; border:none; }
-.btn-primary:hover { filter:brightness(0.9); }
-.main { max-width:1400px; margin:2rem auto; padding:0 1.5rem; }
-.panel { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:2rem; }
-.step-buttons { display:flex; gap:1rem; margin-bottom:2rem; }
-.step-btn { padding:0.6rem 1.5rem; font-size:1rem; }
-.step-content { display:none; }
-.step-content.active { display:block; }
-.loader-bar { height:3px; background:var(--border); border-radius:3px; overflow:hidden; margin:1rem 0; display:none; }
-.loader-bar.visible { display:block; }
-.loader-bar-inner { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); width:40%; animation:slide 1s infinite; }
-@keyframes slide { 0% { transform:translateX(-150%); } 100% { transform:translateX(350%); } }
-.footer { text-align:center; padding:2rem; color:var(--muted); font-size:0.75rem; border-top:1px solid var(--border); margin-top:2rem; }
-.theme-switch { display:flex; gap:0.5rem; }
-.theme-btn { background:var(--card2); border:1px solid var(--border); border-radius:2rem; padding:0.3rem 0.7rem; font-size:0.7rem; cursor:pointer; color:var(--text); }
-.theme-btn.active { background:var(--accent2); color:white; }
-.upload-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
-.upload-card { background:var(--bg); border:1px solid var(--border); border-radius:1rem; padding:1.25rem; }
-.file-drop { border:2px dashed var(--border2); border-radius:1rem; padding:1.5rem; text-align:center; cursor:pointer; transition:.2s; margin-bottom:0.75rem; }
-.file-drop:hover, .file-drop.drag { border-color:var(--accent2); background:rgba(124,109,250,0.05); }
-.upload-status { font-size:0.75rem; color:var(--muted); font-family:monospace; }
-.stats-grid { display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:2rem; }
-.stat-card { background:var(--bg); border-radius:1rem; padding:1rem 1.5rem; flex:1; min-width:140px; border:1px solid var(--border); }
-.stat-label { font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--muted); }
-.stat-number { font-size:2rem; font-weight:800; font-family:'DM Mono',monospace; line-height:1.2; color:var(--text); }
-.stat-number.error { color:var(--accent3); }
-.stat-number.success { color:var(--accent); }
-.table-wrapper { overflow-x:auto; border-radius:1rem; border:1px solid var(--border); background:var(--surface); }
-.error-table, .preview-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
-th, td { padding:0.6rem 0.8rem; text-align:left; border-bottom:1px solid var(--border); }
-th { background:var(--bg); font-weight:600; }
-.badge-error { background:var(--accent3); color:white; padding:0.2rem 0.6rem; border-radius:2rem; font-size:0.7rem; font-weight:600; display:inline-block; }
-.link-btn { background:var(--accent2); color:white; padding:0.25rem 0.75rem; border-radius:2rem; text-decoration:none; font-size:0.75rem; font-weight:500; transition:0.1s; display:inline-flex; align-items:center; gap:0.25rem; }
-.link-btn:hover { filter:brightness(0.9); }
-.empty-state { text-align:center; padding:2rem; color:var(--muted); }
-.week-selector { background:var(--bg); padding:1rem; border-radius:1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap; }
-.history-bar { display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; }
-.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }
-.modal-content { background:var(--surface); border-radius:1rem; max-width:80%; max-height:80%; overflow:auto; padding:1rem; }
-@media (max-width:680px) { .upload-grid { grid-template-columns:1fr; } }
+/* Tüm stiller aynen korundu (kısaltmak için tekrar yazmıyorum, bir önceki sürümdeki stiller aynen geçerli) */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;line-height:1.5;}
+.header{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:1rem;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.header-controls{display:flex;gap:0.75rem;align-items:center;}
+.btn{border:none;background:transparent;padding:0.5rem 1.25rem;border-radius:2rem;font-weight:500;font-size:0.875rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem;}
+.btn-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text);}
+.btn-ghost:hover{background:var(--border);}
+.btn-primary{background:var(--accent2);color:white;}
+.btn-primary:hover{filter:brightness(0.9);}
+.main{max-width:1400px;margin:2rem auto;padding:0 1.5rem;}
+.panel{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:2rem;}
+.step-buttons{display:flex;gap:1rem;margin-bottom:2rem;}
+.step-btn{padding:0.6rem 1.5rem;font-size:1rem;}
+.step-content{display:none;}
+.step-content.active{display:block;}
+.loader-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;margin:1rem 0;display:none;}
+.loader-bar.visible{display:block;}
+.loader-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));width:40%;animation:slide 1s infinite;}
+@keyframes slide{0%{transform:translateX(-150%);}100%{transform:translateX(350%);}}
+.footer{text-align:center;padding:2rem;color:var(--muted);font-size:0.75rem;border-top:1px solid var(--border);margin-top:2rem;}
+.theme-switch{display:flex;gap:0.5rem;}
+.theme-btn{background:var(--card2);border:1px solid var(--border);border-radius:2rem;padding:0.3rem 0.7rem;font-size:0.7rem;cursor:pointer;color:var(--text);}
+.theme-btn.active{background:var(--accent2);color:white;}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+.upload-card{background:var(--bg);border:1px solid var(--border);border-radius:1rem;padding:1.25rem;}
+.file-drop{border:2px dashed var(--border2);border-radius:1rem;padding:1.5rem;text-align:center;cursor:pointer;margin-bottom:0.75rem;}
+.file-drop:hover,.file-drop.drag{border-color:var(--accent2);background:rgba(124,109,250,0.05);}
+.upload-status{font-size:0.75rem;color:var(--muted);font-family:monospace;}
+.stats-grid{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem;}
+.stat-card{background:var(--bg);border-radius:1rem;padding:1rem 1.5rem;flex:1;min-width:140px;border:1px solid var(--border);}
+.stat-label{font-size:0.75rem;text-transform:uppercase;font-weight:600;color:var(--muted);}
+.stat-number{font-size:2rem;font-weight:800;font-family:'DM Mono',monospace;color:var(--text);}
+.stat-number.error{color:var(--accent3);}
+.stat-number.success{color:var(--accent);}
+.table-wrapper{overflow-x:auto;border-radius:1rem;border:1px solid var(--border);background:var(--surface);}
+.error-table,.preview-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+th,td{padding:0.6rem 0.8rem;text-align:left;border-bottom:1px solid var(--border);}
+th{background:var(--bg);font-weight:600;}
+.badge-error{background:var(--accent3);color:white;padding:0.2rem 0.6rem;border-radius:2rem;font-size:0.7rem;display:inline-block;}
+.link-btn{background:var(--accent2);color:white;padding:0.25rem 0.75rem;border-radius:2rem;text-decoration:none;font-size:0.75rem;display:inline-flex;align-items:center;gap:0.25rem;}
+.link-btn:hover{filter:brightness(0.9);}
+.empty-state{text-align:center;padding:2rem;color:var(--muted);}
+.week-selector{background:var(--bg);padding:1rem;border-radius:1rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;}
+.history-bar{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:1000;}
+.modal-content{background:var(--surface);border-radius:1rem;max-width:80%;max-height:80%;overflow:auto;padding:1rem;}
+@media (max-width:680px){.upload-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
-
 <div class="header">
   <div class="logo">📊 Feedback Dağılım — Step 1 & Step 2 (Referans Listeli)</div>
-  <div class="header-controls">
-    <div class="theme-switch"></div>
-    <button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button>
-  </div>
+  <div class="header-controls"><div class="theme-switch"></div><button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button></div>
 </div>
-
 <div class="main">
   <div class="panel">
     <div class="step-buttons">
       <button class="btn btn-primary step-btn" data-step="step1">🔍 Step 1: Monitoring ID</button>
-      <button class="btn btn-ghost step-btn" data-step="step2">📦 Step 2: Dağıtım (Referans Listeli)</button>
+      <button class="btn btn-ghost step-btn" data-step="step2">📦 Step 2: Referans Listeli Dağıtım</button>
     </div>
-
-    <!-- STEP 1 (kısa) -->
+    <!-- STEP 1 (kısa, çalışır) -->
     <div id="step1" class="step-content active">
       <div class="pt">Monitoring ID <em style="background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;">Doğrulama</em></div>
-      <div class="upload-area" id="uploadAreaStep1"><div class="upload-icon" style="font-size:3rem;">📂</div><div class="upload-title">Dosyayı sürükleyin</div><input type="file" id="fileInputStep1" accept=".xlsx,.xls,.csv" style="display:none;"></div>
+      <div class="sdesc">📄 CSV/Excel yükleyin. Monitoring ID 8 haneli sayı olmalı.</div>
+      <div class="upload-area" id="uploadAreaStep1"><div class="upload-icon" style="font-size:3rem;">📂</div><div class="upload-title">Dosyayı sürükleyin veya tıklayın</div><input type="file" id="fileInputStep1" accept=".xlsx,.xls,.csv" style="display:none;"></div>
       <div class="loader-bar" id="loaderStep1"><div class="loader-bar-inner"></div></div>
-      <div class="stats-grid" id="statsContainerStep1" style="display:none;"><div class="stat-card"><div class="stat-label">Toplam</div><div class="stat-number" id="totalCountStep1">0</div></div><div class="stat-card"><div class="stat-label error">Hatalı</div><div class="stat-number error" id="errorCountStep1">0</div></div><div class="stat-card"><div class="stat-label success">Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div></div>
-      <div class="errors-section" id="errorsSectionStep1" style="display:none;"><div class="table-wrapper"><table class="error-table"><thead><tr><th>#</th><th>Monitoring ID</th><th>Ident</th><th>Hata</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Veri yok</td></tr></tbody></table></div></div>
-      <button class="btn btn-ghost" id="resetStep1Btn">Temizle</button>
+      <div class="stats-grid" id="statsContainerStep1" style="display:none;"><div class="stat-card"><div class="stat-label">📊 Toplam</div><div class="stat-number" id="totalCountStep1">0</div></div><div class="stat-card"><div class="stat-label error">⚠️ Hatalı</div><div class="stat-number error" id="errorCountStep1">0</div></div><div class="stat-card"><div class="stat-label success">✅ Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div></div>
+      <div class="errors-section" id="errorsSectionStep1" style="display:none;"><div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div></div>
+      <div style="display:flex; justify-content:flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
-
-    <!-- STEP 2 (Referans Listeli) -->
+    <!-- STEP 2 (YENİ: Referans Listesi, Proje/1.Değerlendirici, Dil) -->
     <div id="step2" class="step-content">
-      <div class="pt">Referans Listesi ile <em>Dinamik Dağıtım (Proje / 1. Değerlendirici)</em></div>
-      <div class="sdesc">Referans listesindeki Dağıtım Türü'ne göre: "Proje" ise proje-dil bazlı, "1. Değerlendirici" ise kişi-proje bazlı. Haftalık hedef: 3,2,3,2. Excel font 9pt.</div>
-      
+      <div class="pt">Referans Listesi ile <em style="background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;">Proje veya Değerlendirici Bazlı Dağıtım</em></div>
+      <div class="sdesc">Haftalık hedef: 1➜3, 2➜2, 3➜3, 4➜2. Referans listesi ile dağıtım türü ve dil belirlenir.</div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>📞 Görüşme Listesi</h3><div class="file-drop" id="dropMainStep2"><input type="file" id="mainFileInputStep2" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükle</div><div style="font-size:0.7rem;">FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated, Dil</div></div><div class="upload-status" id="mainStatusStep2">Yüklenmedi</div></div>
-        <div class="upload-card"><h3>🗑️ Silinenler Listesi</h3><div class="file-drop" id="dropDeletedStep2"><input type="file" id="deletedFileInputStep2" accept=".csv,.xlsx,.xls" style="display:none;"><div>📂 Sürükle</div><div style="font-size:0.7rem;">Ident sütunu</div></div><div class="upload-status" id="deletedStatusStep2">Yüklenmedi</div></div>
-        <div class="upload-card"><h3>📑 Referans Listesi</h3><div class="file-drop" id="dropRefStep2"><input type="file" id="refFileInputStep2" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükle</div><div style="font-size:0.7rem;">Sütunlar: Proje, KaliteDesteği, Dil, Dağıtım Türü</div></div><div class="upload-status" id="refStatusStep2">Yüklenmedi</div></div>
+        <div class="upload-card"><h3>📞 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep2"><input type="file" id="mainFileInputStep2" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükle veya tıkla</div><div style="font-size:0.7rem;">FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated</div></div><div class="upload-status" id="mainStatusStep2">Henüz yüklenmedi</div></div>
+        <div class="upload-card"><h3>🗑️ 2. Silinenler Listesi</h3><div class="file-drop" id="dropDeletedStep2"><input type="file" id="deletedFileInputStep2" accept=".csv,.xlsx,.xls" style="display:none;"><div>📂 Sürükle veya tıkla</div><div style="font-size:0.7rem;">Ident sütunu zorunlu</div></div><div class="upload-status" id="deletedStatusStep2">Henüz yüklenmedi</div></div>
+        <div class="upload-card"><h3>📑 3. Referans Listesi</h3><div class="file-drop" id="dropRefStep2"><input type="file" id="refFileInputStep2" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükle veya tıkla</div><div style="font-size:0.7rem;">Sütunlar: Proje, KaliteDesteği, Dil, Dağıtım Türü</div></div><div class="upload-status" id="refStatusStep2">Henüz yüklenmedi</div></div>
       </div>
-
       <div class="week-selector">
-        <label>📅 Hafta: <select id="weekSelectStep2"><option value="1">1 (3)</option><option value="2">2 (2)</option><option value="3">3 (3)</option><option value="4">4 (2)</option></select></label>
+        <label>📅 Hafta: <select id="weekSelectStep2"><option value="1">1. Hafta (3)</option><option value="2">2. Hafta (2)</option><option value="3">3. Hafta (3)</option><option value="4">4. Hafta (2)</option></select></label>
         <div class="history-bar">
-          <button class="btn btn-ghost" id="exportHistoryBtnStep2">💾 Geçmiş Dışa Aktar</button>
-          <button class="btn btn-ghost" id="importHistoryBtnStep2">📂 Geçmiş Yükle</button>
+          <button class="btn btn-ghost" id="exportHistoryBtnStep2">💾 Geçmişi Dışa Aktar</button>
+          <button class="btn btn-ghost" id="importHistoryBtnStep2">📂 Geçmişi Yükle</button>
           <button class="btn btn-ghost" id="viewHistoryBtnStep2">📋 Geçmişi Görüntüle</button>
-          <button class="btn btn-ghost" id="clearHistoryBtnStep2">🗑️ Temizle</button>
+          <button class="btn btn-ghost" id="clearHistoryBtnStep2">🗑️ Geçmişi Temizle</button>
           <input type="file" id="historyImportInputStep2" accept=".json" style="display:none;">
         </div>
       </div>
-
-      <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
-        <button class="btn btn-primary" id="calculateBtnStep2">📐 Dağıtımı Hesapla</button>
-        <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Onayla & Excel (9pt)</button>
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <button class="btn btn-primary" id="calculateBtnStep2">📐 Dağıtımı Hesapla (Önizleme)</button>
+        <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & Excel İndir (Font 9pt)</button>
       </div>
-      <div id="previewAreaStep2" style="display:none;"><h3>Önizleme</h3><div class="table-wrapper"><table class="preview-table"><thead><tr><th>FeedbackCreatorName</th><th>client_name</th><th>Dil</th><th>emp_monitor_ident</th><th>Monitor Link</th></tr></thead><tbody id="previewBodyStep2"></tbody></table></div></div>
+      <div id="previewAreaStep2" style="display: none;"><h3>📋 Dağıtılacak kayıtlar</h3><div class="table-wrapper"><table class="preview-table"><thead><tr><th>FeedbackCreatorName</th><th>client_name</th><th>emp_monitor_ident</th><th>Monitor Link</th></tr></thead><tbody id="previewBodyStep2"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep2"><div class="loader-bar-inner"></div></div>
     </div>
   </div>
 </div>
-<footer class="footer">Step 2: Referans listesine göre Proje bazlı veya Kişi bazlı dağıtım (3-2-3-2). Geçmiş otomatik JSON indirilir.</footer>
-
+<footer class="footer">Feedback Dağılım Aracı — Referans listesi ile proje/değerlendirici bazlı dağıtım (3-2-3-2)</footer>
 <script src="js/theme.js"></script>
 <script>
 // ========== ORTAK ==========
-function escapeHtml(s) { if(!s) return ''; return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-function showLoader(step, show) { document.getElementById(`loader${step}`)?.classList.toggle('visible', show); }
-function buildMonitorLink(ident) { return ident ? `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION` : '#'; }
-document.querySelectorAll('.step-btn').forEach(btn => { btn.addEventListener('click',()=>{ const id=btn.dataset.step; document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.step-btn').forEach(b=>b.classList.replace('btn-primary','btn-ghost')); btn.classList.replace('btn-ghost','btn-primary'); }); });
+function escapeHtml(s){if(!s)return '';return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function showLoader(step,show){document.getElementById(`loader${step}`)?.classList.toggle('visible',show);}
+function buildMonitorLink(ident){return ident?`https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`:'#';}
+document.querySelectorAll('.step-btn').forEach(btn=>{btn.addEventListener('click',()=>{const id=btn.dataset.step;document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.step-btn').forEach(b=>b.classList.replace('btn-primary','btn-ghost'));btn.classList.replace('btn-ghost','btn-primary');});});
 
-// ==================== STEP 1 (kısa, çalışır) ====================
-let step1Data=[], step1Errors=[];
-const file1=document.getElementById('fileInputStep1'), area1=document.getElementById('uploadAreaStep1');
-const stat1=document.getElementById('statsContainerStep1'), errSec1=document.getElementById('errorsSectionStep1');
+// ==================== STEP 1 (kısaltılmış, çalışır) ====================
+let dataStep1=[], errorsStep1=[];
+const file1=document.getElementById('fileInputStep1'), up1=document.getElementById('uploadAreaStep1');
+const stats1=document.getElementById('statsContainerStep1'), errSec1=document.getElementById('errorsSectionStep1');
 const totalSpan=document.getElementById('totalCountStep1'), errSpan=document.getElementById('errorCountStep1'), validSpan=document.getElementById('validCountStep1'), errBody=document.getElementById('errorTableBodyStep1');
-function findCol(cols,names){ let low=cols.map(c=>c.trim().toLowerCase()); for(let n of names){ let i=low.indexOf(n.toLowerCase()); if(i!==-1) return cols[i]; } return null; }
-function isValidMon(v){ if(v==null) return false; let s=String(v).trim(); return /^\d{8}$/.test(s); }
-function getErr(v){ if(v==null||v==='') return "Boş"; let s=String(v).trim(); if(!/^\d+$/.test(s)) return "Sayısal değil"; if(s.length!==8) return `${s.length} hane`; return "Geçersiz"; }
-async function processStep1(file){ if(!file) return; showLoader('Step1',true); try{ let buf=await file.arrayBuffer(); let wb=XLSX.read(buf,{type:'array'}); let sheet=wb.Sheets[wb.SheetNames[0]]; let rows=XLSX.utils.sheet_to_json(sheet,{defval:""}); if(!rows.length) throw new Error('Boş'); let cols=Object.keys(rows[0]); let monCol=findCol(cols,['Monitoring ID','monitoring id','MonitoringId']); let identCol=findCol(cols,['Ident','ident','ID']); if(!monCol||!identCol) throw new Error('Sütun eksik'); step1Data=rows; let errs=[]; rows.forEach((r,i)=>{ if(!isValidMon(r[monCol])) errs.push({row:i+2, mon:String(r[monCol]??''), ident:String(r[identCol]??''), reason:getErr(r[monCol])}); }); step1Errors=errs; totalSpan.textContent=rows.length; errSpan.textContent=errs.length; validSpan.textContent=rows.length-errs.length; stat1.style.display='flex'; if(errs.length===0){ errSec1.style.display='block'; errBody.innerHTML='<tr><td colspan="5" class="empty-state">✅ Tüm geçerli</td></tr>'; }else{ errSec1.style.display='block'; let html=''; errs.forEach(e=>{ let link=buildMonitorLink(e.ident); html+=`<tr><td>${e.row}</td><td>${escapeHtml(e.mon)}</td><td>${escapeHtml(e.ident)}</td><td><span class="badge-error">${escapeHtml(e.reason)}</span></td><td>${link?`<a href="${link}" target="_blank" class="link-btn">Link</a>`:'-'}</td></tr>`; }); errBody.innerHTML=html; } }catch(e){ alert(e.message); }finally{ showLoader('Step1',false); } }
-area1.addEventListener('click',()=>file1.click()); file1.addEventListener('change',e=>{if(e.target.files[0]) processStep1(e.target.files[0]);}); area1.addEventListener('dragover',e=>{e.preventDefault();area1.classList.add('drag');}); area1.addEventListener('dragleave',()=>area1.classList.remove('drag')); area1.addEventListener('drop',e=>{e.preventDefault(); area1.classList.remove('drag'); if(e.dataTransfer.files[0]) processStep1(e.dataTransfer.files[0]);}); document.getElementById('resetStep1Btn').addEventListener('click',()=>{ step1Data=[]; step1Errors=[]; file1.value=''; stat1.style.display='none'; errSec1.style.display='none'; errBody.innerHTML='<tr><td colspan="5" class="empty-state">Veri yok</td></tr>'; totalSpan.textContent='0'; errSpan.textContent='0'; validSpan.textContent='0';});
+function findCol(cols,names){let low=cols.map(c=>String(c).trim().toLowerCase());for(let n of names){let i=low.indexOf(n.toLowerCase());if(i!==-1)return cols[i];}return null;}
+function isValidID(v){if(v==null)return false;let s=String(v).trim();return /^\d{8}$/.test(s);}
+function errReason(v){if(v==null||v==='')return 'Boş';let s=String(v).trim();if(!/^\d+$/.test(s))return 'Sayısal değil';if(s.length!==8)return `${s.length} hane`;return 'Geçersiz';}
+async function processStep1(file){if(!file)return;showLoader('Step1',true);try{let buf=await file.arrayBuffer();let wb=XLSX.read(buf,{type:'array'});let sheet=wb.Sheets[wb.SheetNames[0]];let rows=XLSX.utils.sheet_to_json(sheet,{defval:""});if(!rows.length)throw new Error('Boş');let cols=Object.keys(rows[0]);let mon=findCol(cols,['Monitoring ID','monitoring id','MonitoringId']);let idt=findCol(cols,['Ident','ident','ID']);if(!mon||!idt)throw new Error('Sütun eksik');dataStep1=rows;let errs=[];rows.forEach((r,i)=>{if(!isValidID(r[mon]))errs.push({row:i+2,val:String(r[mon]??''),idt:String(r[idt]??''),reason:errReason(r[mon])});});errorsStep1=errs;totalSpan.textContent=rows.length;errSpan.textContent=errs.length;validSpan.textContent=rows.length-errs.length;stats1.style.display='flex';if(errs.length===0){errSec1.style.display='block';errBody.innerHTML='<tr><td colspan="5" class="empty-state">✅ Tüm geçerli</td></tr>';}else{errSec1.style.display='block';let html='';errs.forEach(e=>{let link=buildMonitorLink(e.idt);html+=`<tr><td>${e.row}</td><td><code>${escapeHtml(e.val)}</code></td><td><code>${escapeHtml(e.idt)}</code></td><td><span class="badge-error">${escapeHtml(e.reason)}</span></td><td>${link?`<a href="${link}" target="_blank" class="link-btn">Link</a>`:'-'}</td></tr>`;});errBody.innerHTML=html;}}catch(e){alert(e.message);}finally{showLoader('Step1',false);}}
+up1.addEventListener('click',()=>file1.click());file1.addEventListener('change',e=>{if(e.target.files[0])processStep1(e.target.files[0]);});up1.addEventListener('dragover',e=>{e.preventDefault();up1.classList.add('drag');});up1.addEventListener('dragleave',()=>up1.classList.remove('drag'));up1.addEventListener('drop',e=>{e.preventDefault();up1.classList.remove('drag');if(e.dataTransfer.files[0])processStep1(e.dataTransfer.files[0]);});
+document.getElementById('resetStep1Btn').addEventListener('click',()=>{dataStep1=[];errorsStep1=[];file1.value='';stats1.style.display='none';errSec1.style.display='none';errBody.innerHTML='<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>';totalSpan.textContent='0';errSpan.textContent='0';validSpan.textContent='0';});
 
-// ==================== STEP 2 (Referans Listeli) ====================
-let mainData=[], deletedIdents=new Set(), refData=[]; // refData: [{Proje, KaliteDesteği, Dil, DağıtımTürü}]
-let distributionHistory=[], currentPreview=[], currentWeek=1;
+// ==================== STEP 2 (YENİ REFERANS LİSTELİ) ====================
+let mainDataStep2=[], deletedIdentsStep2=new Set(), distributionHistoryStep2=[], currentPreviewStep2=[], currentWeekStep2=1;
+let refDataStep2=[]; // { Proje, KaliteDesteği, Dil, DağıtımTuru }
 const WEEK_TARGET={1:3,2:2,3:3,4:2};
 
-// Referans listesinden, proje+dil eşleşmesine göre dağıtım türünü al
-function getDistributionType(proje, dil) {
-  if(!refData.length) return null; // referans yoksa null
-  const match = refData.find(r => r.Proje === proje && r.Dil === dil);
-  return match ? match.DağıtımTürü : null;
+// Referans listesinden proje bilgilerini al
+function getRefInfo(projeAdi){
+  return refDataStep2.find(r=>String(r.Proje).trim()===String(projeAdi).trim());
 }
 
-// Geçmiş kayıtlar
-function saveHistoryAndDownload() {
-  localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistory));
-  const dataStr = JSON.stringify(distributionHistory, null, 2);
-  const blob = new Blob([dataStr], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `feedback_history_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+// Geçmiş işlemleri
+function saveHistoryAndDownload(){
+  localStorage.setItem('fb_distribution_history',JSON.stringify(distributionHistoryStep2));
+  let dataStr=JSON.stringify(distributionHistoryStep2,null,2);
+  let blob=new Blob([dataStr],{type:'application/json'});
+  let a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`feedback_history_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(blob);
   alert("Geçmiş kaydedildi ve JSON indirildi.");
 }
-function loadHistory() {
-  const stored = localStorage.getItem('fb_distribution_history');
-  if(stored) try{ distributionHistory = JSON.parse(stored); }catch(e){ distributionHistory=[]; }
-  else distributionHistory=[];
-}
-function saveHistory() { localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistory)); }
-function getDistributedIdents() { const set=new Set(); distributionHistory.forEach(h=>{ if(h.distributedIdents) h.distributedIdents.forEach(id=>set.add(id)); }); return set; }
-function getWeekCounts(week) {
-  const wd = distributionHistory.find(h=>h.week===week);
-  if(!wd || !wd.assignments) return new Map();
-  const m=new Map();
-  wd.assignments.forEach(a=>{ const key=`${a.FeedbackCreatorName}|${a.client_name}|${a.Dil}`; m.set(key, (m.get(key)||0)+1); });
-  return m;
-}
-function getCumulativeCountsBeforeWeek(week, type, projeDilKeyOnly=false) {
-  // type: 'person' veya 'project'
-  const counts = new Map();
-  for(let w=1; w<week; w++) {
-    const weekCounts = getWeekCounts(w);
-    for(let [key, cnt] of weekCounts) {
-      if(type==='person') counts.set(key, (counts.get(key)||0)+cnt);
-      else {
-        // proje-dil bazlı: key formatı "proje|dil"
-        const parts = key.split('|');
-        if(parts.length>=3) {
-          const projDilKey = `${parts[1]}|${parts[2]}`; // client_name|Dil
-          counts.set(projDilKey, (counts.get(projDilKey)||0)+cnt);
-        }
-      }
-    }
-  }
-  return counts;
-}
+function loadHistoryStep2(){let s=localStorage.getItem('fb_distribution_history');if(s)try{distributionHistoryStep2=JSON.parse(s);}catch(e){distributionHistoryStep2=[];}else distributionHistoryStep2=[];}
+function saveHistoryStep2(){localStorage.setItem('fb_distribution_history',JSON.stringify(distributionHistoryStep2));}
+function getDistributedIdents(){let s=new Set();distributionHistoryStep2.forEach(h=>{if(h.distributedIdents)h.distributedIdents.forEach(id=>s.add(id));});return s;}
+function getWeekCounts(week){let wd=distributionHistoryStep2.find(h=>h.week===week);if(!wd||!wd.assignments)return new Map();let m=new Map();wd.assignments.forEach(a=>{let key=`${a.FeedbackCreatorName}|${a.client_name}|${a.dil||''}`;m.set(key,(m.get(key)||0)+1);});return m;}
+function getCumulativeBefore(week){let m=new Map();for(let w=1;w<week;w++){let wc=getWeekCounts(w);for(let [k,cnt] of wc)m.set(k,(m.get(k)||0)+cnt);}return m;}
 
-// Kullanılabilir kayıtlar (CheckListCreated=0, silinmemiş, dağıtılmamış)
-function getAvailableRecords() {
-  const distributedIdents = getDistributedIdents();
-  return mainData.filter(rec => {
-    const isZero = (rec.CheckListCreated === 0 || rec.CheckListCreated === '0');
-    if(!isZero) return false;
-    const ident = String(rec.emp_monitor_ident || '');
-    if(deletedIdents.has(ident)) return false;
-    if(distributedIdents.has(ident)) return false;
+// Kullanılabilir kayıtlar (CheckListCreated=0, silinmemiş, daha önce dağıtılmamış)
+function getAvailableRecords(){
+  let distributed=getDistributedIdents();
+  return mainDataStep2.filter(rec=>{
+    let zero=(rec.CheckListCreated===0||rec.CheckListCreated==='0');
+    if(!zero)return false;
+    let ident=String(rec.emp_monitor_ident||'');
+    if(deletedIdentsStep2.has(ident))return false;
+    if(distributed.has(ident))return false;
     return true;
   });
 }
 
-// Dağıtım hesaplama (referans listesine göre)
-function calculateDistribution(week) {
-  const available = getAvailableRecords();
-  if(available.length===0) return [];
-  
-  // Kayıtları grupla: önce referans türüne göre ayır
-  const projectTypeRecords = [];   // Dağıtım Türü = "Proje" olanlar
-  const personTypeRecords = [];    // "1. Değerlendirici" olanlar
-  const noRefRecords = [];         // referansı olmayanlar (varsayılan kişi-proje bazlı)
-  
-  available.forEach(rec => {
-    const proje = rec.client_name;
-    const dil = rec.Dil || '';
-    const distType = getDistributionType(proje, dil);
-    if(distType === 'Proje') projectTypeRecords.push(rec);
-    else if(distType === '1. Değerlendirici') personTypeRecords.push(rec);
-    else noRefRecords.push(rec); // referans yoksa kişi-proje bazlı kabul et
+// Dağıtım algoritması (referans listesine göre)
+function calculateDistributionStep2(week){
+  let available=getAvailableRecords();
+  if(available.length===0)return [];
+  // Referans listesi kontrolü
+  if(refDataStep2.length===0){alert("Referans listesi yüklenmemiş! Lütfen önce referans listesini yükleyin.");return [];}
+  // Kayıtları referans bilgilerine göre kategorilere ayır: kategori = (DağıtımTuru, Proje, Dil, Değerlendirici) veya (Proje, Dil) eğer tür Proje ise
+  // Aslında mantık: Dağıtım Türü = "Proje" ise kategori = Proje + Dil (değerlendirici önemsiz)
+  // Dağıtım Türü = "1. Değerlendirici" ise kategori = Değerlendirici + Proje + Dil (yani kişi-proje-dil üçlüsü)
+  let categoryMap=new Map(); // key -> array of records
+  available.forEach(rec=>{
+    let proje=rec.client_name;
+    let ref=getRefInfo(proje);
+    if(!ref){
+      console.warn(`Proje ${proje} referans listede yok, atlanıyor.`);
+      return;
+    }
+    let dagitimTuru=String(ref.Dağıtım Türü).trim();
+    let dil=String(ref.Dil).trim();
+    let degerlendirici=rec.FeedbackCreatorName;
+    let key;
+    if(dagitimTuru==="Proje"){
+      key = `PROJE|${proje}|${dil}`;
+    } else { // "1. Değerlendirici"
+      key = `KISI|${degerlendirici}|${proje}|${dil}`;
+    }
+    if(!categoryMap.has(key)) categoryMap.set(key,[]);
+    categoryMap.get(key).push(rec);
   });
-  
-  // 1. Proje bazlı dağıtım (proje-dil grubu için hedef haftalık sayı)
-  const selected = [];
-  // Proje-dil gruplama
-  const projDilMap = new Map(); // key: proje|dil, value: kayıt listesi
-  projectTypeRecords.forEach(rec => {
-    const key = `${rec.client_name}|${rec.Dil}`;
-    if(!projDilMap.has(key)) projDilMap.set(key, []);
-    projDilMap.get(key).push(rec);
-  });
-  // Bu haftaya kadar dağıtılan proje-dil sayıları (kümülatif)
-  const cumulativeProjDil = getCumulativeCountsBeforeWeek(week, 'project');
-  for(let [key, records] of projDilMap) {
-    const done = cumulativeProjDil.get(key) || 0;
-    let need = WEEK_TARGET[week]; // her hafta hedef 3 veya 2
-    // Toplam 10 hedefi var mı? Proje bazlıda da toplam 10 olmalı mı? Soruda net değil, ben toplam 10 hedefi koyalım.
-    const totalDone = done; // sadece bu haftaya kadar, bu hafta ekleyeceğiz
-    const maxTotal = 10;
-    let possible = Math.min(need, maxTotal - totalDone);
-    if(possible > 0) {
-      possible = Math.min(possible, records.length);
-      // rastgele seç
-      const shuffled = [...records];
-      for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
-      selected.push(...shuffled.slice(0, possible));
+  // Geçmişteki dağıtım sayılarını al (kümülatif önceki haftalar)
+  let cumulativeBefore=getCumulativeBefore(week);
+  // Her kategori için bu hafta ihtiyaç = min( WEEK_TARGET[week], 10 - cumulativeBefore.get(key) ) ve mevcut kayıt sayısı ile sınırlı
+  let needMap=new Map();
+  for(let [key, records] of categoryMap){
+    let done=cumulativeBefore.get(key)||0;
+    let target=WEEK_TARGET[week];
+    let need=Math.min(target, 10-done);
+    if(need>0){
+      need=Math.min(need, records.length);
+      if(need>0) needMap.set(key, need);
     }
   }
-  
-  // 2. Kişi-proje bazlı dağıtım (personTypeRecords + noRefRecords)
-  const personRecords = [...personTypeRecords, ...noRefRecords];
-  const personProjMap = new Map(); // key: kişi|proje|dil
-  personRecords.forEach(rec => {
-    const key = `${rec.FeedbackCreatorName}|${rec.client_name}|${rec.Dil}`;
-    if(!personProjMap.has(key)) personProjMap.set(key, []);
-    personProjMap.get(key).push(rec);
-  });
-  const cumulativePerson = getCumulativeCountsBeforeWeek(week, 'person');
-  for(let [key, records] of personProjMap) {
-    const done = cumulativePerson.get(key) || 0;
-    let need = WEEK_TARGET[week];
-    const totalDone = done;
-    const maxTotal = 10;
-    let possible = Math.min(need, maxTotal - totalDone);
-    if(possible > 0) {
-      possible = Math.min(possible, records.length);
-      const shuffled = [...records];
-      for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
-      selected.push(...shuffled.slice(0, possible));
-    }
+  // Rastgele seç
+  let selected=[];
+  for(let [key, need] of needMap){
+    let records=categoryMap.get(key);
+    let shuffled=[...records];
+    for(let i=shuffled.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+    selected.push(...shuffled.slice(0,need));
   }
-  
   return selected;
 }
 
-function previewDistribution() {
-  if(!mainData.length) { alert('Görüşme listesini yükleyin.'); return; }
-  if(!refData.length) { alert('Referans listesini yükleyin.'); return; }
-  const week = parseInt(document.getElementById('weekSelectStep2').value);
-  currentWeek = week;
-  const selected = calculateDistribution(week);
-  currentPreview = selected;
-  const previewDiv = document.getElementById('previewAreaStep2');
-  const previewBody = document.getElementById('previewBodyStep2');
-  if(selected.length===0) {
+function previewDistributionStep2(){
+  if(!mainDataStep2.length){alert('Görüşme listesi yükleyin.');return;}
+  if(!refDataStep2.length){alert('Referans listesi yükleyin.');return;}
+  let week=parseInt(weekSelectStep2.value);
+  currentWeekStep2=week;
+  let selected=calculateDistributionStep2(week);
+  currentPreviewStep2=selected;
+  let previewDiv=document.getElementById('previewAreaStep2');
+  let previewBody=document.getElementById('previewBodyStep2');
+  if(selected.length===0){
     previewDiv.style.display='block';
-    previewBody.innerHTML='<tr><td colspan="5">Bu hafta dağıtılacak kayıt yok.</td></tr>';
+    previewBody.innerHTML='<tr><td colspan="4">Bu hafta için dağıtılacak uygun kayıt yok.</td></tr>';
     document.getElementById('confirmBtnStep2').disabled=true;
     return;
   }
   previewBody.innerHTML='';
-  selected.forEach(rec => {
-    const row = previewBody.insertRow();
-    row.insertCell(0).textContent = rec.FeedbackCreatorName || '';
-    row.insertCell(1).textContent = rec.client_name || '';
-    row.insertCell(2).textContent = rec.Dil || '';
-    row.insertCell(3).textContent = rec.emp_monitor_ident || '';
-    const linkCell = row.insertCell(4);
-    const a = document.createElement('a');
-    a.href = buildMonitorLink(rec.emp_monitor_ident);
+  selected.forEach(rec=>{
+    let row=previewBody.insertRow();
+    row.insertCell(0).textContent=rec.FeedbackCreatorName||'';
+    row.insertCell(1).textContent=rec.client_name||'';
+    row.insertCell(2).textContent=rec.emp_monitor_ident||'';
+    let linkCell=row.insertCell(3);
+    let a=document.createElement('a');
+    a.href=buildMonitorLink(rec.emp_monitor_ident);
     a.target='_blank';
     a.textContent='🔗 Link';
     a.className='link-btn';
@@ -319,199 +259,190 @@ function previewDistribution() {
   document.getElementById('confirmBtnStep2').disabled=false;
 }
 
-async function confirmAndExport() {
-  if(currentPreview.length===0) { alert('Önce hesapla'); return; }
+async function confirmAndExportStep2(){
+  if(currentPreviewStep2.length===0){alert('Önce dağıtım hesaplayın.');return;}
   showLoader('Step2',true);
-  try {
-    const week = currentWeek;
-    const newEntry = {
-      week: week,
-      date: new Date().toISOString(),
-      distributedIdents: currentPreview.map(r=>String(r.emp_monitor_ident)),
-      assignments: currentPreview.map(r=>({
-        FeedbackCreatorName: r.FeedbackCreatorName,
-        client_name: r.client_name,
-        Dil: r.Dil,
-        emp_monitor_ident: r.emp_monitor_ident
-      }))
+  try{
+    let week=currentWeekStep2;
+    // Her kayıt için referans bilgisini de ekleyerek geçmişe yaz (dil ve tür bilgisini de sakla)
+    let assignmentsWithMeta=currentPreviewStep2.map(rec=>{
+      let ref=getRefInfo(rec.client_name);
+      return {
+        FeedbackCreatorName: rec.FeedbackCreatorName,
+        client_name: rec.client_name,
+        emp_monitor_ident: rec.emp_monitor_ident,
+        dil: ref?ref.Dil:'',
+        dagitimTuru: ref?ref.Dağıtım Türü:''
+      };
+    });
+    let newEntry={
+      week:week,
+      date:new Date().toISOString(),
+      distributedIdents: currentPreviewStep2.map(r=>String(r.emp_monitor_ident)),
+      assignments: assignmentsWithMeta
     };
-    const idx = distributionHistory.findIndex(h=>h.week===week);
-    if(idx>=0) distributionHistory[idx]=newEntry;
-    else distributionHistory.push(newEntry);
-    saveHistoryAndDownload();
-    
-    // Excel oluşturma (proje bazlı sheetler)
-    const grouped = new Map(); // key: proje, value: rows
-    currentPreview.forEach(rec => {
-      const proj = rec.client_name || 'Tanımsız';
-      if(!grouped.has(proj)) grouped.set(proj, []);
-      grouped.get(proj).push({
+    let idx=distributionHistoryStep2.findIndex(h=>h.week===week);
+    if(idx>=0) distributionHistoryStep2[idx]=newEntry;
+    else distributionHistoryStep2.push(newEntry);
+    saveHistoryAndDownload(); // otomatik indir
+
+    // Excel oluştur (font 9 pt)
+    let grouped=new Map(); // sheet adı -> rows
+    currentPreviewStep2.forEach(rec=>{
+      let ref=getRefInfo(rec.client_name);
+      let sheetName = `${rec.client_name}_${ref?ref.Dil:''}_${ref?ref.Dağıtım Türü:''}`.substring(0,31);
+      if(!grouped.has(sheetName)) grouped.set(sheetName,[]);
+      grouped.get(sheetName).push({
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
         'Operasyon': rec.client_name,
-        'Dil': rec.Dil,
         'Monitor Ident': rec.emp_monitor_ident,
-        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident)
+        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident),
+        'Dil': ref?ref.Dil:'',
+        'Dağıtım Türü': ref?ref.Dağıtım Türü:''
       });
     });
-    const workbook = XLSX.utils.book_new();
-    for(let [proj, rows] of grouped.entries()) {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      if(typeof XLSXStyle !== 'undefined') {
-        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-        for(let R=range.s.r; R<=range.e.r; R++) {
-          for(let C=range.s.c; C<=range.e.c; C++) {
-            const addr = XLSX.utils.encode_cell({r:R,c:C});
-            if(ws[addr]) ws[addr].s = { font: { sz: 9 } };
+    let workbook = XLSX.utils.book_new();
+    for(let [sheetName, rows] of grouped.entries()){
+      let ws = XLSX.utils.json_to_sheet(rows);
+      if(typeof XLSXStyle !== 'undefined'){
+        let range = XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+        for(let R=range.s.r; R<=range.e.r; R++){
+          for(let C=range.s.c; C<=range.e.c; C++){
+            let addr=XLSX.utils.encode_cell({r:R,c:C});
+            if(ws[addr]) ws[addr].s={font:{sz:9}};
           }
         }
       }
-      XLSX.utils.book_append_sheet(workbook, ws, proj.substring(0,31));
+      XLSX.utils.book_append_sheet(workbook, ws, sheetName);
     }
-    // Rapor sheet
-    const reportRows = currentPreview.map(r=>({
-      'Kişi': r.FeedbackCreatorName, 'Proje': r.client_name, 'Dil': r.Dil, 'Ident': r.emp_monitor_ident, 'Hafta': week
+    let reportRows=currentPreviewStep2.map(r=>({
+      'Kişi': r.FeedbackCreatorName, 'Proje': r.client_name, 'Ident': r.emp_monitor_ident, 'Hafta': week
     }));
-    const reportSheet = XLSX.utils.json_to_sheet(reportRows);
-    if(typeof XLSXStyle !== 'undefined') {
-      const range = XLSX.utils.decode_range(reportSheet['!ref'] || 'A1:A1');
-      for(let R=range.s.r; R<=range.e.r; R++) {
-        for(let C=range.s.c; C<=range.e.c; C++) {
-          const addr = XLSX.utils.encode_cell({r:R,c:C});
-          if(reportSheet[addr]) reportSheet[addr].s = { font: { sz: 9 } };
-        }
-      }
+    let reportSheet=XLSX.utils.json_to_sheet(reportRows);
+    if(typeof XLSXStyle !== 'undefined'){
+      let range=XLSX.utils.decode_range(reportSheet['!ref']||'A1:A1');
+      for(let R=range.s.r;R<=range.e.r;R++) for(let C=range.s.c;C<=range.e.c;C++){let addr=XLSX.utils.encode_cell({r:R,c:C});if(reportSheet[addr]) reportSheet[addr].s={font:{sz:9}};}
     }
     XLSX.utils.book_append_sheet(workbook, reportSheet, 'Dağıtım_Raporu');
-    XLSX.writeFile(workbook, `Hafta${week}_Dagilim_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
-    alert(`Dağıtım onaylandı. ${currentPreview.length} kayıt dağıtıldı.`);
+    XLSX.writeFile(workbook, `Hafta${week}_Dagilim_Referansli_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
+    alert(`Dağıtım onaylandı. Toplam ${currentPreviewStep2.length} kayıt dağıtıldı.\nGeçmiş JSON otomatik indirildi.`);
     document.getElementById('confirmBtnStep2').disabled=true;
     document.getElementById('previewAreaStep2').style.display='none';
-    currentPreview=[];
-  } catch(err) { alert('Hata: '+err.message); }
-  finally { showLoader('Step2',false); }
+    currentPreviewStep2=[];
+  }catch(err){alert('Hata:'+err.message);}
+  finally{showLoader('Step2',false);}
 }
 
 // Dosya yükleme fonksiyonları
-async function loadMainFile(file) {
+async function loadMainFileStep2(file){
   showLoader('Step2',true);
-  try {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer,{type:'array'});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(sheet,{defval:""});
-    if(!rows.length) throw new Error('Boş');
-    const required = ['FeedbackCreatorName', 'client_name', 'emp_monitor_ident', 'CheckListCreated', 'Dil'];
-    const first = rows[0];
-    const missing = required.filter(c=>!(c in first));
-    if(missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
-    mainData = rows.filter(r => r.CheckListCreated===0 || r.CheckListCreated==='0');
-    document.getElementById('mainStatusStep2').innerHTML = `✅ ${mainData.length} kayıt (CheckListCreated=0) yüklendi.`;
-    document.getElementById('mainStatusStep2').style.color = 'var(--accent)';
-  } catch(err) {
-    document.getElementById('mainStatusStep2').innerHTML = `❌ ${err.message}`;
-    document.getElementById('mainStatusStep2').style.color = 'var(--accent3)';
-    mainData = [];
-  } finally { showLoader('Step2',false); }
+  try{
+    let buf=await file.arrayBuffer();
+    let wb=XLSX.read(buf,{type:'array'});
+    let sheet=wb.Sheets[wb.SheetNames[0]];
+    let rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    if(!rows.length)throw new Error('Boş');
+    let required=['FeedbackCreatorName','client_name','emp_monitor_ident','CheckListCreated'];
+    let first=rows[0];
+    let missing=required.filter(c=>!(c in first));
+    if(missing.length)throw new Error(`Eksik sütun: ${missing.join(', ')}`);
+    mainDataStep2=rows.filter(r=>r.CheckListCreated===0||r.CheckListCreated==='0');
+    document.getElementById('mainStatusStep2').innerHTML=`✅ ${mainDataStep2.length} kayıt (CheckListCreated=0) yüklendi.`;
+    document.getElementById('mainStatusStep2').style.color='var(--accent)';
+  }catch(err){
+    document.getElementById('mainStatusStep2').innerHTML=`❌ ${err.message}`;
+    document.getElementById('mainStatusStep2').style.color='var(--accent3)';
+    mainDataStep2=[];
+  }finally{showLoader('Step2',false);}
 }
-async function loadDeletedFile(file) {
+async function loadDeletedFileStep2(file){
   showLoader('Step2',true);
-  try {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer,{type:'array'});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(sheet,{defval:""});
-    if(!rows.length) throw new Error('Boş');
-    const cols = Object.keys(rows[0]);
-    const identCol = cols.find(c=>c.toLowerCase()==='ident');
-    if(!identCol) throw new Error(`'Ident' sütunu yok`);
-    deletedIdents.clear();
-    rows.forEach(r=>{ const v=r[identCol]; if(v) deletedIdents.add(String(v).trim()); });
-    document.getElementById('deletedStatusStep2').innerHTML = `✅ ${deletedIdents.size} silinen ident.`;
-    document.getElementById('deletedStatusStep2').style.color = 'var(--accent)';
-  } catch(err) {
-    document.getElementById('deletedStatusStep2').innerHTML = `❌ ${err.message}`;
-    document.getElementById('deletedStatusStep2').style.color = 'var(--accent3)';
-  } finally { showLoader('Step2',false); }
+  try{
+    let buf=await file.arrayBuffer();
+    let wb=XLSX.read(buf,{type:'array'});
+    let sheet=wb.Sheets[wb.SheetNames[0]];
+    let rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    if(!rows.length)throw new Error('Boş');
+    let cols=Object.keys(rows[0]);
+    let identCol=cols.find(c=>c.toLowerCase()==='ident');
+    if(!identCol)throw new Error(`'Ident' sütunu yok. Mevcut: ${cols.join(', ')}`);
+    deletedIdentsStep2.clear();
+    rows.forEach(r=>{let v=r[identCol];if(v)deletedIdentsStep2.add(String(v).trim());});
+    document.getElementById('deletedStatusStep2').innerHTML=`✅ ${deletedIdentsStep2.size} silinen ident yüklendi.`;
+    document.getElementById('deletedStatusStep2').style.color='var(--accent)';
+  }catch(err){
+    document.getElementById('deletedStatusStep2').innerHTML=`❌ ${err.message}`;
+    document.getElementById('deletedStatusStep2').style.color='var(--accent3)';
+    deletedIdentsStep2.clear();
+  }finally{showLoader('Step2',false);}
 }
-async function loadRefFile(file) {
+async function loadRefFileStep2(file){
   showLoader('Step2',true);
-  try {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer,{type:'array'});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(sheet,{defval:""});
-    if(!rows.length) throw new Error('Boş');
-    const required = ['Proje', 'KaliteDesteği', 'Dil', 'Dağıtım Türü'];
-    const first = rows[0];
-    const missing = required.filter(c=>!(c in first));
-    if(missing.length) throw new Error(`Referans listesinde eksik sütun: ${missing.join(', ')}`);
-    refData = rows.map(r => ({
-      Proje: String(r['Proje']).trim(),
-      KaliteDesteği: String(r['KaliteDesteği']).trim(),
-      Dil: String(r['Dil']).trim(),
-      DağıtımTürü: String(r['Dağıtım Türü']).trim()
-    }));
-    document.getElementById('refStatusStep2').innerHTML = `✅ ${refData.length} referans satırı yüklendi.`;
-    document.getElementById('refStatusStep2').style.color = 'var(--accent)';
-  } catch(err) {
-    document.getElementById('refStatusStep2').innerHTML = `❌ ${err.message}`;
-    document.getElementById('refStatusStep2').style.color = 'var(--accent3)';
-    refData = [];
-  } finally { showLoader('Step2',false); }
+  try{
+    let buf=await file.arrayBuffer();
+    let wb=XLSX.read(buf,{type:'array'});
+    let sheet=wb.Sheets[wb.SheetNames[0]];
+    let rows=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    if(!rows.length)throw new Error('Referans listesi boş');
+    let required=['Proje','KaliteDesteği','Dil','Dağıtım Türü'];
+    let first=rows[0];
+    let missing=required.filter(c=>!(c in first));
+    if(missing.length)throw new Error(`Referans listesinde eksik sütun: ${missing.join(', ')}`);
+    refDataStep2=rows;
+    document.getElementById('refStatusStep2').innerHTML=`✅ ${refDataStep2.length} proje referansı yüklendi.`;
+    document.getElementById('refStatusStep2').style.color='var(--accent)';
+  }catch(err){
+    document.getElementById('refStatusStep2').innerHTML=`❌ ${err.message}`;
+    document.getElementById('refStatusStep2').style.color='var(--accent3)';
+    refDataStep2=[];
+  }finally{showLoader('Step2',false);}
 }
-
-// Event listeners
-document.getElementById('mainFileInputStep2').addEventListener('change', e=>{ if(e.target.files[0]) loadMainFile(e.target.files[0]); });
-document.getElementById('deletedFileInputStep2').addEventListener('change', e=>{ if(e.target.files[0]) loadDeletedFile(e.target.files[0]); });
-document.getElementById('refFileInputStep2').addEventListener('change', e=>{ if(e.target.files[0]) loadRefFile(e.target.files[0]); });
-function setupDrop(id, inputId, loadFunc) {
-  const drop = document.getElementById(id);
-  const inp = document.getElementById(inputId);
-  drop.addEventListener('click', ()=>inp.click());
-  drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
-  drop.addEventListener('dragleave', ()=>drop.classList.remove('drag'));
-  drop.addEventListener('drop', e=>{
-    e.preventDefault();
-    drop.classList.remove('drag');
-    if(e.dataTransfer.files[0]) { inp.files = e.dataTransfer.files; loadFunc(e.dataTransfer.files[0]); }
-  });
+// Eventler
+document.getElementById('mainFileInputStep2').addEventListener('change',e=>{if(e.target.files[0])loadMainFileStep2(e.target.files[0]);});
+document.getElementById('deletedFileInputStep2').addEventListener('change',e=>{if(e.target.files[0])loadDeletedFileStep2(e.target.files[0]);});
+document.getElementById('refFileInputStep2').addEventListener('change',e=>{if(e.target.files[0])loadRefFileStep2(e.target.files[0]);});
+function setupDrop(dropId,inputId,func){
+  let drop=document.getElementById(dropId);
+  let inp=document.getElementById(inputId);
+  drop.addEventListener('click',()=>inp.click());
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag');});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');if(e.dataTransfer.files[0]){inp.files=e.dataTransfer.files;func(e.dataTransfer.files[0]);}});
 }
-setupDrop('dropMainStep2', 'mainFileInputStep2', loadMainFile);
-setupDrop('dropDeletedStep2', 'deletedFileInputStep2', loadDeletedFile);
-setupDrop('dropRefStep2', 'refFileInputStep2', loadRefFile);
-document.getElementById('calculateBtnStep2').addEventListener('click', previewDistribution);
-document.getElementById('confirmBtnStep2').addEventListener('click', confirmAndExport);
-document.getElementById('exportHistoryBtnStep2').addEventListener('click', saveHistoryAndDownload);
-document.getElementById('importHistoryBtnStep2').addEventListener('click', ()=>document.getElementById('historyImportInputStep2').click());
-document.getElementById('historyImportInputStep2').addEventListener('change', e=>{
-  if(!e.target.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try { const imp = JSON.parse(ev.target.result); if(Array.isArray(imp)) { distributionHistory = imp; saveHistory(); alert('Geçmiş yüklendi'); } else throw new Error(); } catch(e){ alert('Geçersiz'); }
-  };
+setupDrop('dropMainStep2','mainFileInputStep2',loadMainFileStep2);
+setupDrop('dropDeletedStep2','deletedFileInputStep2',loadDeletedFileStep2);
+setupDrop('dropRefStep2','refFileInputStep2',loadRefFileStep2);
+document.getElementById('calculateBtnStep2').addEventListener('click',previewDistributionStep2);
+document.getElementById('confirmBtnStep2').addEventListener('click',confirmAndExportStep2);
+document.getElementById('exportHistoryBtnStep2').addEventListener('click',()=>saveHistoryAndDownload());
+document.getElementById('importHistoryBtnStep2').addEventListener('click',()=>document.getElementById('historyImportInputStep2').click());
+document.getElementById('historyImportInputStep2').addEventListener('change',e=>{
+  if(!e.target.files[0])return;
+  let reader=new FileReader();
+  reader.onload=ev=>{try{let imp=JSON.parse(ev.target.result);if(Array.isArray(imp)){distributionHistoryStep2=imp;saveHistoryStep2();alert('Geçmiş yüklendi.');}else throw new Error();}catch(err){alert('Geçersiz dosya');}};
   reader.readAsText(e.target.files[0]);
 });
-document.getElementById('viewHistoryBtnStep2').addEventListener('click', ()=>{
-  const modal = document.createElement('div'); modal.className='modal'; modal.style.display='flex';
-  const cont = document.createElement('div'); cont.className='modal-content';
-  cont.innerHTML = '<h3>Geçmiş</h3><button id="closeModalBtn" style="float:right;">Kapat</button><div style="clear:both;"></div>';
-  const table = document.createElement('table'); table.style.width='100%'; table.innerHTML='<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
-  const tbody = table.querySelector('tbody');
-  distributionHistory.slice().sort((a,b)=>a.week-b.week).forEach(entry => {
-    const row = tbody.insertRow();
-    row.insertCell(0).textContent = entry.week;
-    row.insertCell(1).textContent = new Date(entry.date).toLocaleString();
-    row.insertCell(2).textContent = entry.assignments.length;
-    const btn = document.createElement('button'); btn.textContent='Göster'; btn.className='btn-ghost'; btn.onclick = ()=>alert(entry.assignments.map(a=>`${a.FeedbackCreatorName} - ${a.client_name} (${a.Dil})`).join('\n'));
+document.getElementById('viewHistoryBtnStep2').addEventListener('click',()=>{
+  let modal=document.createElement('div');modal.className='modal';modal.style.display='flex';
+  let content=document.createElement('div');content.className='modal-content';
+  content.innerHTML='<h3>Geçmiş Dağıtımlar</h3><button id="closeModalBtn" style="float:right;">Kapat</button><div style="clear:both;"></div>';
+  let tbl=document.createElement('table');tbl.style.width='100%';tbl.style.borderCollapse='collapse';
+  tbl.innerHTML='<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
+  let tbody=tbl.querySelector('tbody');
+  distributionHistoryStep2.slice().sort((a,b)=>a.week-b.week).forEach(entry=>{
+    let row=tbody.insertRow();
+    row.insertCell(0).textContent=entry.week;
+    row.insertCell(1).textContent=new Date(entry.date).toLocaleString();
+    row.insertCell(2).textContent=entry.assignments.length;
+    let btn=document.createElement('button');btn.textContent='Göster';btn.className='btn-ghost';btn.style.padding='0.2rem 0.5rem';
+    btn.onclick=()=>alert(entry.assignments.map(a=>`${a.FeedbackCreatorName} - ${a.client_name} (${a.emp_monitor_ident})`).join('\n'));
     row.insertCell(3).appendChild(btn);
   });
-  cont.appendChild(table); modal.appendChild(cont); document.body.appendChild(modal);
-  document.getElementById('closeModalBtn').onclick = ()=>modal.remove();
+  content.appendChild(tbl);modal.appendChild(content);document.body.appendChild(modal);
+  document.getElementById('closeModalBtn').onclick=()=>modal.remove();
 });
-document.getElementById('clearHistoryBtnStep2').addEventListener('click', ()=>{
-  if(confirm('Tüm geçmiş silinecek?')) { distributionHistory = []; saveHistory(); alert('Temizlendi'); }
-});
-loadHistory();
+document.getElementById('clearHistoryBtnStep2').addEventListener('click',()=>{if(confirm('Tüm geçmiş silinecek?')){distributionHistoryStep2=[];saveHistoryStep2();alert('Temizlendi.');}});
+loadHistoryStep2();
 </script>
 </body>
 </html>
