@@ -11,6 +11,13 @@ function buildMonitorLink(ident) {
   if (!ident) return '#';
   return `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`;
 }
+function formatDateForFilename() {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+}
 
 // ========== ADIM GEÇİŞİ ==========
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// ==================== STEP 1 ====================
+// ==================== STEP 1 (değişmedi) ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
 const fileInputStep1 = document.getElementById('fileInputStep1');
 const uploadAreaStep1 = document.getElementById('uploadAreaStep1');
@@ -96,7 +103,7 @@ async function processFileStep1(file) {
     statsContainerStep1.style.display = 'flex';
     if (errCount === 0) {
       errorsSectionStep1.style.display = 'block';
-      errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli!</tr>`;
+      errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli!</td></tr>`;
     } else {
       errorsSectionStep1.style.display = 'block';
       let html = '';
@@ -135,91 +142,171 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   totalCountSpanStep1.textContent = '0'; errorCountSpanStep1.textContent = '0'; validCountSpanStep1.textContent = '0';
 });
 
-// ==================== STEP 2 ====================
-let mainDataStep2 = [], deletedIdentsStep2 = new Set(), distributionHistoryStep2 = [], currentPreviewStep2 = [], currentWeekStep2 = 1;
-let refDataStep2 = [];
+// ==================== STEP 2 (ÜÇ GRUP) ====================
+let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
+let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = {1:3, 2:2, 3:3, 4:2};
+let currentWeekStep2 = 1;
+let currentPreview = { DM: [], ML: [], DONUSUM: [] };
+
+// Grup tanımları
+const groups = {
+  DM: { key: 'DM', name: 'DM', filter: (ref) => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM' && ref["Dağıtım Türü"] === 'Proje', sheetPerProject: true, fileName: (week) => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx` },
+  ML: { key: 'ML', name: 'ML', filter: (ref) => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML' && ref["Dağıtım Türü"] === 'Proje', sheetPerProject: true, fileName: (week) => `ML_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx` },
+  DONUSUM: { key: 'DONUSUM', name: 'Dönüşüm Projeleri', filter: (ref) => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM' && ref["Dağıtım Türü"] === '1. Değerlendirici', sheetPerProject: false, fileName: (week) => `Dönüşüm Projeleri_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx` }
+};
 
 function getRefInfo(projeAdi) {
   return refDataStep2.find(r => String(r.Proje).trim() === String(projeAdi).trim());
 }
-function saveHistoryAndDownload() {
-  localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistoryStep2));
-  const dataStr = JSON.stringify(distributionHistoryStep2, null, 2);
+
+// Geçmiş işlemleri (her grup için ayrı localStorage)
+function saveHistoryForGroup(groupKey) {
+  localStorage.setItem(`fb_distribution_history_${groupKey}`, JSON.stringify(distributionHistory[groupKey]));
+}
+function loadHistoryForGroup(groupKey) {
+  const stored = localStorage.getItem(`fb_distribution_history_${groupKey}`);
+  if (stored) try { distributionHistory[groupKey] = JSON.parse(stored); } catch(e) { distributionHistory[groupKey] = []; }
+  else distributionHistory[groupKey] = [];
+}
+function loadAllHistories() {
+  loadHistoryForGroup('DM');
+  loadHistoryForGroup('ML');
+  loadHistoryForGroup('DONUSUM');
+}
+function saveAllHistories() {
+  saveHistoryForGroup('DM');
+  saveHistoryForGroup('ML');
+  saveHistoryForGroup('DONUSUM');
+}
+// Geçmişi tek bir JSON olarak dışa aktar
+function exportAllHistory() {
+  const all = { DM: distributionHistory.DM, ML: distributionHistory.ML, DONUSUM: distributionHistory.DONUSUM };
+  const dataStr = JSON.stringify(all, null, 2);
   const blob = new Blob([dataStr], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `feedback_history_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+  a.download = `feedback_history_all_${formatDateForFilename()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  alert("Geçmiş kaydedildi ve JSON dosyası otomatik indirildi.");
+  alert("Tüm geçmiş dışa aktarıldı.");
 }
-function loadHistoryStep2() {
-  const stored = localStorage.getItem('fb_distribution_history');
-  if (stored) try { distributionHistoryStep2 = JSON.parse(stored); } catch(e) { distributionHistoryStep2 = []; }
-  else distributionHistoryStep2 = [];
+// Geçmiş yükle
+function importAllHistory(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (imported.DM && imported.ML && imported.DONUSUM) {
+        distributionHistory = imported;
+        saveAllHistories();
+        alert('Geçmiş başarıyla yüklendi.');
+      } else throw new Error('Geçersiz format');
+    } catch (err) { alert('Geçersiz dosya'); }
+  };
+  reader.readAsText(file);
 }
-function saveHistoryStep2() { localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistoryStep2)); }
-function getDistributedIdentsStep2() {
+// Geçmişi görüntüleme modal'ı (tüm gruplar)
+function viewHistoryModal() {
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.display = 'flex';
+  const content = document.createElement('div'); content.className = 'modal-content';
+  content.innerHTML = '<h3>Tüm Geçmiş Dağıtımlar</h3><button id="closeModalBtn" style="float:right;">Kapat</button><div style="clear:both;"></div>';
+  const groupsList = ['DM', 'ML', 'DONUSUM'];
+  groupsList.forEach(g => {
+    const title = document.createElement('h4');
+    title.textContent = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
+    content.appendChild(title);
+    const table = document.createElement('table'); table.style.width = '100%'; table.style.borderCollapse = 'collapse';
+    table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
+    const tbody = table.querySelector('tbody');
+    const hist = distributionHistory[g];
+    if (!hist.length) {
+      const row = tbody.insertRow();
+      row.insertCell(0).colSpan = 4; row.insertCell(0).textContent = 'Geçmiş yok';
+    } else {
+      hist.slice().sort((a,b) => a.week - b.week).forEach(entry => {
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = entry.week;
+        row.insertCell(1).textContent = new Date(entry.date).toLocaleString();
+        row.insertCell(2).textContent = entry.assignments.length;
+        const btn = document.createElement('button'); btn.textContent = 'Göster'; btn.className = 'btn-ghost'; btn.style.padding = '0.2rem 0.5rem';
+        btn.onclick = () => alert(entry.assignments.map(a => `${a.FeedbackCreatorName} - ${a.client_name} (${a.emp_monitor_ident})`).join('\n'));
+        row.insertCell(3).appendChild(btn);
+      });
+    }
+    content.appendChild(table);
+    content.appendChild(document.createElement('hr'));
+  });
+  modal.appendChild(content); document.body.appendChild(modal);
+  document.getElementById('closeModalBtn').onclick = () => modal.remove();
+}
+function clearAllHistory() {
+  if (confirm('Tüm grupların geçmişi silinecek. Devam?')) {
+    distributionHistory = { DM: [], ML: [], DONUSUM: [] };
+    saveAllHistories();
+    alert('Tüm geçmiş temizlendi.');
+  }
+}
+
+// Ortak yardımcılar (dağıtım algoritması grup bazlı)
+function getDistributedIdentsForGroup(groupKey, week) {
   const set = new Set();
-  distributionHistoryStep2.forEach(entry => { if (entry.distributedIdents) entry.distributedIdents.forEach(id => set.add(id)); });
+  const hist = distributionHistory[groupKey];
+  for (let entry of hist) {
+    if (entry.week < week) { // önceki haftalar
+      if (entry.distributedIdents) entry.distributedIdents.forEach(id => set.add(id));
+    }
+  }
   return set;
 }
-function getWeekCounts(week) {
-  const weekData = distributionHistoryStep2.find(h => h.week === week);
-  if (!weekData || !weekData.assignments) return new Map();
+function getCumulativeCountsForGroup(groupKey, week) {
   const counts = new Map();
-  weekData.assignments.forEach(ass => {
-    const key = `${ass.FeedbackCreatorName}|${ass.client_name}|${ass.dil || ''}`;
-    counts.set(key, (counts.get(key) || 0) + 1);
-  });
-  return counts;
-}
-function getCumulativeBefore(week) {
-  const counts = new Map();
+  const hist = distributionHistory[groupKey];
   for (let w = 1; w < week; w++) {
-    const wc = getWeekCounts(w);
-    for (let [k, cnt] of wc) counts.set(k, (counts.get(k) || 0) + cnt);
+    const entry = hist.find(h => h.week === w);
+    if (entry && entry.assignments) {
+      entry.assignments.forEach(ass => {
+        const key = `${ass.FeedbackCreatorName}|${ass.client_name}`;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    }
   }
   return counts;
 }
-function getAvailableRecords() {
-  const distributed = getDistributedIdentsStep2();
+function getAvailableRecordsForGroup(groupKey, week, groupFilter) {
+  const distributedIdents = getDistributedIdentsForGroup(groupKey, week);
   return mainDataStep2.filter(rec => {
-    const zero = (rec.CheckListCreated === 0 || rec.CheckListCreated === '0' || rec.CheckListCreated === 0.0);
+    const zero = (rec.CheckListCreated === 0 || rec.CheckListCreated === '0');
     if (!zero) return false;
     const ident = String(rec.emp_monitor_ident || '');
     if (deletedIdentsStep2.has(ident)) return false;
-    if (distributed.has(ident)) return false;
-    return true;
+    if (distributedIdents.has(ident)) return false;
+    // Grup filtresine uygun proje mi?
+    const ref = getRefInfo(rec.client_name);
+    if (!ref) return false;
+    return groupFilter(ref);
   });
 }
-function calculateDistributionStep2(week) {
-  const available = getAvailableRecords();
+function calculateDistributionForGroup(groupKey, week, groupFilter) {
+  const available = getAvailableRecordsForGroup(groupKey, week, groupFilter);
   if (available.length === 0) return [];
-  if (refDataStep2.length === 0) { alert("Referans listesi yüklenmemiş!"); return []; }
+  // Kategorilere ayır: Proje bazlı (çünkü DM/ML'de Dağıtım Türü zaten Proje, Dönüşüm'de 1. Değerlendirici)
+  // DM ve ML için kategori = proje adı (tüm değerlendiriciler birlikte)
+  // Dönüşüm için kategori = değerlendirici + proje (kişi-proje bazlı)
   const categoryMap = new Map();
   available.forEach(rec => {
-    const proje = rec.client_name;
-    const ref = getRefInfo(proje);
-    if (!ref) {
-      console.warn(`Proje ${proje} referans listede yok, atlanıyor.`);
-      return;
-    }
-    const dagitimTuru = String(ref["Dağıtım Türü"]).trim();
-    const dil = String(ref.Dil).trim();
-    const degerlendirici = rec.FeedbackCreatorName;
+    const ref = getRefInfo(rec.client_name);
     let key;
-    if (dagitimTuru === "Proje") {
-      key = `PROJE|${proje}|${dil}`;
+    if (groupKey === 'DONUSUM') {
+      key = `${rec.FeedbackCreatorName}|${rec.client_name}`; // kişi-proje
     } else {
-      key = `KISI|${degerlendirici}|${proje}|${dil}`;
+      key = rec.client_name; // sadece proje
     }
     if (!categoryMap.has(key)) categoryMap.set(key, []);
     categoryMap.get(key).push(rec);
   });
-  const cumulativeBefore = getCumulativeBefore(week);
+  const cumulativeBefore = getCumulativeCountsForGroup(groupKey, week);
   const needMap = new Map();
   for (let [key, records] of categoryMap) {
     let done = cumulativeBefore.get(key) || 0;
@@ -242,28 +329,96 @@ function calculateDistributionStep2(week) {
   }
   return selected;
 }
-function previewDistributionStep2() {
+async function saveGroupDistribution(groupKey, week, selected, groupFilter) {
+  const assignmentsWithMeta = selected.map(rec => {
+    const ref = getRefInfo(rec.client_name);
+    return {
+      FeedbackCreatorName: rec.FeedbackCreatorName,
+      client_name: rec.client_name,
+      emp_monitor_ident: rec.emp_monitor_ident,
+      dil: ref ? ref.Dil : '',
+      dagitimTuru: ref ? ref["Dağıtım Türü"] : ''
+    };
+  });
+  const newEntry = {
+    week: week,
+    date: new Date().toISOString(),
+    distributedIdents: selected.map(r => String(r.emp_monitor_ident)),
+    assignments: assignmentsWithMeta
+  };
+  const idx = distributionHistory[groupKey].findIndex(h => h.week === week);
+  if (idx >= 0) distributionHistory[groupKey][idx] = newEntry;
+  else distributionHistory[groupKey].push(newEntry);
+  saveHistoryForGroup(groupKey);
+}
+async function exportGroupExcel(groupKey, selected, week) {
+  const group = groups[groupKey];
+  if (!selected.length) return;
+  const workbook = XLSX.utils.book_new();
+  if (group.sheetPerProject) {
+    // Her proje için ayrı sheet
+    const grouped = new Map();
+    selected.forEach(rec => {
+      const proj = rec.client_name;
+      if (!grouped.has(proj)) grouped.set(proj, []);
+      grouped.get(proj).push({
+        'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
+        'Operasyon': rec.client_name,
+        'Monitor Ident': rec.emp_monitor_ident,
+        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident)
+      });
+    });
+    for (let [proj, rows] of grouped.entries()) {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(workbook, ws, proj.substring(0, 31));
+    }
+  } else {
+    // Dönüşüm Projeleri: tek sheet, sheet adı referanstaki Dağıtım Türü (ör. "1. Değerlendirici")
+    let sheetName = "1. Değerlendirici"; // varsayılan
+    if (selected.length > 0) {
+      const ref = getRefInfo(selected[0].client_name);
+      if (ref && ref["Dağıtım Türü"]) sheetName = String(ref["Dağıtım Türü"]).trim();
+    }
+    const rows = selected.map(rec => ({
+      'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
+      'Operasyon': rec.client_name,
+      'Monitor Ident': rec.emp_monitor_ident,
+      'Monitor Link': buildMonitorLink(rec.emp_monitor_ident)
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, ws, sheetName.substring(0, 31));
+  }
+  XLSX.writeFile(workbook, group.fileName(week));
+}
+
+// Önizleme ve Onaylama
+async function previewAllGroups() {
   if (!mainDataStep2.length) { alert('Görüşme listesi yükleyin.'); return; }
   if (!refDataStep2.length) { alert('Referans listesi yükleyin.'); return; }
   const week = parseInt(document.getElementById('weekSelectStep2').value);
   currentWeekStep2 = week;
-  const selected = calculateDistributionStep2(week);
-  currentPreviewStep2 = selected;
+  let allSelected = [];
+  for (let [groupKey, group] of Object.entries(groups)) {
+    const selected = calculateDistributionForGroup(groupKey, week, group.filter);
+    currentPreview[groupKey] = selected;
+    allSelected.push(...selected.map(s => ({ ...s, grup: group.name })));
+  }
   const previewDiv = document.getElementById('previewAreaStep2');
   const previewBody = document.getElementById('previewBodyStep2');
-  if (selected.length === 0) {
+  if (allSelected.length === 0) {
     previewDiv.style.display = 'block';
-    previewBody.innerHTML = '<tr><td colspan="4">Bu hafta için dağıtılacak uygun kayıt bulunamadı.</td></tr>';
+    previewBody.innerHTML = '<tr><td colspan="5">Bu hafta için hiçbir grupta dağıtılacak kayıt yok.</td></tr>';
     document.getElementById('confirmBtnStep2').disabled = true;
     return;
   }
   previewBody.innerHTML = '';
-  selected.forEach(rec => {
+  allSelected.forEach(rec => {
     const row = previewBody.insertRow();
-    row.insertCell(0).textContent = rec.FeedbackCreatorName || '';
-    row.insertCell(1).textContent = rec.client_name || '';
-    row.insertCell(2).textContent = rec.emp_monitor_ident || '';
-    const linkCell = row.insertCell(3);
+    row.insertCell(0).textContent = rec.grup;
+    row.insertCell(1).textContent = rec.FeedbackCreatorName || '';
+    row.insertCell(2).textContent = rec.client_name || '';
+    row.insertCell(3).textContent = rec.emp_monitor_ident || '';
+    const linkCell = row.insertCell(4);
     const a = document.createElement('a');
     a.href = buildMonitorLink(rec.emp_monitor_ident);
     a.target = '_blank';
@@ -274,68 +429,30 @@ function previewDistributionStep2() {
   previewDiv.style.display = 'block';
   document.getElementById('confirmBtnStep2').disabled = false;
 }
-async function confirmAndExportStep2() {
-  if (currentPreviewStep2.length === 0) { alert('Önce dağıtım hesaplayın.'); return; }
+async function confirmAndExportAll() {
+  if (Object.values(currentPreview).every(arr => arr.length === 0)) { alert('Önce dağıtım hesaplayın.'); return; }
   showLoader('Step2', true);
   try {
     const week = currentWeekStep2;
-    const assignmentsWithMeta = currentPreviewStep2.map(rec => {
-      const ref = getRefInfo(rec.client_name);
-      return {
-        FeedbackCreatorName: rec.FeedbackCreatorName,
-        client_name: rec.client_name,
-        emp_monitor_ident: rec.emp_monitor_ident,
-        dil: ref ? ref.Dil : '',
-        dagitimTuru: ref ? ref["Dağıtım Türü"] : ''
-      };
-    });
-    const newEntry = {
-      week: week,
-      date: new Date().toISOString(),
-      distributedIdents: currentPreviewStep2.map(r => String(r.emp_monitor_ident)),
-      assignments: assignmentsWithMeta
-    };
-    const idx = distributionHistoryStep2.findIndex(h => h.week === week);
-    if (idx >= 0) distributionHistoryStep2[idx] = newEntry;
-    else distributionHistoryStep2.push(newEntry);
-    saveHistoryAndDownload();
-    // Excel oluştur (font ayarı yapılmıyor, standart xlsx ile)
-    const grouped = new Map();
-    currentPreviewStep2.forEach(rec => {
-      const ref = getRefInfo(rec.client_name);
-      const sheetName = `${rec.client_name}_${ref ? ref.Dil : ''}_${ref ? ref["Dağıtım Türü"] : ''}`.substring(0, 31);
-      if (!grouped.has(sheetName)) grouped.set(sheetName, []);
-      grouped.get(sheetName).push({
-        'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
-        'Operasyon': rec.client_name,
-        'Monitor Ident': rec.emp_monitor_ident,
-        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident),
-        'Dil': ref ? ref.Dil : '',
-        'Dağıtım Türü': ref ? ref["Dağıtım Türü"] : ''
-      });
-    });
-    const workbook = XLSX.utils.book_new();
-    for (let [sheetName, rows] of grouped.entries()) {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(workbook, ws, sheetName);
+    for (let [groupKey, group] of Object.entries(groups)) {
+      const selected = currentPreview[groupKey];
+      if (selected.length > 0) {
+        await saveGroupDistribution(groupKey, week, selected, group.filter);
+        await exportGroupExcel(groupKey, selected, week);
+      }
     }
-    const reportRows = currentPreviewStep2.map(r => ({
-      'Kişi': r.FeedbackCreatorName, 'Proje': r.client_name, 'Ident': r.emp_monitor_ident, 'Hafta': week
-    }));
-    const reportSheet = XLSX.utils.json_to_sheet(reportRows);
-    XLSX.utils.book_append_sheet(workbook, reportSheet, 'Dağıtım_Raporu');
-    XLSX.writeFile(workbook, `Hafta${week}_Dagilim_Referansli_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
-    alert(`Dağıtım onaylandı. Toplam ${currentPreviewStep2.length} kayıt dağıtıldı.\nGeçmiş JSON otomatik indirildi.`);
+    alert(`Dağıtım onaylandı. ${Object.values(currentPreview).reduce((a,b)=>a+b.length,0)} kayıt dağıtıldı.\nExcel dosyaları indirildi.`);
     document.getElementById('confirmBtnStep2').disabled = true;
     document.getElementById('previewAreaStep2').style.display = 'none';
-    currentPreviewStep2 = [];
+    currentPreview = { DM: [], ML: [], DONUSUM: [] };
   } catch (err) {
     alert('Hata: ' + err.message);
   } finally {
     showLoader('Step2', false);
   }
 }
-// Dosya yükleme fonksiyonları
+
+// Dosya yükleme fonksiyonları (değişmedi)
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   try {
@@ -421,42 +538,11 @@ function setupDrop(dropId, inputId, func) {
 setupDrop('dropMainStep2', 'mainFileInputStep2', loadMainFileStep2);
 setupDrop('dropDeletedStep2', 'deletedFileInputStep2', loadDeletedFileStep2);
 setupDrop('dropRefStep2', 'refFileInputStep2', loadRefFileStep2);
-document.getElementById('calculateBtnStep2').addEventListener('click', previewDistributionStep2);
-document.getElementById('confirmBtnStep2').addEventListener('click', confirmAndExportStep2);
-document.getElementById('exportHistoryBtnStep2').addEventListener('click', () => saveHistoryAndDownload());
+document.getElementById('calculateBtnStep2').addEventListener('click', previewAllGroups);
+document.getElementById('confirmBtnStep2').addEventListener('click', confirmAndExportAll);
+document.getElementById('exportHistoryBtnStep2').addEventListener('click', exportAllHistory);
 document.getElementById('importHistoryBtnStep2').addEventListener('click', () => document.getElementById('historyImportInputStep2').click());
-document.getElementById('historyImportInputStep2').addEventListener('change', e => {
-  if (!e.target.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const imported = JSON.parse(ev.target.result);
-      if (Array.isArray(imported)) { distributionHistoryStep2 = imported; saveHistoryStep2(); alert('Geçmiş yüklendi.'); }
-      else throw new Error();
-    } catch (err) { alert('Geçersiz dosya'); }
-  };
-  reader.readAsText(e.target.files[0]);
-});
-document.getElementById('viewHistoryBtnStep2').addEventListener('click', () => {
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.display = 'flex';
-  const content = document.createElement('div'); content.className = 'modal-content';
-  content.innerHTML = '<h3>Geçmiş Dağıtımlar</h3><button id="closeModalBtn" style="float:right;">Kapat</button><div style="clear:both;"></div>';
-  const table = document.createElement('table'); table.style.width = '100%'; table.style.borderCollapse = 'collapse';
-  table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
-  const tbody = table.querySelector('tbody');
-  distributionHistoryStep2.slice().sort((a,b) => a.week - b.week).forEach(entry => {
-    const row = tbody.insertRow();
-    row.insertCell(0).textContent = entry.week;
-    row.insertCell(1).textContent = new Date(entry.date).toLocaleString();
-    row.insertCell(2).textContent = entry.assignments.length;
-    const btn = document.createElement('button'); btn.textContent = 'Göster'; btn.className = 'btn-ghost'; btn.style.padding = '0.2rem 0.5rem';
-    btn.onclick = () => alert(entry.assignments.map(a => `${a.FeedbackCreatorName} - ${a.client_name} (${a.emp_monitor_ident})`).join('\n'));
-    row.insertCell(3).appendChild(btn);
-  });
-  content.appendChild(table); modal.appendChild(content); document.body.appendChild(modal);
-  document.getElementById('closeModalBtn').onclick = () => modal.remove();
-});
-document.getElementById('clearHistoryBtnStep2').addEventListener('click', () => {
-  if (confirm('Tüm geçmiş silinecek. Devam?')) { distributionHistoryStep2 = []; saveHistoryStep2(); alert('Geçmiş temizlendi.'); }
-});
-loadHistoryStep2();
+document.getElementById('historyImportInputStep2').addEventListener('change', e => { if (e.target.files[0]) importAllHistory(e.target.files[0]); });
+document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHistoryModal);
+document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
+loadAllHistories();
