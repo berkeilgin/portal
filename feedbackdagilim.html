@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Dağılım — Step 1 & Step 2 (Referans Listeli)</title>
+<title>Feedback Dağılım — Step 1 & Step 2</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<!-- xlsx-style tek başına yeterli (font 9 için) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx-style@0.8.13/dist/xlsxstyle.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* ========== TÜM STILLER (temel, layout, component) ========== */
+/* ========== TÜM STILLER (eksiksiz) ========== */
 * {
   margin: 0;
   padding: 0;
@@ -19,7 +18,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
   line-height: 1.5;
   transition: background 0.2s, color 0.2s;
 }
@@ -314,7 +313,7 @@ td {
 </head>
 <body>
 <div class="header">
-  <div class="logo">📊 Feedback Dağılım — Step 1 & Step 2 (Referans Listeli)</div>
+  <div class="logo">📊 Feedback Dağılım — Step 1 & Step 2</div>
   <div class="header-controls">
     <div class="theme-switch"></div>
     <button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button>
@@ -345,13 +344,14 @@ td {
       <div class="errors-section" id="errorsSectionStep1" style="display: none;">
         <div class="section-title"><span>🚨</span> Hatalı Monitoring ID'ler & Linkler</div>
         <div class="table-wrapper">
-          <table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>🔗 Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table>
+          <table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>🔗 Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody>
+          </table>
         </div>
       </div>
       <div style="display: flex; justify-content: flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
 
-    <!-- STEP 2 (Referans Listeli) -->
+    <!-- STEP 2 -->
     <div id="step2" class="step-content">
       <div class="pt">Referans Listesi ile <em style="background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;">Proje veya Değerlendirici Bazlı Dağıtım</em></div>
       <div class="sdesc">Haftalık hedef: 1➜3, 2➜2, 3➜3, 4➜2. Referans listesi ile dağıtım türü ve dil belirlenir.</div>
@@ -361,7 +361,7 @@ td {
         <div class="upload-card"><h3>📑 3. Referans Listesi</h3><div class="file-drop" id="dropRefStep2"><input type="file" id="refFileInputStep2" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükle veya tıkla</div><div style="font-size:0.7rem;">Sütunlar: Proje, KaliteDesteği, Dil, Dağıtım Türü</div></div><div class="upload-status" id="refStatusStep2">Henüz yüklenmedi</div></div>
       </div>
       <div class="week-selector">
-        <label>📅 Hafta: <select id="weekSelectStep2"><option value="1">1. Hafta (hedef 3)</option><option value="2">2. Hafta (hedef 2)</option><option value="3">3. Hafta (hedef 3)</option><option value="4">4. Hafta (hedef 2)</option></select></label>
+        <label>📅 Hafta: <select id="weekSelectStep2"><option value="1">1. Hafta (3)</option><option value="2">2. Hafta (2)</option><option value="3">3. Hafta (3)</option><option value="4">4. Hafta (2)</option></select></label>
         <div class="history-bar">
           <button class="btn btn-ghost" id="exportHistoryBtnStep2">💾 Geçmişi Dışa Aktar</button>
           <button class="btn btn-ghost" id="importHistoryBtnStep2">📂 Geçmişi Yükle</button>
@@ -375,7 +375,7 @@ td {
         <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & Excel İndir (Font 9pt)</button>
       </div>
       <div id="previewAreaStep2" style="display: none;">
-        <h3>📋 Bu hafta dağıtılacak kayıtlar (Önizleme)</h3>
+        <h3>📋 Bu hafta dağıtılacak kayıtlar</h3>
         <div class="table-wrapper">
           <table class="preview-table"><thead><tr><th>FeedbackCreatorName</th><th>client_name</th><th>emp_monitor_ident</th><th>Monitor Link</th></tr></thead><tbody id="previewBodyStep2"></tbody></table>
         </div>
@@ -384,7 +384,7 @@ td {
     </div>
   </div>
 </div>
-<footer class="footer">Feedback Dağılım Aracı — Step 1 (ID kontrol) & Step 2 (Referans listeli, 3-2-3-2 dağıtım, geçmiş otomatik indir)</footer>
+<footer class="footer">Feedback Dağılım</footer>
 <script src="js/theme.js"></script>
 <script src="js/feedbackdagilim.js"></script>
 </body>
