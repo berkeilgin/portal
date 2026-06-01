@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="css/theme.css">
 <style>
 /* ========== TEMA BAĞIMSIZ STILLER (layout, component, animation) ========== */
 * {
@@ -319,7 +319,7 @@ body {
   .pt { font-size: 1.4rem; }
 }
 
-/* Theme butonları için ek stil */
+/* Theme butonları için ek stil - theme.js tarafından oluşturulan butonlar */
 .theme-switch {
   display: flex;
   gap: 0.5rem;
@@ -404,6 +404,7 @@ body {
   <div class="copyright-text">Feedback Dağılım Aracı — Step 1 • Monitoring ID kontrolü ve Ident linkleme</div>
 </footer>
 
+<script src="js/theme.js"></script>
 <script>
 // ==================== STATE ====================
 let currentData = [];
@@ -626,6 +627,5 @@ clearBtn.addEventListener('click', resetAll);
 
 resetAll();
 </script>
-<script src="theme.js"></script>
 </body>
 </html>
