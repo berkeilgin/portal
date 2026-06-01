@@ -368,9 +368,11 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (Raporlama) ====================
-let reportMainData = []; // görüşme listesi (CheckListCreated=0)
-let reportHistory = { DM:[], ML:[], DONUSUM:[] };
+// ==================== STEP 3 (Raporlama) - KARARLI SÜRÜM ====================
+let reportMainData = [];          // görüşme listesinden CheckListCreated=0 olanlar
+let reportHistory = { DM: [], ML: [], DONUSUM: [] };
+
+// DOM elementleri
 const mainFileInputStep3 = document.getElementById('mainFileInputStep3');
 const historyFileInputStep3 = document.getElementById('historyFileInputStep3');
 const mainStatusStep3 = document.getElementById('mainStatusStep3');
@@ -380,54 +382,116 @@ const exportReportBtn = document.getElementById('exportReportBtnStep3');
 const reportBody = document.getElementById('reportBodyStep3');
 const reportArea = document.getElementById('reportAreaStep3');
 
+// Yardımcı: Dosya yükleme (görüşme listesi)
 async function loadMainForReport(file) {
+  if (!file) return;
   showLoader('Step3', true);
   try {
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
     let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    if (!rows.length) throw new Error('Boş');
-    reportMainData = rows.filter(r => r.CheckListCreated === 0 || r.CheckListCreated === '0');
+    if (!rows.length) throw new Error('Dosya boş');
+    // Filtre: CheckListCreated = 0 (hem sayı hem string)
+    reportMainData = rows.filter(r => {
+      const val = r.CheckListCreated;
+      return val === 0 || val === '0' || val === 0.0;
+    });
     mainStatusStep3.innerHTML = `✅ ${reportMainData.length} kayıt (CheckListCreated=0) yüklendi.`;
     mainStatusStep3.style.color = 'var(--accent)';
-  } catch(err) {
-    mainStatusStep3.innerHTML = `❌ ${err.message}`;
+  } catch (err) {
+    console.error(err);
+    mainStatusStep3.innerHTML = `❌ Hata: ${err.message}`;
+    mainStatusStep3.style.color = 'var(--accent3)';
     reportMainData = [];
-  } finally { showLoader('Step3', false); }
+  } finally {
+    showLoader('Step3', false);
+  }
 }
+
+// Geçmiş JSON dosyasını yükle
 function loadHistoryForReport(file) {
+  if (!file) return;
+  showLoader('Step3', true);
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const j = JSON.parse(e.target.result);
-      if (j.DM && j.ML && j.DONUSUM) {
-        reportHistory = j;
-        historyStatusStep3.innerHTML = `✅ Geçmiş yüklendi (DM:${reportHistory.DM.length}, ML:${reportHistory.ML.length}, Dönüşüm:${reportHistory.DONUSUM.length} hafta)`;
+      const parsed = JSON.parse(e.target.result);
+      // Beklenen yapı: { DM: [], ML: [], DONUSUM: [] }
+      if (parsed && typeof parsed === 'object' && 
+          Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
+        reportHistory = parsed;
+        // Her bir entry'nin distributedIdents ve assignments kontrolü (opsiyonel)
+        historyStatusStep3.innerHTML = `✅ Geçmiş yüklendi (DM: ${reportHistory.DM.length} hafta, ML: ${reportHistory.ML.length}, Dönüşüm: ${reportHistory.DONUSUM.length})`;
         historyStatusStep3.style.color = 'var(--accent)';
-      } else throw new Error();
-    } catch(err) { historyStatusStep3.innerHTML = `❌ Geçersiz JSON`; reportHistory = {DM:[],ML:[],DONUSUM:[]}; }
+      } else {
+        throw new Error('JSON yapısı hatalı: {DM, ML, DONUSUM} dizileri bekleniyor.');
+      }
+    } catch (err) {
+      console.error(err);
+      historyStatusStep3.innerHTML = `❌ Geçersiz JSON: ${err.message}`;
+      historyStatusStep3.style.color = 'var(--accent3)';
+      reportHistory = { DM: [], ML: [], DONUSUM: [] };
+    } finally {
+      showLoader('Step3', false);
+    }
+  };
+  reader.onerror = () => {
+    historyStatusStep3.innerHTML = `❌ Dosya okunamadı`;
+    historyStatusStep3.style.color = 'var(--accent3)';
+    showLoader('Step3', false);
   };
   reader.readAsText(file);
 }
+
+// Rapor oluştur (proje bazlı dağıtılan/bekleyen)
 function generateReport() {
-  if (!reportMainData.length) { alert('Lütfen görüşme listesini yükleyin.'); return; }
-  const allDistributedIdents = new Set();
-  for (let gk of ['DM','ML','DONUSUM']) {
-    (reportHistory[gk] || []).forEach(entry => {
-      if (entry.distributedIdents) entry.distributedIdents.forEach(id => allDistributedIdents.add(id));
-    });
+  // Veri kontrolü
+  if (!reportMainData.length) {
+    alert('Lütfen önce görüşme listesini yükleyin (Step3 - Görüşme Listesi).');
+    return;
   }
-  const projectStats = new Map(); // key: proje adı -> { total:0, distributed:0 }
-  reportMainData.forEach(rec => {
+  // Tüm dağıtılmış ident'leri topla (tüm gruplardaki tüm haftalar)
+  const allDistributedIdents = new Set();
+  const groups = ['DM', 'ML', 'DONUSUM'];
+  for (let g of groups) {
+    const historyArray = reportHistory[g] || [];
+    for (let entry of historyArray) {
+      if (entry && Array.isArray(entry.distributedIdents)) {
+        entry.distributedIdents.forEach(id => {
+          if (id) allDistributedIdents.add(String(id).trim());
+        });
+      }
+    }
+  }
+
+  // Proje bazında istatistik
+  const projectStats = new Map(); // key: proje adı, value: { total:0, distributed:0 }
+  for (let rec of reportMainData) {
     const proj = rec.client_name;
-    if (!projectStats.has(proj)) projectStats.set(proj, { total:0, distributed:0 });
+    if (!proj) continue;
+    if (!projectStats.has(proj)) {
+      projectStats.set(proj, { total: 0, distributed: 0 });
+    }
     const stat = projectStats.get(proj);
     stat.total++;
-    const ident = String(rec.emp_monitor_ident || '');
-    if (allDistributedIdents.has(ident)) stat.distributed++;
-  });
+    const ident = String(rec.emp_monitor_ident || '').trim();
+    if (ident && allDistributedIdents.has(ident)) {
+      stat.distributed++;
+    }
+  }
+
+  // Tabloyu doldur
   reportBody.innerHTML = '';
+  if (projectStats.size === 0) {
+    const emptyRow = reportBody.insertRow();
+    emptyRow.insertCell(0).colSpan = 4;
+    emptyRow.insertCell(0).textContent = 'Henüz proje bazlı veri yok.';
+    reportArea.style.display = 'block';
+    exportReportBtn.disabled = true;
+    return;
+  }
+
   for (let [proj, stat] of projectStats.entries()) {
     const row = reportBody.insertRow();
     row.insertCell(0).textContent = proj;
@@ -438,17 +502,57 @@ function generateReport() {
   reportArea.style.display = 'block';
   exportReportBtn.disabled = false;
 }
+
+// Raporu Excel'e aktar
 function exportReportExcel() {
+  // Tablodaki verileri topla
   const rows = [];
-  for (let [proj, stat] of Array.from(reportBody.parentElement.querySelectorAll('tbody tr')).map(tr => ({ proj: tr.cells[0].innerText, dagitilan: parseInt(tr.cells[1].innerText), bekleyen: parseInt(tr.cells[2].innerText), toplam: parseInt(tr.cells[3].innerText) }))) {
-    rows.push({ 'Proje Adı': proj, 'Dağıtılan Adet': stat.dagitilan, 'Bekleyen Adet (Giriş Yapılmamış)': stat.bekleyen, 'Toplam (CheckListCreated=0)': stat.toplam });
+  const tableRows = reportBody.querySelectorAll('tr');
+  for (let tr of tableRows) {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length === 4) {
+      rows.push({
+        'Proje Adı': cells[0].innerText,
+        'Dağıtılan Adet': parseInt(cells[1].innerText) || 0,
+        'Bekleyen Adet (Giriş Yapılmamış)': parseInt(cells[2].innerText) || 0,
+        'Toplam (CheckListCreated=0)': parseInt(cells[3].innerText) || 0
+      });
+    }
+  }
+  if (rows.length === 0) {
+    alert('Rapor verisi yok, önce "Raporu Oluştur" butonuna tıklayın.');
+    return;
   }
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'ProjeBazliRapor');
   XLSX.writeFile(wb, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
 }
-setupDrop('dropMainStep3', 'mainFileInputStep3', loadMainForReport);
-setupDrop('dropHistoryStep3', 'historyFileInputStep3', loadHistoryForReport);
-calculateReportBtn.addEventListener('click', generateReport);
-exportReportBtn.addEventListener('click', exportReportExcel);
+
+// Event listener'ları bağla (dosya seçme, sürükle-bırak)
+function setupDropStep3(dropId, inputId, loadFunc) {
+  const drop = document.getElementById(dropId);
+  const inp = document.getElementById(inputId);
+  if (!drop || !inp) return;
+  drop.addEventListener('click', () => inp.click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      inp.files = e.dataTransfer.files;
+      loadFunc(e.dataTransfer.files[0]);
+    }
+  });
+}
+setupDropStep3('dropMainStep3', 'mainFileInputStep3', loadMainForReport);
+setupDropStep3('dropHistoryStep3', 'historyFileInputStep3', loadHistoryForReport);
+
+// Buton dinleyicileri
+if (calculateReportBtn) calculateReportBtn.addEventListener('click', generateReport);
+if (exportReportBtn) exportReportBtn.addEventListener('click', exportReportExcel);
+
+// Sayfa yüklendiğinde varsayılan durum
+reportArea.style.display = 'none';
+exportReportBtn.disabled = true;
