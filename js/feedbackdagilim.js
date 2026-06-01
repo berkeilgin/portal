@@ -1,302 +1,235 @@
-// Feedback Dağılım - Ana Kontrol Modülü
-// Zorunlu kolonlar: "Ident" ve "Monitoring ID"
+// ==================== STATE ====================
+let currentData = [];      // Orijinal satırlar (object array)
+let errorRows = [];        // Hata içeren satırlar için indeks ve detay
 
-(function() {
-    // DOM Elements
-    const selectFileBtn = document.getElementById('selectFileBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const fileInput = document.getElementById('fileInput');
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInfo = document.getElementById('fileInfo');
-    const loadingRow = document.getElementById('loadingRow');
-    const step1Row = document.getElementById('step1Row');
-    const tableHeaderRow = document.getElementById('tableHeaderRow');
-    const tableRow = document.getElementById('tableRow');
-    const errorListRow = document.getElementById('errorListRow');
-    const totalCountSpan = document.getElementById('totalCount');
-    const errorCountSpan = document.getElementById('errorCount');
-    const validCountSpan = document.getElementById('validCount');
-    const tableHeader = document.getElementById('tableHeader');
-    const tableBody = document.getElementById('tableBody');
-    const errorList = document.getElementById('errorList');
-    const identButtons = document.getElementById('identButtons');
+// ==================== DOM Elements ====================
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+const loaderBar = document.getElementById('loaderBar');
+const statsContainer = document.getElementById('statsContainer');
+const errorsSection = document.getElementById('errorsSection');
+const totalCountSpan = document.getElementById('totalCount');
+const errorCountSpan = document.getElementById('errorCount');
+const validCountSpan = document.getElementById('validCount');
+const errorTableBody = document.getElementById('errorTableBody');
+const resetBtn = document.getElementById('resetBtn');
+const clearBtn = document.getElementById('clearBtn');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 
-    // Monitoring ID Validation - 8 haneli numerik
-    function validateMonitoringId(value) {
-        if (value === null || value === undefined || value === '') {
-            return { valid: false, reason: 'Boş değer' };
-        }
-        const strValue = String(value).trim();
-        if (strValue === '') return { valid: false, reason: 'Boşluk içeriyor' };
-        if (!/^\d+$/.test(strValue)) return { valid: false, reason: 'Numerik değer içermiyor (sadece rakam olmalı)' };
-        if (strValue.length !== 8) return { valid: false, reason: `${strValue.length} haneli (8 haneli olmalı)` };
-        return { valid: true, reason: '' };
-    }
+// ==================== Helper Functions ====================
+// Tema yönetimi
+function initTheme() {
+  const isDark = localStorage.getItem('theme') === 'dark';
+  if (isDark) document.body.classList.add('dark');
+  else document.body.classList.remove('dark');
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+}
+themeToggleBtn.addEventListener('click', toggleTheme);
+initTheme();
 
-    // Dinamik link oluşturma
-    function generateLink(ident) {
-        if (!ident || ident.trim() === '') return '#';
-        const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
-        return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident.trim())}&frmOption=OPTION`;
-    }
+// Monitoring ID kontrolü: tam 8 haneli sayı (string olarak kontrol)
+function isValidMonitoringId(value) {
+  if (value === null || value === undefined) return false;
+  let str = String(value).trim();
+  if (str === "") return false;
+  // Regex: sadece rakamlar ve tam 8 karakter
+  return /^\d{8}$/.test(str);
+}
 
-    // CSV satırı ayrıştırma
-    function parseCSVLine(line) {
-        const result = [];
-        let inQuotes = false;
-        let current = '';
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') inQuotes = !inQuotes;
-            else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
-            } else current += char;
-        }
-        result.push(current.trim());
-        return result.map(f => (f.startsWith('"') && f.endsWith('"')) ? f.slice(1, -1) : f);
-    }
+// Hata nedeni mesajı
+function getErrorReason(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "Boş veya null değer";
+  let str = String(value).trim();
+  if (!/^\d+$/.test(str)) return "Sayısal karakter dışında içerik (harf/özel karakter)";
+  if (str.length !== 8) return `${str.length} haneli (8 gerekli)`;
+  return "Geçersiz format";
+}
 
-    // CSV ayrıştırma
-    function parseCSV(text) {
-        const lines = text.split(/\r?\n/);
-        if (lines.length === 0) return { headers: [], data: [] };
-        const headers = parseCSVLine(lines[0]);
-        const data = [];
-        for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === '') continue;
-            data.push(parseCSVLine(lines[i]));
-        }
-        return { headers, data };
-    }
+// Dinamik link oluşturma (Ident kolonu)
+function buildDynamicLink(identValue) {
+  if (!identValue || String(identValue).trim() === "") return null;
+  const baseUrl = "https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl";
+  const params = new URLSearchParams({
+    frmTarget: "CHECKLIST",
+    checklist_ident: String(identValue).trim(),
+    frmOption: "OPTION"
+  });
+  return `${baseUrl}?${params.toString()}`;
+}
 
-    // Zorunlu kolon kontrolü
-    function checkRequiredColumns(headers) {
-        const identIndex = headers.findIndex(h => h === 'Ident');
-        const monitoringIndex = headers.findIndex(h => h === 'Monitoring ID');
-        const missing = [];
-        if (identIndex === -1) missing.push('Ident');
-        if (monitoringIndex === -1) missing.push('Monitoring ID');
-        return { hasAllRequired: missing.length === 0, missing, identIndex, monitoringIndex };
-    }
-
-    // Veri işleme
-    function processData(headers, data) {
-        const { identIndex, monitoringIndex } = checkRequiredColumns(headers);
-        if (identIndex === -1 || monitoringIndex === -1) {
-            throw new Error('Zorunlu kolonlar eksik: Ident ve/veya Monitoring ID bulunamadı');
-        }
-        const validatedData = [];
-        const errors = [];
-        for (let i = 0; i < data.length; i++) {
-            const row = data[i];
-            const monitoringValue = monitoringIndex < row.length ? row[monitoringIndex] : '';
-            const identValue = identIndex < row.length ? row[identIndex] : '';
-            const validation = validateMonitoringId(monitoringValue);
-            validatedData.push({
-                rowIndex: i + 1,
-                originalRow: row,
-                monitoringId: monitoringValue,
-                ident: identValue,
-                valid: validation.valid,
-                errorReason: validation.reason
-            });
-            if (!validation.valid) {
-                errors.push({ row: i + 1, monitoringId: monitoringValue, reason: validation.reason, ident: identValue });
-            }
-        }
-        return { validatedData, errors };
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    // Tablo render
-    function renderTable(validatedData, headers) {
-        tableHeader.innerHTML = '';
-        tableBody.innerHTML = '';
-        if (!headers || headers.length === 0) return;
-        
-        const headerRow = document.createElement('tr');
-        headers.forEach(header => {
-            const th = document.createElement('th');
-            th.textContent = header;
-            if (header === 'Monitoring ID') th.style.backgroundColor = '#fd4239';
-            if (header === 'Ident') th.style.backgroundColor = '#28a745';
-            headerRow.appendChild(th);
-        });
-        const statusTh = document.createElement('th');
-        statusTh.textContent = 'Monitoring ID Durumu';
-        statusTh.style.backgroundColor = '#009dd0';
-        headerRow.appendChild(statusTh);
-        tableHeader.appendChild(headerRow);
-        
-        validatedData.forEach(item => {
-            const row = document.createElement('tr');
-            if (!item.valid) row.classList.add('error-row');
-            
-            headers.forEach((header, idx) => {
-                const td = document.createElement('td');
-                let cellValue = idx < item.originalRow.length ? item.originalRow[idx] : '';
-                if (header === 'Monitoring ID' && !item.valid) {
-                    td.innerHTML = `<span class="error-badge">✗ ${escapeHtml(cellValue) || '(boş)'}</span>`;
-                } else if (header === 'Ident' && cellValue) {
-                    const link = generateLink(cellValue);
-                    td.innerHTML = `<a href="${link}" target="_blank" style="color:#009dd0;">🔗 ${escapeHtml(cellValue)}</a>`;
-                } else {
-                    td.textContent = cellValue;
-                }
-                row.appendChild(td);
-            });
-            
-            const statusTd = document.createElement('td');
-            statusTd.innerHTML = item.valid ? '<span class="valid-badge">✓ Geçerli (8 hane)</span>' : `<span class="error-badge">✗ Hata: ${item.errorReason}</span>`;
-            row.appendChild(statusTd);
-            tableBody.appendChild(row);
-        });
-    }
-
-    // Hata listesi
-    function renderErrorList(errors) {
-        errorList.innerHTML = '';
-        if (errors.length === 0) {
-            errorListRow.style.display = 'none';
-            return;
-        }
-        errors.forEach(err => {
-            const li = document.createElement('li');
-            let identLink = '';
-            if (err.ident && err.ident.trim()) {
-                identLink = `<a href="${generateLink(err.ident)}" target="_blank"><i class="fas fa-link"></i> Ident: ${escapeHtml(err.ident)}</a>`;
-            }
-            li.innerHTML = `<i class="fas fa-bug" style="color:#fd4239"></i> <strong>Satır ${err.row}</strong> | Monitoring ID: "${escapeHtml(err.monitoringId)}" | <span style="color:#fd4239">${err.reason}</span> ${identLink}`;
-            errorList.appendChild(li);
-        });
-        errorListRow.style.display = 'table-row';
-    }
-
-    // Ident linkleri (Step 1)
-    function renderIdentLinks(validatedData) {
-        identButtons.innerHTML = '';
-        const uniqueIdents = [...new Set(validatedData.map(item => item.ident).filter(id => id && id.trim()))];
-        if (uniqueIdents.length === 0) {
-            step1Row.style.display = 'none';
-            return;
-        }
-        uniqueIdents.forEach(ident => {
-            const link = generateLink(ident);
-            const btn = document.createElement('a');
-            btn.href = link;
-            btn.target = '_blank';
-            btn.className = 'ident-link';
-            btn.innerHTML = `<i class="fas fa-link"></i> ${escapeHtml(ident)}`;
-            identButtons.appendChild(btn);
-        });
-        step1Row.style.display = 'table-row';
-    }
-
-    function updateStats(total, errorCount, validCount) {
-        totalCountSpan.textContent = total;
-        errorCountSpan.textContent = errorCount;
-        validCountSpan.textContent = validCount;
-    }
-
-    function showHideRows(show) {
-        const display = show ? 'table-row' : 'none';
-        tableHeaderRow.style.display = display;
-        tableRow.style.display = display;
-        if (!show) errorListRow.style.display = 'none';
-        if (!show) step1Row.style.display = 'none';
-    }
-
-    // Ana işlem
-    function processFile(file) {
-        if (!file) return;
-        
-        loadingRow.style.display = 'table-row';
-        showHideRows(false);
-        fileInfo.innerHTML = '';
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const text = e.target.result;
-                const { headers, data } = parseCSV(text);
-                
-                const { hasAllRequired, missing } = checkRequiredColumns(headers);
-                if (!hasAllRequired) {
-                    fileInfo.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hata: Zorunlu kolonlar eksik - ${missing.join(', ')}`;
-                    fileInfo.style.color = '#fd4239';
-                    loadingRow.style.display = 'none';
-                    return;
-                }
-                
-                const { validatedData, errors } = processData(headers, data);
-                const total = validatedData.length;
-                const errorCount = errors.length;
-                const validCount = total - errorCount;
-                
-                updateStats(total, errorCount, validCount);
-                renderTable(validatedData, headers);
-                renderErrorList(errors);
-                renderIdentLinks(validatedData);
-                showHideRows(true);
-                
-                fileInfo.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(file.name)} - ${total} kayıt, ${errorCount} hata`;
-                fileInfo.style.color = '#28a745';
-                
-                if (errorCount > 0) errorListRow.scrollIntoView({ behavior: 'smooth' });
-            } catch (err) {
-                fileInfo.innerHTML = `<i class="fas fa-exclamation-circle"></i> Hata: ${err.message}`;
-                fileInfo.style.color = '#fd4239';
-            } finally {
-                loadingRow.style.display = 'none';
-            }
-        };
-        reader.onerror = () => { alert('Dosya okunamadı!'); loadingRow.style.display = 'none'; };
-        reader.readAsText(file, 'UTF-8');
-    }
-
-    function resetAll() {
-        fileInput.value = '';
-        updateStats(0, 0, 0);
-        showHideRows(false);
-        fileInfo.innerHTML = '';
-        tableHeader.innerHTML = '';
-        tableBody.innerHTML = '';
-        errorList.innerHTML = '';
-        identButtons.innerHTML = '';
-    }
-
-    // Event Listeners
-    function init() {
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
-        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('drag-over');
-            const file = e.dataTransfer.files[0];
-            if (file && file.name.toLowerCase().endsWith('.csv')) processFile(file);
-            else alert('Lütfen geçerli bir CSV dosyası yükleyin!');
-        });
-        
-        uploadArea.addEventListener('click', (e) => {
-            if (e.target === uploadArea || uploadArea.contains(e.target)) {
-                if (e.target.classList && e.target.classList.contains('btn')) return;
-                fileInput.click();
-            }
-        });
-        
-        selectFileBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
-        fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFile(e.target.files[0]); });
-        resetBtn.addEventListener('click', (e) => { e.stopPropagation(); resetAll(); });
-        
-        document.querySelectorAll('.btn').forEach(btn => btn.addEventListener('click', (e) => e.stopPropagation()));
-        
-        console.log('Feedback Dağılım aracı hazır - Zorunlu kolonlar: "Ident" ve "Monitoring ID"');
+// Dosya okuma ve işleme
+async function processFile(file) {
+  if (!file) return;
+  
+  // Loading göster
+  loaderBar.classList.add('visible');
+  statsContainer.style.display = 'none';
+  errorsSection.style.display = 'none';
+  errorRows = [];
+  currentData = [];
+  
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: false, defval: "" });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    // json output: header'ları otomatik al
+    let rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+    
+    if (!rows || rows.length === 0) {
+      alert("Dosyada veri bulunamadı veya başlık satırı okunamadı.");
+      loaderBar.classList.remove('visible');
+      return;
     }
     
-    init();
-})();
+    // Gerekli sütunların varlığını kontrol et
+    const firstRow = rows[0];
+    if (!firstRow.hasOwnProperty('Monitoring ID') || !firstRow.hasOwnProperty('Ident')) {
+      alert("Dosyada 'Monitoring ID' veya 'Ident' sütunu bulunamadı. Lütfen sütun adlarını kontrol edin.");
+      loaderBar.classList.remove('visible');
+      return;
+    }
+    
+    currentData = rows;
+    
+    // Hata tespiti
+    const errors = [];
+    rows.forEach((row, idx) => {
+      const monitoringId = row['Monitoring ID'];
+      const ident = row['Ident'];
+      const isValid = isValidMonitoringId(monitoringId);
+      if (!isValid) {
+        errors.push({
+          rowNumber: idx + 2,  // +2 çünkü indeks 0 dan başlar + başlık satırı
+          monitoringIdRaw: monitoringId !== undefined && monitoringId !== null ? String(monitoringId) : "(boş)",
+          identRaw: ident !== undefined && ident !== null ? String(ident) : "",
+          reason: getErrorReason(monitoringId)
+        });
+      }
+    });
+    
+    errorRows = errors;
+    renderStatsAndTable();
+    
+  } catch (err) {
+    console.error("Dosya işleme hatası:", err);
+    alert("Dosya okunurken bir hata oluştu. Lütfen formatı kontrol edin (Excel/CSV).");
+  } finally {
+    loaderBar.classList.remove('visible');
+  }
+}
+
+// İstatistikleri ve tabloyu render et
+function renderStatsAndTable() {
+  const total = currentData.length;
+  const errorCount = errorRows.length;
+  const validCount = total - errorCount;
+  
+  totalCountSpan.textContent = total;
+  errorCountSpan.textContent = errorCount;
+  validCountSpan.textContent = validCount;
+  
+  statsContainer.style.display = 'flex';
+  
+  if (errorCount === 0) {
+    errorsSection.style.display = 'block';
+    errorTableBody.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli! (8 haneli sayı)</td></tr>`;
+    return;
+  }
+  
+  errorsSection.style.display = 'block';
+  
+  // Tablo satırlarını oluştur
+  let html = '';
+  errorRows.forEach(err => {
+    const link = buildDynamicLink(err.identRaw);
+    const linkHtml = link 
+      ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="link-btn">🔗 İncele</a>`
+      : `<span class="badge-error">Ident eksik</span>`;
+    
+    html += `
+      <tr>
+        <td>${err.rowNumber}</td>
+        <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
+        <td><code>${escapeHtml(err.identRaw) || "—"}</code></td>
+        <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
+        <td>${linkHtml}</td>
+      </tr>
+    `;
+  });
+  errorTableBody.innerHTML = html;
+}
+
+// Escape HTML (XSS koruması)
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+    return c;
+  });
+}
+
+// Reset / Temizleme
+function resetAll() {
+  currentData = [];
+  errorRows = [];
+  fileInput.value = '';
+  statsContainer.style.display = 'none';
+  errorsSection.style.display = 'none';
+  errorTableBody.innerHTML = '<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>';
+  totalCountSpan.textContent = '0';
+  errorCountSpan.textContent = '0';
+  validCountSpan.textContent = '0';
+  loaderBar.classList.remove('visible');
+}
+
+// ==================== EVENT HANDLERS ====================
+// Dosya seçme / sürükle bırak
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files.length > 0) {
+    processFile(e.target.files[0]);
+  }
+});
+
+// Sürükle bırak alanı
+uploadArea.addEventListener('click', () => {
+  fileInput.click();
+});
+
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+  uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    const droppedFile = e.dataTransfer.files[0];
+    // Dosya tipi kontrolü
+    const validExt = /\.(xlsx|xls|csv)$/i;
+    if (validExt.test(droppedFile.name)) {
+      fileInput.files = e.dataTransfer.files;
+      processFile(droppedFile);
+    } else {
+      alert("Lütfen .xlsx, .xls veya .csv uzantılı bir dosya yükleyin.");
+    }
+  }
+});
+
+// Reset butonları
+resetBtn.addEventListener('click', resetAll);
+clearBtn.addEventListener('click', resetAll);
+
+// Sayfa ilk açılışta boş durum
+resetAll();
