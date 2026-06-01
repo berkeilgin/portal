@@ -12,7 +12,7 @@ function buildMonitorLink(ident) {
   return `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`;
 }
 
-// ========== ADIM GEÇİŞİ (çalıştığından emin ol) ==========
+// ========== ADIM GEÇİŞİ ==========
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.step-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
@@ -96,7 +96,7 @@ async function processFileStep1(file) {
     statsContainerStep1.style.display = 'flex';
     if (errCount === 0) {
       errorsSectionStep1.style.display = 'block';
-      errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli!</td></tr>`;
+      errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli!</tr>`;
     } else {
       errorsSectionStep1.style.display = 'block';
       let html = '';
@@ -119,7 +119,6 @@ async function processFileStep1(file) {
     showLoader('Step1', false);
   }
 }
-// Event listeners Step1
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -300,7 +299,7 @@ async function confirmAndExportStep2() {
     if (idx >= 0) distributionHistoryStep2[idx] = newEntry;
     else distributionHistoryStep2.push(newEntry);
     saveHistoryAndDownload();
-    // Excel oluştur (font 9 pt)
+    // Excel oluştur (font ayarı yapılmıyor, standart xlsx ile)
     const grouped = new Map();
     currentPreviewStep2.forEach(rec => {
       const ref = getRefInfo(rec.client_name);
@@ -318,30 +317,12 @@ async function confirmAndExportStep2() {
     const workbook = XLSX.utils.book_new();
     for (let [sheetName, rows] of grouped.entries()) {
       const ws = XLSX.utils.json_to_sheet(rows);
-      if (typeof XLSX !== 'undefined') {
-        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-        for (let R = range.s.r; R <= range.e.r; R++) {
-          for (let C = range.s.c; C <= range.e.c; C++) {
-            const addr = XLSX.utils.encode_cell({ r: R, c: C });
-            if (ws[addr]) ws[addr].s = { font: { sz: 9 } };
-          }
-        }
-      }
       XLSX.utils.book_append_sheet(workbook, ws, sheetName);
     }
     const reportRows = currentPreviewStep2.map(r => ({
       'Kişi': r.FeedbackCreatorName, 'Proje': r.client_name, 'Ident': r.emp_monitor_ident, 'Hafta': week
     }));
     const reportSheet = XLSX.utils.json_to_sheet(reportRows);
-    if (typeof XLSX !== 'undefined') {
-      const range = XLSX.utils.decode_range(reportSheet['!ref'] || 'A1:A1');
-      for (let R = range.s.r; R <= range.e.r; R++) {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const addr = XLSX.utils.encode_cell({ r: R, c: C });
-          if (reportSheet[addr]) reportSheet[addr].s = { font: { sz: 9 } };
-        }
-      }
-    }
     XLSX.utils.book_append_sheet(workbook, reportSheet, 'Dağıtım_Raporu');
     XLSX.writeFile(workbook, `Hafta${week}_Dagilim_Referansli_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     alert(`Dağıtım onaylandı. Toplam ${currentPreviewStep2.length} kayıt dağıtıldı.\nGeçmiş JSON otomatik indirildi.`);
