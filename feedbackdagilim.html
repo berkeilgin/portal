@@ -1,341 +1,425 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Feedback Dağılım - Kalite Kontrol ve Değerlendirme Sistemi">
-    <title>Feedback Dağılım | Kalite Kontrol Sistemi</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/css/base.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/theme.css">
-    <style>
-        /* Feedback Dağılım Ek Stiller */
-        .stats-container {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            flex-wrap: wrap;
-            padding: 10px 0;
-        }
-        .stat-box {
-            text-align: center;
-            padding: 15px 25px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            min-width: 120px;
-            border: 1px solid #e0e0e0;
-        }
-        .stat-label {
-            font-size: 11px;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #333;
-        }
-        .stat-box.error .stat-value { color: #fd4239; }
-        .stat-box.success .stat-value { color: #28a745; }
-        
-        .upload-container {
-            width: 100%;
-        }
-        .upload-area {
-            text-align: center;
-            padding: 30px;
-            border: 2px dashed #ccc;
-            border-radius: 12px;
-            background: #fafafa;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        .upload-area.drag-over {
-            border-color: #009dd0;
-            background: #e8f4f8;
-        }
-        .upload-icon {
-            font-size: 48px;
-            color: #009dd0;
-            margin-bottom: 15px;
-        }
-        .upload-area h3 {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        .required-info {
-            font-size: 12px;
-            color: #fd4239;
-            margin: 10px 0;
-        }
-        .button-group {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .file-info {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #28a745;
-        }
-        
-        .loading-cell {
-            text-align: center;
-            padding: 30px !important;
-        }
-        .loading-cell i {
-            font-size: 24px;
-            color: #009dd0;
-            margin-right: 8px;
-        }
-        
-        .step1-cell {
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            color: white;
-        }
-        .step-header {
-            font-size: 16px;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .ident-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .ident-link {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-size: 12px;
-            transition: 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .ident-link:hover {
-            background: rgba(255,255,255,0.35);
-            color: white;
-        }
-        
-        .table-wrapper {
-            overflow-x: auto;
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            min-width: 800px;
-        }
-        .data-table th {
-            background: #009dd0;
-            color: white;
-            padding: 10px 8px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .data-table td {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .data-table tr:hover { background: #f5f5f5; }
-        .data-table .error-row { background: #fff5f5; }
-        
-        .error-badge {
-            background: #fd4239;
-            color: white;
-            border-radius: 20px;
-            padding: 3px 10px;
-            font-size: 11px;
-            display: inline-block;
-        }
-        .valid-badge {
-            background: #28a745;
-            color: white;
-            border-radius: 20px;
-            padding: 3px 10px;
-            font-size: 11px;
-            display: inline-block;
-        }
-        
-        .error-header {
-            color: #fd4239;
-            font-size: 15px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .error-list {
-            list-style: none;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .error-list li {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .error-list a { margin-left: 15px; }
-        
-        .teleperformance-footer {
-            text-align: center;
-            font-size: 11px;
-            color: #696A6D;
-            padding: 8px 20px;
-            background: #f3f3f3;
-            border-bottom: 3px solid #fd4239;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
-        }
-        .teleperformance-footer a {
-            color: #009dd0;
-            text-decoration: none;
-        }
-        .teleperformance-footer a:hover {
-            text-decoration: underline;
-        }
-        
-        @media only screen and (max-width: 700px) {
-            .stats-container { flex-direction: column; align-items: center; }
-            .stat-box { width: 80%; }
-            .button-group { flex-direction: column; align-items: center; }
-            .btn { width: 80%; justify-content: center; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Dağılım — Monitoring ID Kontrolü (Step 1)</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --text-light: #475569;
+  --muted: #64748b;
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --accent: #10b981;
+  --accent2: #8b5cf6;
+  --danger: #ef4444;
+  --danger-bg: #fee2e2;
+  --warning: #f59e0b;
+  --radius: 1rem;
+  --radius-sm: 0.75rem;
+}
+
+body.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --card: #1e293b;
+  --border: #334155;
+  --border2: #475569;
+  --text: #f1f5f9;
+  --text-light: #cbd5e1;
+  --muted: #94a3b8;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, var(--accent2), var(--primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.02em;
+}
+
+.header-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 1.25rem;
+  border-radius: 2rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+}
+
+.btn-ghost:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.btn-outline {
+  border: 1px solid var(--border2);
+  background: var(--surface);
+}
+
+/* Main */
+.main {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.pt {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.sdesc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+  border-left: 3px solid var(--accent2);
+  padding-left: 1rem;
+}
+
+/* Upload Card */
+.upload-area {
+  background: var(--bg);
+  border: 2px dashed var(--border2);
+  border-radius: 1.25rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 2rem;
+}
+
+.upload-area:hover, .upload-area.drag-over {
+  border-color: var(--accent2);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.upload-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.upload-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+/* Stats Cards */
+.stats-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--bg);
+  border-radius: 1rem;
+  padding: 1rem 1.5rem;
+  flex: 1;
+  min-width: 140px;
+  border: 1px solid var(--border);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: 'DM Mono', monospace;
+  line-height: 1.2;
+}
+
+.stat-number.error {
+  color: var(--danger);
+}
+
+.stat-number.success {
+  color: var(--accent);
+}
+
+/* Errors Table */
+.errors-section {
+  margin-top: 1.5rem;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+}
+
+.error-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.error-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.error-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.error-table tr:last-child td {
+  border-bottom: none;
+}
+
+.badge-error {
+  background: var(--danger-bg);
+  color: var(--danger);
+  padding: 0.2rem 0.5rem;
+  border-radius: 2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.link-btn {
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.link-btn:hover {
+  background: var(--primary-dark);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.loader-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 1rem 0;
+  display: none;
+}
+
+.loader-bar.visible {
+  display: block;
+}
+
+.loader-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--primary));
+  width: 40%;
+  animation: slide 1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0% { transform: translateX(-150%); }
+  100% { transform: translateX(350%); }
+}
+
+.footer {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+}
+
+@media (max-width: 680px) {
+  .main { padding: 0 1rem; }
+  .panel { padding: 1.25rem; }
+  .pt { font-size: 1.4rem; }
+}
+</style>
 </head>
 <body>
-<div class="pg red">
-    <div class="pg_cont">
-        <div class="logo_container">
-            <table width="50%" cellspacing="0" cellpadding="0" border="0" align="center">
-                <tbody>
-                    <tr align="center">
-                        <td align="center" class="bh">
-                            <i class="fas fa-chart-line"></i> Feedback Dağılım Sistemi
-                         </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
 
-        <table class="m_tbl" cellpadding="0" cellspacing="0" align="center">
-            <tbody>
-                <tr>
-                    <td valign="top" style="position: relative;">
-                        <div class="uq_cd">v1.0</div>
-                        
-                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                            <tbody>
-                                <tr><td class="eu_h"><i class="a_i"></i>Feedback Dağılım - CSV Kontrol Paneli</td></tr>
-                                <tr><td class="hr"><hr></td></tr>
-                                
-                                <!-- İstatistikler -->
-                                <tr>
-                                    <td class="eu_co">
-                                        <div class="stats-container">
-                                            <div class="stat-box">
-                                                <div class="stat-label">Toplam Kayıt</div>
-                                                <div class="stat-value" id="totalCount">0</div>
-                                            </div>
-                                            <div class="stat-box error">
-                                                <div class="stat-label">Hatalı Monitoring ID</div>
-                                                <div class="stat-value" id="errorCount">0</div>
-                                            </div>
-                                            <div class="stat-box success">
-                                                <div class="stat-label">Geçerli Monitoring ID</div>
-                                                <div class="stat-value" id="validCount">0</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Dosya Yükleme -->
-                                <tr>
-                                    <td class="eu_co">
-                                        <div class="upload-container">
-                                            <div class="upload-area" id="uploadArea">
-                                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                                <h3>CSV Dosyası Yükleyin</h3>
-                                                <p>Sürükleyip bırakın veya tıklayarak seçin</p>
-                                                <p class="required-info">Zorunlu kolonlar: "Ident" ve "Monitoring ID"</p>
-                                                <div class="button-group">
-                                                    <button type="button" class="btn" id="selectFileBtn"><i class="fas fa-folder-open"></i> Dosya Seç</button>
-                                                    <button type="button" class="btn" id="resetBtn" style="background:#6c757d; border-color:#6c757d;"><i class="fas fa-sync-alt"></i> Sıfırla</button>
-                                                </div>
-                                                <input type="file" id="fileInput" accept=".csv" style="display: none;">
-                                                <div class="file-info" id="fileInfo"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Yükleniyor -->
-                                <tr id="loadingRow" style="display: none;">
-                                    <td class="eu_co loading-cell"><i class="fas fa-spinner fa-spin"></i> Dosya işleniyor...</td>
-                                </tr>
-                                
-                                <!-- Step 1 - Ident Linkleri -->
-                                <tr id="step1Row" style="display: none;">
-                                    <td class="eu_co step1-cell">
-                                        <div class="step-header"><i class="fas fa-link"></i> Step 1 - Dinamik Linkler (Ident kolonuna göre)</div>
-                                        <div class="ident-buttons" id="identButtons"></div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Tablo -->
-                                <tr id="tableHeaderRow" style="display: none;"><td class="eu_co" style="font-weight:bold; padding-bottom:0;"><i class="fas fa-table"></i> CSV Önizleme ve Doğrulama</td></tr>
-                                <tr id="tableRow" style="display: none;">
-                                    <td class="eu_co" style="padding-top:0;">
-                                        <div class="table-wrapper">
-                                            <table class="data-table" id="dataTable">
-                                                <thead id="tableHeader"></thead>
-                                                <tbody id="tableBody"></tbody>
-                                            </table>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Hata Listesi -->
-                                <tr id="errorListRow" style="display: none;">
-                                    <td class="eu_co">
-                                        <div class="error-header"><i class="fas fa-exclamation-triangle"></i> Monitoring ID Hataları (8 haneli numerik olmalı)</div>
-                                        <ul class="error-list" id="errorList"></ul>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Footer - Teleperformance -->
-                                <tr>
-                                    <td class="teleperformance-footer">
-                                        <i class="fas fa-headset"></i> Yardım mı gerekiyor? 
-                                        <a href="mailto:it-security_engineering@emea.teleperformance.com">it-security_engineering@emea.teleperformance.com</a>
-                                        <br><br>
-                                        <span class="s_img"></span>
-                                        Teleperformance - Feedback Dağılım ve Kalite Kontrol Sistemi
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+<div class="header">
+  <div class="logo">📋 FeedbackDağılım — Step 1</div>
+  <div class="header-controls">
+    <button class="btn btn-ghost" id="themeToggleBtn">🌓 Tema</button>
+    <button class="btn btn-ghost" id="resetBtn">🧹 Temizle</button>
+  </div>
 </div>
 
-<script src="/js/feedbackdagilim.js"></script>
+<div class="main">
+  <div class="panel">
+    <div class="pt">Monitoring ID <em style="color: var(--accent2);">Doğrulama ve Linkleme</em></div>
+    <div class="sdesc">
+      📄 CSV / Excel dosyası yükleyin. "Monitoring ID" sütunundaki değerler 8 haneli sayı olmalıdır.<br>
+      Hatalı satırlar listelenir ve "Ident" değeri ile dinamik link oluşturulur.
+    </div>
+
+    <!-- Dosya yükleme alanı -->
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📂</div>
+      <div class="upload-title">Dosyayı sürükleyin veya tıklayın</div>
+      <div class="upload-hint">.xlsx, .xls, .csv (19+ sütun, "Monitoring ID" ve "Ident" zorunlu)</div>
+      <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .CSV" class="file-input-hidden">
+    </div>
+
+    <div class="loader-bar" id="loaderBar">
+      <div class="loader-bar-inner"></div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="stats-grid" id="statsContainer" style="display: none;">
+      <div class="stat-card"><div class="stat-label">📊 Toplam Kayıt</div><div class="stat-number" id="totalCount">0</div></div>
+      <div class="stat-card"><div class="stat-label">⚠️ Hatalı Kayıt</div><div class="stat-number error" id="errorCount">0</div></div>
+      <div class="stat-card"><div class="stat-label">✅ Geçerli Kayıt</div><div class="stat-number success" id="validCount">0</div></div>
+    </div>
+
+    <!-- Hata listesi tablosu -->
+    <div class="errors-section" id="errorsSection" style="display: none;">
+      <div class="section-title">
+        <span>🚨</span> Hatalı Monitoring ID'ler & Linkler
+      </div>
+      <div class="table-wrapper">
+        <table class="error-table" id="errorTable">
+          <thead>
+            <tr><th># Satır</th><th>Monitoring ID</th><th>Ident (Link için)</th><th>Hata Nedeni</th><th>🔗 Link</th></tr>
+          </thead>
+          <tbody id="errorTableBody">
+            <tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-row" style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+      <button class="btn btn-ghost" id="clearBtn">Temizle</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="copyright-text">Feedback Dağılım Aracı — Step 1 • Monitoring ID kontrolü ve Ident linkleme</div>
+</footer>
+
+<script src="FeedbackDagilim.js"></script>
 </body>
 </html>
