@@ -103,6 +103,15 @@ body {
   color: var(--text);
 }
 
+.pt em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+
 .sdesc {
   color: var(--muted);
   font-size: 0.9rem;
@@ -349,7 +358,7 @@ body {
 
 <div class="main">
   <div class="panel">
-    <div class="pt">Monitoring ID <em style="color: var(--accent2);">Doğrulama ve Linkleme</em></div>
+    <div class="pt">Monitoring ID <em>Doğrulama ve Linkleme</em></div>
     <div class="sdesc">
       📄 CSV / Excel dosyası yükleyin. "Monitoring ID" sütunundaki değerler 8 haneli sayı olmalıdır.<br>
       Hatalı satırlar listelenir ve "Ident" değeri ile dinamik link oluşturulur.
