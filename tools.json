@@ -469,7 +469,7 @@
     },
     {
       "id": "faq",
-      "name": "Portal El Kitabı",
+      "name": "Portal Kullanım Kılavuzu",
       "url": "faq.html",
       "cat": "faq",
       "icon": "logo.png",
@@ -477,7 +477,7 @@
       "isNew": false,
       "isTest": false,
       "isBest": false,
-      "nameEn": "Portal El Kitabı",
+      "nameEn": "Portal User Guide",
       "order": 31
     },
     {
