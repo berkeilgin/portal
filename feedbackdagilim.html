@@ -6,7 +6,7 @@
 <title>Feedback Dağılım — Step 1 & Step 2</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/xlsx-style@0.8.13/dist/xlsxstyle.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
 /* ========== TÜM STILLER (eksiksiz) ========== */
@@ -344,7 +344,7 @@ td {
       <div class="errors-section" id="errorsSectionStep1" style="display: none;">
         <div class="section-title"><span>🚨</span> Hatalı Monitoring ID'ler & Linkler</div>
         <div class="table-wrapper">
-          <table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>🔗 Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody>
+          <table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>🔗 Link</th></tr></thead><tbody id="errorTableBodyStep1"><td><td colspan="5" class="empty-state">Henüz veri yok</tr></td></tbody>
           </table>
         </div>
       </div>
@@ -372,7 +372,7 @@ td {
       </div>
       <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
         <button class="btn btn-primary" id="calculateBtnStep2">📐 Dağıtımı Hesapla (Önizleme)</button>
-        <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & Excel İndir (Font 9pt)</button>
+        <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & Excel İndir</button>
       </div>
       <div id="previewAreaStep2" style="display: none;">
         <h3>📋 Bu hafta dağıtılacak kayıtlar</h3>
@@ -384,7 +384,7 @@ td {
     </div>
   </div>
 </div>
-<footer class="footer">Feedback Dağılım</footer>
+<footer class="footer">Feedback Dağılım — Step 1 (ID kontrol) & Step 2 (Referans listeli, 3-2-3-2 dağıtım)</footer>
 <script src="js/theme.js"></script>
 <script src="js/feedbackdagilim.js"></script>
 </body>
