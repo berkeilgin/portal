@@ -8,20 +8,24 @@ function showLoader(step, show) {
   if (el) el.classList.toggle('visible', show);
 }
 function buildMonitorLink(ident) {
-  return ident ? `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION` : '#';
+  if (!ident) return '#';
+  return `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`;
 }
-// Adım geçiş
-document.querySelectorAll('.step-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const stepId = btn.dataset.step;
-    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(stepId).classList.add('active');
-    document.querySelectorAll('.step-btn').forEach(b => b.classList.replace('btn-primary', 'btn-ghost'));
-    btn.classList.replace('btn-ghost', 'btn-primary');
+
+// ========== ADIM GEÇİŞİ (çalıştığından emin ol) ==========
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.step-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const stepId = this.dataset.step;
+      document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(stepId).classList.add('active');
+      document.querySelectorAll('.step-btn').forEach(b => b.classList.replace('btn-primary', 'btn-ghost'));
+      this.classList.replace('btn-ghost', 'btn-primary');
+    });
   });
 });
 
-// ==================== STEP 1 (Monitoring ID Kontrolü) ====================
+// ==================== STEP 1 ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
 const fileInputStep1 = document.getElementById('fileInputStep1');
 const uploadAreaStep1 = document.getElementById('uploadAreaStep1');
@@ -41,14 +45,14 @@ function findColumnName(columns, possibleNames) {
   return null;
 }
 function isValidMonitoringId(value) {
-  if (value === null || value === undefined) return false;
+  if (value == null) return false;
   let str = String(value).trim();
   return /^\d{8}$/.test(str);
 }
 function getErrorReason(value) {
-  if (value === null || value === undefined || String(value).trim() === "") return "Boş veya null değer";
+  if (value == null || String(value).trim() === "") return "Boş değer";
   let str = String(value).trim();
-  if (!/^\d+$/.test(str)) return "Sayısal karakter dışında içerik";
+  if (!/^\d+$/.test(str)) return "Sayısal değil";
   if (str.length !== 8) return `${str.length} haneli (8 gerekli)`;
   return "Geçersiz format";
 }
@@ -66,7 +70,7 @@ async function processFileStep1(file) {
     let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
     if (!rows.length) throw new Error('Dosya boş');
     const columns = Object.keys(rows[0]);
-    const monitoringCol = findColumnName(columns, ['Monitoring ID', 'monitoring id', 'MonitoringId', 'monitoring_id']);
+    const monitoringCol = findColumnName(columns, ['Monitoring ID', 'monitoring id', 'MonitoringId']);
     const identCol = findColumnName(columns, ['Ident', 'ident', 'ID', 'Id']);
     if (!monitoringCol) throw new Error(`'Monitoring ID' sütunu bulunamadı. Mevcut: ${columns.join(', ')}`);
     if (!identCol) throw new Error(`'Ident' sütunu bulunamadı. Mevcut: ${columns.join(', ')}`);
@@ -78,8 +82,8 @@ async function processFileStep1(file) {
       if (!isValidMonitoringId(monitoringId)) {
         errors.push({
           rowNumber: idx + 2,
-          monitoringIdRaw: monitoringId !== undefined ? String(monitoringId) : "(boş)",
-          identRaw: ident !== undefined ? String(ident) : "",
+          monitoringIdRaw: monitoringId != null ? String(monitoringId) : "(boş)",
+          identRaw: ident != null ? String(ident) : "",
           reason: getErrorReason(monitoringId)
         });
       }
@@ -99,7 +103,13 @@ async function processFileStep1(file) {
       errors.forEach(err => {
         const link = buildMonitorLink(err.identRaw);
         const linkHtml = link ? `<a href="${link}" target="_blank" class="link-btn">🔗 İncele</a>` : `<span class="badge-error">Ident eksik</span>`;
-        html += `<tr><td>${err.rowNumber}</td><td><code>${escapeHtml(err.monitoringIdRaw)}</code></td><td><code>${escapeHtml(err.identRaw) || "—"}</code></td><td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td><td>${linkHtml}</td></tr>`;
+        html += `<tr>
+          <td>${err.rowNumber}</td>
+          <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
+          <td><code>${escapeHtml(err.identRaw) || "—"}</code></td>
+          <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
+          <td>${linkHtml}</td>
+        </tr>`;
       });
       errorTableBodyStep1.innerHTML = html;
     }
@@ -109,6 +119,7 @@ async function processFileStep1(file) {
     showLoader('Step1', false);
   }
 }
+// Event listeners Step1
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -125,7 +136,7 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   totalCountSpanStep1.textContent = '0'; errorCountSpanStep1.textContent = '0'; validCountSpanStep1.textContent = '0';
 });
 
-// ==================== STEP 2 (Referans Listeli Dağıtım) ====================
+// ==================== STEP 2 ====================
 let mainDataStep2 = [], deletedIdentsStep2 = new Set(), distributionHistoryStep2 = [], currentPreviewStep2 = [], currentWeekStep2 = 1;
 let refDataStep2 = [];
 const WEEK_TARGET = {1:3, 2:2, 3:3, 4:2};
@@ -133,7 +144,6 @@ const WEEK_TARGET = {1:3, 2:2, 3:3, 4:2};
 function getRefInfo(projeAdi) {
   return refDataStep2.find(r => String(r.Proje).trim() === String(projeAdi).trim());
 }
-
 function saveHistoryAndDownload() {
   localStorage.setItem('fb_distribution_history', JSON.stringify(distributionHistoryStep2));
   const dataStr = JSON.stringify(distributionHistoryStep2, null, 2);
@@ -198,7 +208,7 @@ function calculateDistributionStep2(week) {
       console.warn(`Proje ${proje} referans listede yok, atlanıyor.`);
       return;
     }
-    const dagitimTuru = String(ref.Dağıtım Türü).trim();
+    const dagitimTuru = String(ref["Dağıtım Türü"]).trim();
     const dil = String(ref.Dil).trim();
     const degerlendirici = rec.FeedbackCreatorName;
     let key;
@@ -277,7 +287,7 @@ async function confirmAndExportStep2() {
         client_name: rec.client_name,
         emp_monitor_ident: rec.emp_monitor_ident,
         dil: ref ? ref.Dil : '',
-        dagitimTuru: ref ? ref.Dağıtım Türü : ''
+        dagitimTuru: ref ? ref["Dağıtım Türü"] : ''
       };
     });
     const newEntry = {
@@ -294,7 +304,7 @@ async function confirmAndExportStep2() {
     const grouped = new Map();
     currentPreviewStep2.forEach(rec => {
       const ref = getRefInfo(rec.client_name);
-      const sheetName = `${rec.client_name}_${ref ? ref.Dil : ''}_${ref ? ref.Dağıtım Türü : ''}`.substring(0, 31);
+      const sheetName = `${rec.client_name}_${ref ? ref.Dil : ''}_${ref ? ref["Dağıtım Türü"] : ''}`.substring(0, 31);
       if (!grouped.has(sheetName)) grouped.set(sheetName, []);
       grouped.get(sheetName).push({
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
@@ -302,15 +312,13 @@ async function confirmAndExportStep2() {
         'Monitor Ident': rec.emp_monitor_ident,
         'Monitor Link': buildMonitorLink(rec.emp_monitor_ident),
         'Dil': ref ? ref.Dil : '',
-        'Dağıtım Türü': ref ? ref.Dağıtım Türü : ''
+        'Dağıtım Türü': ref ? ref["Dağıtım Türü"] : ''
       });
     });
     const workbook = XLSX.utils.book_new();
     for (let [sheetName, rows] of grouped.entries()) {
       const ws = XLSX.utils.json_to_sheet(rows);
-      // Font boyutu 9 (xlsx-style ile)
-      if (typeof XLSX !== 'undefined' && XLSX.version && XLSX.read) {
-        // xlsx-style yüklü ise stil eklenebilir
+      if (typeof XLSX !== 'undefined') {
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
         for (let R = range.s.r; R <= range.e.r; R++) {
           for (let C = range.s.c; C <= range.e.c; C++) {
@@ -325,7 +333,7 @@ async function confirmAndExportStep2() {
       'Kişi': r.FeedbackCreatorName, 'Proje': r.client_name, 'Ident': r.emp_monitor_ident, 'Hafta': week
     }));
     const reportSheet = XLSX.utils.json_to_sheet(reportRows);
-    if (typeof XLSX !== 'undefined' && XLSX.version && XLSX.read) {
+    if (typeof XLSX !== 'undefined') {
       const range = XLSX.utils.decode_range(reportSheet['!ref'] || 'A1:A1');
       for (let R = range.s.r; R <= range.e.r; R++) {
         for (let C = range.s.c; C <= range.e.c; C++) {
@@ -346,7 +354,7 @@ async function confirmAndExportStep2() {
     showLoader('Step2', false);
   }
 }
-// Dosya yükleme
+// Dosya yükleme fonksiyonları
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   try {
@@ -410,7 +418,7 @@ async function loadRefFileStep2(file) {
     refDataStep2 = [];
   } finally { showLoader('Step2', false); }
 }
-// Event listeners
+// Event listeners Step2
 document.getElementById('mainFileInputStep2').addEventListener('change', e => { if (e.target.files[0]) loadMainFileStep2(e.target.files[0]); });
 document.getElementById('deletedFileInputStep2').addEventListener('change', e => { if (e.target.files[0]) loadDeletedFileStep2(e.target.files[0]); });
 document.getElementById('refFileInputStep2').addEventListener('change', e => { if (e.target.files[0]) loadRefFileStep2(e.target.files[0]); });
