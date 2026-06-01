@@ -9,7 +9,6 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* Tüm stiller aynen korundu (öncekiyle aynı, kısaltmak için tekrar yazmadım ama çalışır) */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; line-height:1.5; }
 .header { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; gap:1rem; }
@@ -75,7 +74,7 @@ td { color:var(--text); }
       <button class="btn btn-ghost step-btn" data-step="step3">📊 Step 3: Raporlama</button>
     </div>
 
-    <!-- STEP 1 (Monitoring ID + duplicate kontrol) -->
+    <!-- STEP 1 -->
     <div id="step1" class="step-content active">
       <div class="pt">Monitoring ID <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Doğrulama & Duplicate</em></div>
       <div class="sdesc">📄 CSV / Excel yükleyin. Monitoring ID 8 haneli sayı olmalı, tekrar edenler hata olarak listelenir.</div>
@@ -90,12 +89,12 @@ td { color:var(--text); }
         <div class="stat-card"><div class="stat-label">✅ Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div>
       </div>
       <div class="errors-section" id="errorsSectionStep1" style="display:none;">
-        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><td><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
+        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
       </div>
       <div style="display:flex; justify-content:flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
 
-    <!-- STEP 2 (Dağıtım) -->
+    <!-- STEP 2 -->
     <div id="step2" class="step-content">
       <div class="pt">DM / ML / Dönüşüm <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Özel Kurallar</em></div>
       <div class="sdesc">ML: position_code_type_full_name içinde "Quality Assurance Analyst" olmalı. HP için özel dağıtıcılar.</div>
@@ -120,17 +119,17 @@ td { color:var(--text); }
       <div class="loader-bar" id="loaderStep2"><div class="loader-bar-inner"></div></div>
     </div>
 
-    <!-- STEP 3 (Raporlama) -->
+    <!-- STEP 3 -->
     <div id="step3" class="step-content">
       <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Bekleyen Adetler</em></div>
-      <div class="sdesc">Görüşme listesi ve dağıtım geçmişine göre proje bazlı durum. (Geçmiş JSON'u Step 2'den dışa aktardığınız dosya)</div>
+      <div class="sdesc">Görüşme listesi ve dağıtım geçmişine göre proje bazlı durum.</div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>📄 Görüşme Listesi (Step1'deki ile aynı)</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla (isteğe bağlı, hafızada yoksa yükleyin)</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
+        <div class="upload-card"><h3>📄 Görüşme Listesi (CheckListCreated=0)</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
         <div class="upload-card"><h3>🗂️ Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
       </div>
       <div><button class="btn btn-primary" id="calculateReportBtnStep3">📊 Raporu Oluştur</button>
       <button class="btn btn-primary" id="exportReportBtnStep3" disabled>💾 Excel İndir</button></div>
-      <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><h3>📊 Proje Bazlı Dağıtım Durumu</h3><div class="table-wrapper"><table class="report-table"><thead><tr><th>Proje Adı</th><th>Dağıtılan Adet</th><th>Bekleyen Adet (Giriş Yapılmamış)</th><th>Toplam (CheckListCreated=0)</th></tr></thead><tbody id="reportBodyStep3"></tbody></table></div></div>
+      <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><h3>📊 Proje Bazlı Dağıtım Durumu</h3><div class="table-wrapper"><table class="report-table"><thead><tr><th>Proje Adı</th><th>Dağıtılan Adet</th><th>Bekleyen Adet</th><th>Toplam</th></tr></thead><tbody id="reportBodyStep3"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
     </div>
   </div>
