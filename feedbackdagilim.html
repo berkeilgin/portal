@@ -125,11 +125,6 @@ body {
   color: var(--text);
 }
 
-.btn-outline {
-  border: 1px solid var(--border2);
-  background: var(--surface);
-}
-
 /* Main */
 .main {
   max-width: 1400px;
@@ -374,7 +369,6 @@ body {
       Hatalı satırlar listelenir ve "Ident" değeri ile dinamik link oluşturulur.
     </div>
 
-    <!-- Dosya yükleme alanı -->
     <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📂</div>
       <div class="upload-title">Dosyayı sürükleyin veya tıklayın</div>
@@ -386,14 +380,12 @@ body {
       <div class="loader-bar-inner"></div>
     </div>
 
-    <!-- İstatistikler -->
     <div class="stats-grid" id="statsContainer" style="display: none;">
       <div class="stat-card"><div class="stat-label">📊 Toplam Kayıt</div><div class="stat-number" id="totalCount">0</div></div>
       <div class="stat-card"><div class="stat-label">⚠️ Hatalı Kayıt</div><div class="stat-number error" id="errorCount">0</div></div>
       <div class="stat-card"><div class="stat-label">✅ Geçerli Kayıt</div><div class="stat-number success" id="validCount">0</div></div>
     </div>
 
-    <!-- Hata listesi tablosu -->
     <div class="errors-section" id="errorsSection" style="display: none;">
       <div class="section-title">
         <span>🚨</span> Hatalı Monitoring ID'ler & Linkler
@@ -420,6 +412,248 @@ body {
   <div class="copyright-text">Feedback Dağılım Aracı — Step 1 • Monitoring ID kontrolü ve Ident linkleme</div>
 </footer>
 
-<script src="FeedbackDagilim.js"></script>
+<script>
+// ==================== STATE ====================
+let currentData = [];
+let errorRows = [];
+
+// ==================== DOM Elements ====================
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+const loaderBar = document.getElementById('loaderBar');
+const statsContainer = document.getElementById('statsContainer');
+const errorsSection = document.getElementById('errorsSection');
+const totalCountSpan = document.getElementById('totalCount');
+const errorCountSpan = document.getElementById('errorCount');
+const validCountSpan = document.getElementById('validCount');
+const errorTableBody = document.getElementById('errorTableBody');
+const resetBtn = document.getElementById('resetBtn');
+const clearBtn = document.getElementById('clearBtn');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+// ==================== Helper Functions ====================
+// Tema yönetimi
+function initTheme() {
+  const isDark = localStorage.getItem('theme') === 'dark';
+  if (isDark) document.body.classList.add('dark');
+  else document.body.classList.remove('dark');
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+}
+themeToggleBtn.addEventListener('click', toggleTheme);
+initTheme();
+
+// Sütun adını case-insensitive olarak bul (örnek: "Monitoring ID" veya "monitoring id")
+function findColumnName(columns, possibleNames) {
+  const lowerCols = columns.map(c => String(c).trim().toLowerCase());
+  for (let name of possibleNames) {
+    const idx = lowerCols.indexOf(name.toLowerCase());
+    if (idx !== -1) return columns[idx];
+  }
+  return null;
+}
+
+// Monitoring ID kontrolü: tam 8 haneli sayı
+function isValidMonitoringId(value) {
+  if (value === null || value === undefined) return false;
+  let str = String(value).trim();
+  if (str === "") return false;
+  return /^\d{8}$/.test(str);
+}
+
+function getErrorReason(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "Boş veya null değer";
+  let str = String(value).trim();
+  if (!/^\d+$/.test(str)) return "Sayısal karakter dışında içerik (harf/özel karakter)";
+  if (str.length !== 8) return `${str.length} haneli (8 gerekli)`;
+  return "Geçersiz format";
+}
+
+function buildDynamicLink(identValue) {
+  if (!identValue || String(identValue).trim() === "") return null;
+  const baseUrl = "https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl";
+  const params = new URLSearchParams({
+    frmTarget: "CHECKLIST",
+    checklist_ident: String(identValue).trim(),
+    frmOption: "OPTION"
+  });
+  return `${baseUrl}?${params.toString()}`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// Dosya işleme
+async function processFile(file) {
+  if (!file) return;
+  
+  // XLSK kütüphanesi kontrolü
+  if (typeof XLSX === 'undefined') {
+    alert("XLSX kütüphanesi yüklenemedi. Lütfen internet bağlantınızı kontrol edin.");
+    return;
+  }
+
+  loaderBar.classList.add('visible');
+  statsContainer.style.display = 'none';
+  errorsSection.style.display = 'none';
+  errorRows = [];
+  currentData = [];
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', defval: "" });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+    
+    if (!rows || rows.length === 0) {
+      alert("Dosyada veri bulunamadı veya başlık satırı okunamadı.");
+      loaderBar.classList.remove('visible');
+      return;
+    }
+    
+    // Sütun adlarını case-insensitive bul
+    const columns = Object.keys(rows[0]);
+    const monitoringCol = findColumnName(columns, ['Monitoring ID', 'monitoring id', 'MonitoringId', 'monitoring_id']);
+    const identCol = findColumnName(columns, ['Ident', 'ident', 'ID', 'Id']);
+    
+    if (!monitoringCol) {
+      alert("Dosyada 'Monitoring ID' sütunu bulunamadı. Mevcut sütunlar: " + columns.join(', '));
+      loaderBar.classList.remove('visible');
+      return;
+    }
+    if (!identCol) {
+      alert("Dosyada 'Ident' sütunu bulunamadı. Mevcut sütunlar: " + columns.join(', '));
+      loaderBar.classList.remove('visible');
+      return;
+    }
+    
+    currentData = rows;
+    const errors = [];
+    
+    rows.forEach((row, idx) => {
+      const monitoringId = row[monitoringCol];
+      const ident = row[identCol];
+      const isValid = isValidMonitoringId(monitoringId);
+      if (!isValid) {
+        errors.push({
+          rowNumber: idx + 2,
+          monitoringIdRaw: monitoringId !== undefined && monitoringId !== null ? String(monitoringId) : "(boş)",
+          identRaw: ident !== undefined && ident !== null ? String(ident) : "",
+          reason: getErrorReason(monitoringId)
+        });
+      }
+    });
+    
+    errorRows = errors;
+    renderStatsAndTable();
+    
+  } catch (err) {
+    console.error("Dosya işleme hatası:", err);
+    alert("Dosya okunurken bir hata oluştu: " + err.message);
+  } finally {
+    loaderBar.classList.remove('visible');
+  }
+}
+
+function renderStatsAndTable() {
+  const total = currentData.length;
+  const errorCount = errorRows.length;
+  const validCount = total - errorCount;
+  
+  totalCountSpan.textContent = total;
+  errorCountSpan.textContent = errorCount;
+  validCountSpan.textContent = validCount;
+  
+  statsContainer.style.display = 'flex';
+  
+  if (errorCount === 0) {
+    errorsSection.style.display = 'block';
+    errorTableBody.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm Monitoring ID değerleri geçerli! (8 haneli sayı)</td></tr>`;
+    return;
+  }
+  
+  errorsSection.style.display = 'block';
+  let html = '';
+  errorRows.forEach(err => {
+    const link = buildDynamicLink(err.identRaw);
+    const linkHtml = link 
+      ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="link-btn">🔗 İncele</a>`
+      : `<span class="badge-error">Ident eksik</span>`;
+    
+    html += `
+      <tr>
+        <td>${err.rowNumber}</td>
+        <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
+        <td><code>${escapeHtml(err.identRaw) || "—"}</code></td>
+        <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
+        <td>${linkHtml}</td>
+      </tr>
+    `;
+  });
+  errorTableBody.innerHTML = html;
+}
+
+function resetAll() {
+  currentData = [];
+  errorRows = [];
+  fileInput.value = '';
+  statsContainer.style.display = 'none';
+  errorsSection.style.display = 'none';
+  errorTableBody.innerHTML = '<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>';
+  totalCountSpan.textContent = '0';
+  errorCountSpan.textContent = '0';
+  validCountSpan.textContent = '0';
+  loaderBar.classList.remove('visible');
+}
+
+// ==================== EVENT HANDLERS ====================
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files.length > 0) {
+    processFile(e.target.files[0]);
+  }
+});
+
+uploadArea.addEventListener('click', () => {
+  fileInput.click();
+});
+
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+  uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    const droppedFile = e.dataTransfer.files[0];
+    const validExt = /\.(xlsx|xls|csv)$/i;
+    if (validExt.test(droppedFile.name)) {
+      fileInput.files = e.dataTransfer.files;
+      processFile(droppedFile);
+    } else {
+      alert("Lütfen .xlsx, .xls veya .csv uzantılı bir dosya yükleyin.");
+    }
+  }
+});
+
+resetBtn.addEventListener('click', resetAll);
+clearBtn.addEventListener('click', resetAll);
+
+resetAll();
+</script>
 </body>
 </html>
