@@ -553,10 +553,15 @@ function showLoaderStep3(show) {
 }
 
 // "Soyisim, İsim" → "İsim Soyisim"
+// indexOf kullanılıyor; birden fazla virgül olsa bile sadece ilk virgülden böler
 function formatReviewerName(name) {
   if (!name) return '';
-  const parts = name.split(',');
-  return parts.length === 2 ? `${parts[1].trim()} ${parts[0].trim()}` : name.trim();
+  const str      = name.trim();
+  const commaIdx = str.indexOf(',');
+  if (commaIdx === -1) return str;                          // virgül yoksa olduğu gibi
+  const soyisim = str.substring(0, commaIdx).trim();
+  const isim    = str.substring(commaIdx + 1).trim();
+  return isim ? `${isim} ${soyisim}` : soyisim;
 }
 function findColumnNameStep3(columns, possibleNames) {
   const lowerCols = columns.map(c => String(c).trim().toLowerCase());
@@ -645,7 +650,7 @@ function loadMainExcel(file) {
 
       mainStatusS3.innerHTML   = `✅ ${reportMainData.length} kayıt (CheckListCreated=0) yüklendi.`;
       mainStatusS3.style.color = 'var(--accent)';
-      if (reportHistory.DM.length || reportHistory.ML.length || reportHistory.DONUSUM.length) generateReport();
+      // Otomatik rapor oluşturma yok — kullanıcı "Raporu Oluştur" butonuna basmalı
     } catch (err) {
       console.error(err);
       mainStatusS3.innerHTML   = `❌ Hata: ${err.message}`;
@@ -672,7 +677,7 @@ function loadHistoryJSON(file) {
         reportHistory = parsed;
         historyStatusS3.innerHTML   = `✅ Geçmiş yüklendi (DM: ${reportHistory.DM.length}, ML: ${reportHistory.ML.length}, Dönüşüm Projeleri: ${reportHistory.DONUSUM.length})`;
         historyStatusS3.style.color = 'var(--accent)';
-        if (reportMainData.length) generateReport();
+        // Otomatik rapor oluşturma yok — kullanıcı "Raporu Oluştur" butonuna basmalı
       } else {
         throw new Error('JSON yapısı hatalı — DM, ML, DONUSUM anahtarları eksik');
       }
@@ -732,6 +737,13 @@ function generateReport() {
   tabProje.style.display     = 'inline-flex';
   tabProjeKisi.style.display = 'inline-flex';
   tabKisi.style.display      = 'inline-flex';
+
+  // Aktif tab butonuna doğru rengi ver
+  [tabProje, tabProjeKisi, tabKisi].forEach(btn => btn.classList.remove('btn-primary', 'btn-ghost'));
+  [tabProje, tabProjeKisi, tabKisi].forEach(btn => btn.classList.add('btn-ghost'));
+  if (currentReportView === 'proje')          { tabProje.classList.remove('btn-ghost');     tabProje.classList.add('btn-primary'); }
+  else if (currentReportView === 'projekisi') { tabProjeKisi.classList.remove('btn-ghost'); tabProjeKisi.classList.add('btn-primary'); }
+  else                                        { tabKisi.classList.remove('btn-ghost');      tabKisi.classList.add('btn-primary'); }
 }
 
 function renderReportTable(headers, rows) {
@@ -781,20 +793,26 @@ function exportReport() {
   ), 'Değerlendirici_Bazlı');
 
   // 4. RAW — Dağıtım Detayı
+  // pendingSet: reportMainData'da (CheckListCreated=0) hâlâ bekleyen monitoring ID'leri
+  // Dağıtılmış bir ID bu sette varsa → Tamamlanmadı, yoksa → Tamamlandı
+  const pendingSet = new Set(reportMainData.map(r => r.monitoringId));
+
   const rawDist = [];
   for (const [g, entries] of Object.entries(reportHistory)) {
     const groupName = GROUP_LABELS[g] || g;
     for (const entry of entries || []) {
       for (const ass of entry.assignments || []) {
+        const monId = String(ass.emp_monitor_ident || '').trim();
         rawDist.push({
           'Grup':                                   groupName,
           'Hafta':                                  entry.week || '',
           'Dağıtım Tarihi':                         entry.date ? new Date(entry.date).toLocaleString('tr-TR') : '',
           'Değerlendirici (FeedbackCreatorName)':   ass.FeedbackCreatorName || '',
           'Proje (client_name)':                    ass.client_name         || '',
-          'Monitoring ID (emp_monitor_ident)':      ass.emp_monitor_ident   || '',
+          'Monitoring ID (emp_monitor_ident)':      monId,
           'Dil':                                    ass.dil                 || '',
-          'Dağıtım Türü':                           ass.dagitimTuru         || ''
+          'Dağıtım Türü':                           ass.dagitimTuru         || '',
+          'Durum':                                  pendingSet.has(monId) ? 'Tamamlanmadı' : 'Tamamlandı'
         });
       }
     }
@@ -829,10 +847,13 @@ function exportReport() {
 
 function setView(view) {
   currentReportView = view;
-  [tabProje, tabProjeKisi, tabKisi].forEach(btn => btn.classList.remove('btn-primary'));
-  if (view === 'proje')          tabProje.classList.add('btn-primary');
-  else if (view === 'projekisi') tabProjeKisi.classList.add('btn-primary');
-  else                           tabKisi.classList.add('btn-primary');
+  [tabProje, tabProjeKisi, tabKisi].forEach(btn => {
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-ghost');
+  });
+  if (view === 'proje')          { tabProje.classList.remove('btn-ghost');     tabProje.classList.add('btn-primary'); }
+  else if (view === 'projekisi') { tabProjeKisi.classList.remove('btn-ghost'); tabProjeKisi.classList.add('btn-primary'); }
+  else                           { tabKisi.classList.remove('btn-ghost');      tabKisi.classList.add('btn-primary'); }
   if (reportMainData.length) generateReport();
 }
 
