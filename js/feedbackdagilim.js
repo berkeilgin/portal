@@ -414,14 +414,13 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (Raporlama) - DÜZELTİLMİŞ MANTIK ====================
-console.log('STEP3 (Raporlama) yükleniyor...');
+// ==================== STEP 3 (Raporlama) - SADELEŞTİRİLMİŞ VE SAĞLAM ====================
+console.log('STEP3 yükleniyor...');
 
-let reportMainData = []; // Görüşme listesi: { monitoringId, ident, feedbackCreatorName }
-let reportHistory = { DM: [], ML: [], DONUSUM: [] }; // DONUSUM içinde assignments'ta client_name var
-let currentReportView = 'proje'; // proje, projekisi, kisi
+let reportMainData = [];      // { monitoringId, ident? }
+let reportHistory = { DM: [], ML: [], DONUSUM: [] };
+let currentReportType = 'proje'; // 'proje', 'projekisi', 'kisi'
 
-// DOM elementleri
 const mainFileInput = document.getElementById('mainFileInputStep3');
 const historyFileInput = document.getElementById('historyFileInputStep3');
 const mainStatus = document.getElementById('mainStatusStep3');
@@ -435,397 +434,327 @@ const tabProje = document.getElementById('reportTabProje');
 const tabProjeKisi = document.getElementById('reportTabProjeKisi');
 const tabKisi = document.getElementById('reportTabKisi');
 
-// Yardımcı fonksiyonlar
-function findColumnNameStep3(columns, possibleNames) {
-  const lowerCols = columns.map(c => String(c).trim().toLowerCase());
+function findColumn(columns, possibleNames) {
+  const lower = columns.map(c => String(c).trim().toLowerCase());
   for (let name of possibleNames) {
-    const idx = lowerCols.indexOf(name.toLowerCase());
+    const idx = lower.indexOf(name.toLowerCase());
     if (idx !== -1) return columns[idx];
   }
   return null;
 }
 
-function showLoaderStep3(show) {
+function showLoader(show) {
   const loader = document.getElementById('loaderStep3');
   if (loader) loader.classList.toggle('visible', show);
 }
 
-// Görüşme listesi yükleme (Monitoring ID, Ident, FeedbackCreatorName, CheckListCreated)
+// 1. Görüşme listesi yükle (sadece Monitoring ID)
 function loadMainExcel(file) {
   if (!file) return;
-  console.log('Görüşme dosyası yükleniyor:', file.name);
-  showLoaderStep3(true);
+  showLoader(true);
   mainStatus.innerHTML = '⏳ Yükleniyor...';
-  mainStatus.style.color = 'var(--muted)';
-
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     try {
       const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
       let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
       if (!rows.length) throw new Error('Dosya boş');
-
-      const columns = Object.keys(rows[0]);
-      console.log('Mevcut sütunlar:', columns);
-
-      const monCol = findColumnNameStep3(columns, ['Monitoring ID', 'monitoring id', 'MonitoringId', 'monitoring_id']);
-      const identCol = findColumnNameStep3(columns, ['Ident', 'ident', 'ID', 'Id']);
-      const fbCol = findColumnNameStep3(columns, ['FeedbackCreatorName', 'feedbackcreatorname', 'Feedback Creator Name', 'Reviewer Name', 'reviewer name']);
+      const cols = Object.keys(rows[0]);
+      const monCol = findColumn(cols, ['Monitoring ID', 'monitoring id', 'MonitoringId']);
+      if (!monCol) throw new Error(`Monitoring ID sütunu bulunamadı. Mevcut: ${cols.join(', ')}`);
       
-      if (!monCol) throw new Error(`Monitoring ID sütunu bulunamadı. Mevcut: ${columns.join(', ')}`);
-      if (!identCol) throw new Error(`Ident sütunu bulunamadı.`);
-      if (!fbCol) throw new Error(`FeedbackCreatorName / Reviewer Name sütunu bulunamadı.`);
-
-      const checkCol = columns.find(c => c.toLowerCase().includes('checklistcreated'));
+      reportMainData = rows.map(row => ({
+        monitoringId: String(row[monCol] || '').trim()
+      })).filter(r => r.monitoringId !== '');
       
-      reportMainData = rows.filter(row => {
-        if (checkCol) {
-          const val = row[checkCol];
-          return val === 0 || val === '0' || val === 0.0;
-        }
-        return true; // CheckListCreated yoksa tüm satırları al
-      }).map(row => {
-        let reviewerName = String(row[fbCol] || '').trim();
-        // İsim Soyisim formatına çevir (eğer "Soyisim, İsim" şeklindeyse)
-        if (reviewerName.includes(',')) {
-          const parts = reviewerName.split(',');
-          if (parts.length === 2) {
-            reviewerName = `${parts[1].trim()} ${parts[0].trim()}`;
-          }
-        }
-        return {
-          monitoringId: String(row[monCol] || '').trim(),
-          ident: String(row[identCol] || '').trim(),
-          feedbackCreatorName: reviewerName
-        };
-      });
-
-      console.log('Yüklenen kayıt sayısı:', reportMainData.length);
       mainStatus.innerHTML = `✅ ${reportMainData.length} kayıt yüklendi.`;
       mainStatus.style.color = 'var(--accent)';
-
-      if (Object.values(reportHistory).some(arr => arr.length)) {
-        generateReport();
-      }
+      if (reportHistory.DM.length || reportHistory.ML.length || reportHistory.DONUSUM.length) generateReport();
     } catch (err) {
-      console.error(err);
       mainStatus.innerHTML = `❌ Hata: ${err.message}`;
-      mainStatus.style.color = 'var(--accent3)';
       reportMainData = [];
     } finally {
-      showLoaderStep3(false);
+      showLoader(false);
     }
   };
-  reader.onerror = () => {
-    mainStatus.innerHTML = `❌ Dosya okunamadı`;
-    showLoaderStep3(false);
-  };
+  reader.onerror = () => { mainStatus.innerHTML = `❌ Dosya okunamadı`; showLoader(false); };
   reader.readAsArrayBuffer(file);
 }
 
-// Geçmiş JSON yükleme (DM, ML, Dönüşüm Projeleri)
+// 2. JSON geçmişi yükle
 function loadHistoryJSON(file) {
   if (!file) return;
-  showLoaderStep3(true);
+  showLoader(true);
   historyStatus.innerHTML = '⏳ Yükleniyor...';
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const parsed = JSON.parse(e.target.result);
-      // Beklenen yapı: { DM: [], ML: [], DONUSUM: [] } (DONUSUM içinde assignments'ta client_name var)
-      if (parsed && typeof parsed === 'object' && 
-          Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
-        reportHistory = parsed;
-        historyStatus.innerHTML = `✅ Geçmiş yüklendi (DM:${reportHistory.DM.length}, ML:${reportHistory.ML.length}, Dönüşüm:${reportHistory.DONUSUM.length})`;
+      if (parsed && typeof parsed === 'object' && parsed.DM && parsed.ML && parsed.DONUSUM) {
+        // Grup isimlerini düzelt: DONUSUM -> Dönüşüm Projeleri (görüntüleme için)
+        reportHistory = {
+          DM: parsed.DM,
+          ML: parsed.ML,
+          'Dönüşüm Projeleri': parsed.DONUSUM
+        };
+        historyStatus.innerHTML = `✅ Geçmiş yüklendi (DM:${reportHistory.DM.length}, ML:${reportHistory.ML.length}, Dönüşüm:${reportHistory['Dönüşüm Projeleri'].length})`;
         historyStatus.style.color = 'var(--accent)';
         if (reportMainData.length) generateReport();
-      } else {
-        throw new Error('JSON yapısı hatalı (DM, ML, DONUSUM eksik)');
-      }
+      } else throw new Error('JSON yapısı hatalı');
     } catch (err) {
-      console.error(err);
       historyStatus.innerHTML = `❌ Geçersiz JSON: ${err.message}`;
-      historyStatus.style.color = 'var(--accent3)';
     } finally {
-      showLoaderStep3(false);
+      showLoader(false);
     }
   };
-  reader.onerror = () => {
-    historyStatus.innerHTML = `❌ Dosya okunamadı`;
-    showLoaderStep3(false);
-  };
+  reader.onerror = () => { historyStatus.innerHTML = `❌ Dosya okunamadı`; showLoader(false); };
   reader.readAsText(file);
 }
 
-// Rapor oluşturma (tüm görünümler)
+// Dağıtılmış ident'leri set olarak topla (tüm gruplardan)
+function getAllDistributedIdents() {
+  const set = new Set();
+  for (let g of ['DM', 'ML', 'Dönüşüm Projeleri']) {
+    (reportHistory[g] || []).forEach(entry => {
+      if (entry.distributedIdents) entry.distributedIdents.forEach(id => set.add(String(id).trim()));
+    });
+  }
+  return set;
+}
+
+// Rapor oluştur (seçilen tipe göre)
 function generateReport() {
   if (!reportMainData.length) {
     alert('Önce görüşme listesini yükleyin.');
     return;
   }
-  if (!Object.values(reportHistory).some(arr => arr.length)) {
-    alert('Geçmiş JSON yüklenmemiş, rapor sadece görüşme listesine göre olacak (dağıtılan 0).');
-  }
-
-  // Dağıtılmış ident'leri (Monitoring ID ile eşleşecek) ve proje bilgilerini topla
-  // distributedMap: key = monitoringId, value = { client_name, group, week, reviewerName }
-  const distributedMap = new Map(); // monitoringId -> en son dağıtım bilgisi (isteğe bağlı)
-  const distributedSet = new Set(); // sadece dağıtılmış ident'ler
-  const projeKisiDistributed = new Map(); // key = proje|kisi -> dağıtılan adet (isteğe bağlı, rapor için kullanılacak)
+  const distributedSet = getAllDistributedIdents();
   
-  // Önce tüm dağıtılmış ident'leri topla
-  for (let g of ['DM', 'ML', 'DONUSUM']) {
-    const groupName = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
-    const hist = reportHistory[g] || [];
-    for (let entry of hist) {
-      const assignments = entry.assignments || [];
-      for (let ass of assignments) {
-        const ident = String(ass.emp_monitor_ident || '').trim();
-        if (ident) {
-          distributedSet.add(ident);
-          const clientName = ass.client_name || '';
-          const reviewer = ass.FeedbackCreatorName || '';
-          distributedMap.set(ident, { client_name: clientName, group: groupName, reviewerName: reviewer });
-        }
-      }
+  // Tüm dağıtım kayıtlarını düz listeye çevir (her bir assignment)
+  let allAssignments = [];
+  for (let groupName of ['DM', 'ML', 'Dönüşüm Projeleri']) {
+    (reportHistory[groupName] || []).forEach(entry => {
+      (entry.assignments || []).forEach(ass => {
+        allAssignments.push({
+          monitoringId: String(ass.emp_monitor_ident || '').trim(),
+          proje: ass.client_name || '',
+          kisi: ass.FeedbackCreatorName || '',
+          grup: groupName,
+          hafta: entry.week
+        });
+      });
+    });
+  }
+  
+  // Eşleme: görüşme listesindeki her kayıt için dağıtılmış mı?
+  // Ayrıca dağıtılanların proje ve kişi bilgilerini al (aynı ident farklı projelerde olabilir mi? teoride her ident tek projededir)
+  // Basitçe, dağıtılmış ident'ler için proje ve kişi bilgisini allAssignments'dan alalım.
+  const identToInfo = new Map();
+  for (let ass of allAssignments) {
+    if (!identToInfo.has(ass.monitoringId)) {
+      identToInfo.set(ass.monitoringId, { proje: ass.proje, kisi: ass.kisi, grup: ass.grup });
     }
   }
-  console.log('Dağıtılmış ident sayısı:', distributedSet.size);
-
-  // Şimdi görüşme listesindeki her kayıt için dağıtılmış mı kontrol et
-  // Ayrıca proje bilgisini distributedMap'ten al (yoksa proje bilgisi yok demektir)
-  const enrichedData = reportMainData.map(rec => {
-    const isDistributed = distributedSet.has(rec.monitoringId);
-    const distInfo = distributedMap.get(rec.monitoringId) || {};
-    return {
-      monitoringId: rec.monitoringId,
-      ident: rec.ident,
-      feedbackCreatorName: rec.feedbackCreatorName,
-      isDistributed: isDistributed,
-      client_name: distInfo.client_name || '(Proje bilgisi yok)',
-      group: distInfo.group || '',
-      reviewerNameFromHistory: distInfo.reviewerName || ''
-    };
-  });
-
-  // Raporlama türlerine göre veri hazırlama
-  if (currentReportView === 'proje') {
-    // Proje Bazlı: client_name bazında toplam ve dağıtılan sayı
-    const projMap = new Map();
-    for (let rec of enrichedData) {
-      const proj = rec.client_name;
-      if (!projMap.has(proj)) projMap.set(proj, { total: 0, distributed: 0 });
-      const stat = projMap.get(proj);
+  
+  // İstatistikler
+  if (currentReportType === 'proje') {
+    const projMap = new Map(); // proje -> { total:0, dist:0 }
+    for (let rec of reportMainData) {
+      const info = identToInfo.get(rec.monitoringId);
+      const proje = info ? info.proje : '(Bilinmeyen Proje)';
+      if (!projMap.has(proje)) projMap.set(proje, { total:0, dist:0 });
+      const stat = projMap.get(proje);
       stat.total++;
-      if (rec.isDistributed) stat.distributed++;
+      if (info) stat.dist++;
     }
-    const headers = ['Proje Adı', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'];
-    const rows = Array.from(projMap.entries()).map(([proj, stat]) => [proj, stat.distributed, stat.total - stat.distributed, stat.total]);
-    renderReportTable(headers, rows);
+    renderTable(['Proje Adı', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'],
+      Array.from(projMap.entries()).map(([p, s]) => [p, s.dist, s.total - s.dist, s.total]));
   } 
-  else if (currentReportView === 'projekisi') {
-    // Proje + Değerlendirici Bazlı
-    const keyMap = new Map();
-    for (let rec of enrichedData) {
-      const key = `${rec.client_name}|${rec.feedbackCreatorName}`;
-      if (!keyMap.has(key)) keyMap.set(key, { proje: rec.client_name, kisi: rec.feedbackCreatorName, total: 0, distributed: 0 });
+  else if (currentReportType === 'projekisi') {
+    const keyMap = new Map(); // key = proje|kisi
+    for (let rec of reportMainData) {
+      const info = identToInfo.get(rec.monitoringId);
+      const proje = info ? info.proje : '(Bilinmeyen Proje)';
+      const kisi = info ? info.kisi : '(Bilinmeyen Kişi)';
+      const key = `${proje}|${kisi}`;
+      if (!keyMap.has(key)) keyMap.set(key, { proje, kisi, total:0, dist:0 });
       const stat = keyMap.get(key);
       stat.total++;
-      if (rec.isDistributed) stat.distributed++;
+      if (info) stat.dist++;
     }
-    const headers = ['Proje', 'Değerlendirici', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'];
-    const rows = Array.from(keyMap.values()).map(v => [v.proje, v.kisi, v.distributed, v.total - v.distributed, v.total]);
-    renderReportTable(headers, rows);
+    renderTable(['Proje', 'Değerlendirici', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'],
+      Array.from(keyMap.values()).map(v => [v.proje, v.kisi, v.dist, v.total - v.dist, v.total]));
   } 
-  else {
-    // Kişi Bazlı (sadece değerlendirici)
+  else { // kisi
     const kisiMap = new Map();
-    for (let rec of enrichedData) {
-      const kisi = rec.feedbackCreatorName;
-      if (!kisi) continue;
-      if (!kisiMap.has(kisi)) kisiMap.set(kisi, { total: 0, distributed: 0 });
+    for (let rec of reportMainData) {
+      const info = identToInfo.get(rec.monitoringId);
+      const kisi = info ? info.kisi : '(Bilinmeyen Kişi)';
+      if (!kisiMap.has(kisi)) kisiMap.set(kisi, { total:0, dist:0 });
       const stat = kisiMap.get(kisi);
       stat.total++;
-      if (rec.isDistributed) stat.distributed++;
+      if (info) stat.dist++;
     }
-    const headers = ['Değerlendirici', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'];
-    const rows = Array.from(kisiMap.entries()).map(([kisi, stat]) => [kisi, stat.distributed, stat.total - stat.distributed, stat.total]);
-    renderReportTable(headers, rows);
+    renderTable(['Değerlendirici', 'Dağıtılan Adet', 'Bekleyen Adet', 'Toplam'],
+      Array.from(kisiMap.entries()).map(([k, s]) => [k, s.dist, s.total - s.dist, s.total]));
   }
-
   reportArea.style.display = 'block';
   exportBtn.disabled = false;
-  
-  // Tab butonlarını görünür yap
+  // Butonları göster
   tabProje.style.display = 'inline-flex';
   tabProjeKisi.style.display = 'inline-flex';
   tabKisi.style.display = 'inline-flex';
 }
 
-function renderReportTable(headers, rows) {
+function renderTable(headers, rows) {
   reportHeader.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
   reportBody.innerHTML = rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
-  if (rows.length === 0) {
-    reportBody.innerHTML = '<td><td colspan="10">Rapor verisi yok (henüz dağıtım yapılmamış veya eşleşme yok)</td></tr>';
-  }
+  if (rows.length === 0) reportBody.innerHTML = '<td><td colspan="10">Rapor verisi yok (henüz dağıtım yapılmamış olabilir)</td></tr>';
 }
 
-// Excel export (tüm raporlar + RAW datalar)
+// Excel export (tüm rapor türleri + RAW datalar)
 function exportReport() {
-  if (!reportMainData.length) {
-    alert('Rapor verisi yok, önce "Raporu Oluştur" butonuna tıklayın.');
-    return;
-  }
-  const workbook = XLSX.utils.book_new();
+  if (!reportMainData.length) { alert('Rapor verisi yok'); return; }
+  const wb = XLSX.utils.book_new();
   
-  // 1. Mevcut görünüm tablosu
+  // 1. Mevcut görünümdeki tablo
   const headers = Array.from(reportHeader.querySelectorAll('th')).map(th => th.innerText);
   const rows = [];
   document.querySelectorAll('#reportBodyStep3 tr').forEach(tr => {
     const cells = tr.querySelectorAll('td');
-    if (cells.length && cells[0].innerText !== 'Rapor verisi yok') {
+    if (cells.length) {
       const row = {};
       cells.forEach((cell, idx) => row[headers[idx]] = cell.innerText);
       rows.push(row);
     }
   });
-  let sheetName = currentReportView === 'proje' ? 'Proje Bazlı' : (currentReportView === 'projekisi' ? 'Proje+Değerlendirici' : 'Değerlendirici Bazlı');
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), sheetName);
+  let sheetName = currentReportType === 'proje' ? 'Proje Bazlı' : (currentReportType === 'projekisi' ? 'Proje+Kişi' : 'Kişi Bazlı');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
   
-  // 2. Tüm raporlar (Proje, Proje+Değerlendirici, Değerlendirici) ayrı sheetlerde
-  // Proje Bazlı
+  // 2. Diğer rapor türlerini de ayrı sheet olarak ekle (geçici olarak hesapla)
+  const distributedSet = getAllDistributedIdents();
+  let allAssignments = [];
+  for (let groupName of ['DM', 'ML', 'Dönüşüm Projeleri']) {
+    (reportHistory[groupName] || []).forEach(entry => {
+      (entry.assignments || []).forEach(ass => {
+        allAssignments.push({
+          monitoringId: String(ass.emp_monitor_ident || '').trim(),
+          proje: ass.client_name || '',
+          kisi: ass.FeedbackCreatorName || '',
+          grup: groupName,
+          hafta: entry.week
+        });
+      });
+    });
+  }
+  const identToInfo = new Map();
+  for (let ass of allAssignments) identToInfo.set(ass.monitoringId, { proje: ass.proje, kisi: ass.kisi, grup: ass.grup });
+  
+  // Proje bazlı
   const projMap = new Map();
   for (let rec of reportMainData) {
-    const distInfo = (() => { for (let g of ['DM','ML','DONUSUM']) for (let e of reportHistory[g]||[]) for (let a of e.assignments||[]) if (a.emp_monitor_ident === rec.monitoringId) return a; return null; })();
-    const proj = distInfo ? distInfo.client_name : '(Proje bilgisi yok)';
-    if (!projMap.has(proj)) projMap.set(proj, { total:0, dist:0 });
-    const stat = projMap.get(proj);
-    stat.total++;
-    if (distInfo) stat.dist++;
+    const info = identToInfo.get(rec.monitoringId);
+    const proje = info ? info.proje : '(Bilinmeyen Proje)';
+    if (!projMap.has(proje)) projMap.set(proje, { total:0, dist:0 });
+    const s = projMap.get(proje);
+    s.total++; if (info) s.dist++;
   }
-  const projRows = Array.from(projMap.entries()).map(([p,s]) => ({ 'Proje Adı': p, 'Dağıtılan Adet': s.dist, 'Bekleyen Adet': s.total - s.dist, 'Toplam': s.total }));
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(projRows), 'Proje Bazlı');
+  const projRows = Array.from(projMap.entries()).map(([p, s]) => ({ 'Proje Adı': p, 'Dağıtılan Adet': s.dist, 'Bekleyen Adet': s.total - s.dist, 'Toplam': s.total }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(projRows), 'Proje Bazlı');
   
-  // Proje+Değerlendirici Bazlı
-  const projKisiMap = new Map();
+  // Proje+Kişi bazlı
+  const pkMap = new Map();
   for (let rec of reportMainData) {
-    const distInfo = (() => { for (let g of ['DM','ML','DONUSUM']) for (let e of reportHistory[g]||[]) for (let a of e.assignments||[]) if (a.emp_monitor_ident === rec.monitoringId) return a; return null; })();
-    const proj = distInfo ? distInfo.client_name : '(Proje bilgisi yok)';
-    const key = `${proj}|${rec.feedbackCreatorName}`;
-    if (!projKisiMap.has(key)) projKisiMap.set(key, { proje: proj, kisi: rec.feedbackCreatorName, total:0, dist:0 });
-    const stat = projKisiMap.get(key);
-    stat.total++;
-    if (distInfo) stat.dist++;
+    const info = identToInfo.get(rec.monitoringId);
+    const proje = info ? info.proje : '(Bilinmeyen Proje)';
+    const kisi = info ? info.kisi : '(Bilinmeyen Kişi)';
+    const key = `${proje}|${kisi}`;
+    if (!pkMap.has(key)) pkMap.set(key, { proje, kisi, total:0, dist:0 });
+    const s = pkMap.get(key);
+    s.total++; if (info) s.dist++;
   }
-  const projKisiRows = Array.from(projKisiMap.values()).map(v => ({ 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan Adet': v.dist, 'Bekleyen Adet': v.total - v.dist, 'Toplam': v.total }));
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(projKisiRows), 'Proje+Değerlendirici');
+  const pkRows = Array.from(pkMap.values()).map(v => ({ 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan Adet': v.dist, 'Bekleyen Adet': v.total - v.dist, 'Toplam': v.total }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pkRows), 'Proje+Kişi Bazlı');
   
-  // Değerlendirici Bazlı
+  // Kişi bazlı
   const kisiMap = new Map();
   for (let rec of reportMainData) {
-    const distInfo = (() => { for (let g of ['DM','ML','DONUSUM']) for (let e of reportHistory[g]||[]) for (let a of e.assignments||[]) if (a.emp_monitor_ident === rec.monitoringId) return a; return null; })();
-    const kisi = rec.feedbackCreatorName;
+    const info = identToInfo.get(rec.monitoringId);
+    const kisi = info ? info.kisi : '(Bilinmeyen Kişi)';
     if (!kisiMap.has(kisi)) kisiMap.set(kisi, { total:0, dist:0 });
-    const stat = kisiMap.get(kisi);
-    stat.total++;
-    if (distInfo) stat.dist++;
+    const s = kisiMap.get(kisi);
+    s.total++; if (info) s.dist++;
   }
-  const kisiRows = Array.from(kisiMap.entries()).map(([k,s]) => ({ 'Değerlendirici': k, 'Dağıtılan Adet': s.dist, 'Bekleyen Adet': s.total - s.dist, 'Toplam': s.total }));
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(kisiRows), 'Değerlendirici Bazlı');
+  const kisiRows = Array.from(kisiMap.entries()).map(([k, s]) => ({ 'Değerlendirici': k, 'Dağıtılan Adet': s.dist, 'Bekleyen Adet': s.total - s.dist, 'Toplam': s.total }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kisiRows), 'Kişi Bazlı');
   
-  // 3. RAW Dağıtım Detayları (tüm gruplar)
+  // RAW dağıtım detayları
   const rawDist = [];
-  for (let g of ['DM', 'ML', 'DONUSUM']) {
-    const groupName = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
-    for (let entry of reportHistory[g] || []) {
-      for (let ass of entry.assignments || []) {
+  for (let groupName of ['DM', 'ML', 'Dönüşüm Projeleri']) {
+    (reportHistory[groupName] || []).forEach(entry => {
+      (entry.assignments || []).forEach(ass => {
         rawDist.push({
           'Grup': groupName,
           'Hafta': entry.week,
-          'Dağıtım Tarihi': entry.date ? new Date(entry.date).toLocaleString() : '',
-          'Değerlendirici (Reviewer)': ass.FeedbackCreatorName || '',
+          'Tarih': entry.date ? new Date(entry.date).toLocaleString() : '',
+          'Değerlendirici (Reviewer Name)': ass.FeedbackCreatorName || '',
           'Proje (client_name)': ass.client_name || '',
-          'Ident (emp_monitor_ident)': ass.emp_monitor_ident || '',
-          'Dil': ass.dil || '',
-          'Dağıtım Türü': ass.dagitimTuru || ''
+          'Ident (emp_monitor_ident)': ass.emp_monitor_ident || ''
         });
-      }
-    }
+      });
+    });
   }
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rawDist), 'RAW_Dağıtım_Detay');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawDist), 'RAW_Dağıtım_Detay');
   
-  // 4. Görüşme Listesi RAW
-  const interviewRaw = reportMainData.map(rec => ({
-    'Monitoring ID': rec.monitoringId,
-    'Ident': rec.ident,
-    'Değerlendirici (Reviewer Name)': rec.feedbackCreatorName
-  }));
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(interviewRaw), 'RAW_Gorusme_Listesi');
+  // RAW görüşme listesi
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportMainData), 'RAW_Gorusme_Listesi');
   
-  XLSX.writeFile(workbook, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
+  XLSX.writeFile(wb, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
 }
 
-// Tab değiştirme
-function setView(view) {
-  currentReportView = view;
-  [tabProje, tabProjeKisi, tabKisi].forEach(btn => btn.classList.remove('btn-primary'));
-  if (view === 'proje') tabProje.classList.add('btn-primary');
-  else if (view === 'projekisi') tabProjeKisi.classList.add('btn-primary');
+// Buton işlevleri
+function setReportType(type) {
+  currentReportType = type;
+  tabProje.classList.remove('btn-primary');
+  tabProjeKisi.classList.remove('btn-primary');
+  tabKisi.classList.remove('btn-primary');
+  if (type === 'proje') tabProje.classList.add('btn-primary');
+  else if (type === 'projekisi') tabProjeKisi.classList.add('btn-primary');
   else tabKisi.classList.add('btn-primary');
   if (reportMainData.length) generateReport();
 }
 
-// Event kurulumu
-function initStep3() {
-  console.log('initStep3 başladı');
-  if (!mainFileInput) { console.error('mainFileInput bulunamadı'); return; }
-  
-  const dropMain = document.getElementById('dropMainStep3');
-  const dropHistory = document.getElementById('dropHistoryStep3');
-  
-  dropMain.addEventListener('click', () => mainFileInput.click());
-  dropHistory.addEventListener('click', () => historyFileInput.click());
-  
-  mainFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) loadMainExcel(e.target.files[0]);
-  });
-  historyFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) loadHistoryJSON(e.target.files[0]);
-  });
-  
-  dropMain.addEventListener('dragover', e => e.preventDefault());
-  dropMain.addEventListener('drop', e => {
+// Drop zone kurulumu
+function setupDrop(dropId, inputId, loadFunc) {
+  const drop = document.getElementById(dropId);
+  const inp = document.getElementById(inputId);
+  if (!drop || !inp) return;
+  drop.addEventListener('click', () => inp.click());
+  drop.addEventListener('dragover', e => e.preventDefault());
+  drop.addEventListener('drop', e => {
     e.preventDefault();
     if (e.dataTransfer.files.length) {
-      mainFileInput.files = e.dataTransfer.files;
-      loadMainExcel(e.dataTransfer.files[0]);
+      inp.files = e.dataTransfer.files;
+      loadFunc(e.dataTransfer.files[0]);
     }
   });
-  dropHistory.addEventListener('dragover', e => e.preventDefault());
-  dropHistory.addEventListener('drop', e => {
-    e.preventDefault();
-    if (e.dataTransfer.files.length) {
-      historyFileInput.files = e.dataTransfer.files;
-      loadHistoryJSON(e.dataTransfer.files[0]);
-    }
-  });
-  
-  console.log('Step3 init tamam');
+  inp.addEventListener('change', e => { if (e.target.files.length) loadFunc(e.target.files[0]); });
 }
+setupDrop('dropMainStep3', 'mainFileInputStep3', loadMainExcel);
+setupDrop('dropHistoryStep3', 'historyFileInputStep3', loadHistoryJSON);
 
 calculateBtn.addEventListener('click', generateReport);
 exportBtn.addEventListener('click', exportReport);
-tabProje.addEventListener('click', () => setView('proje'));
-tabProjeKisi.addEventListener('click', () => setView('projekisi'));
-tabKisi.addEventListener('click', () => setView('kisi'));
+tabProje.addEventListener('click', () => setReportType('proje'));
+tabProjeKisi.addEventListener('click', () => setReportType('projekisi'));
+tabKisi.addEventListener('click', () => setReportType('kisi'));
 
-// Başlangıç durumu
+// Başlangıç
 tabProje.style.display = 'none';
 tabProjeKisi.style.display = 'none';
 tabKisi.style.display = 'none';
 reportArea.style.display = 'none';
 exportBtn.disabled = true;
-
-initStep3();
+console.log('Step3 hazır.');
