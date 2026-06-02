@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Dağılım — DM / ML / Dönüşüm + Raporlama</title>
+<title>Feedback Dağılım Aracı</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -65,15 +65,15 @@ td { color:var(--text); }
 </head>
 <body>
 <div class="header">
-  <div class="logo">📊 Feedback Dağılım — DM / ML / Dönüşüm + Raporlama</div>
+  <div class="logo">📊 Feedback Dağılım — Raporlama</div>
   <div class="header-controls"><div class="theme-switch"></div><button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button></div>
 </div>
 <div class="main">
   <div class="panel">
     <div class="step-buttons">
-      <button class="btn btn-primary step-btn" data-step="step1">🔍 Step 1: Monitoring ID</button>
-      <button class="btn btn-ghost step-btn" data-step="step2">📦 Step 2: Dağıtım</button>
-      <button class="btn btn-ghost step-btn" data-step="step3">📊 Step 3: Raporlama</button>
+      <button class="btn btn-primary step-btn" data-step="step1">🔍 Monitoring ID Kontrolü</button>
+      <button class="btn btn-ghost step-btn" data-step="step2">📦 Dağıtım</button>
+      <button class="btn btn-ghost step-btn" data-step="step3">📊 Raporlama</button>
     </div>
 
     <!-- STEP 1 -->
@@ -99,7 +99,7 @@ td { color:var(--text); }
     <!-- STEP 2 -->
     <div id="step2" class="step-content">
       <div class="pt">DM / ML / Dönüşüm <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Özel Kurallar</em></div>
-      <div class="sdesc">ML: position_code_type_full_name içinde "Quality Assurance Analyst" olmalı. HP için özel dağıtıcılar.</div>
+      <div class="sdesc">ML: Sadece kalite uzmanına ait görüşmeler dağıtılacak. HP German/Dutch olarak ayrı dağıtılacak.</div>
       <div class="upload-grid">
         <div class="upload-card"><h3>📞 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep2"><input type="file" id="mainFileInputStep2" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep2">Henüz yüklenmedi</div></div>
         <div class="upload-card"><h3>🗑️ 2. Silinenler</h3><div class="file-drop" id="dropDeletedStep2"><input type="file" id="deletedFileInputStep2" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Ident sütunu zorunlu</div></div><div class="upload-status" id="deletedStatusStep2">Henüz yüklenmedi</div></div>
@@ -141,7 +141,7 @@ td { color:var(--text); }
     </div>
   </div>
 </div>
-<footer class="footer">Feedback Dağılım — Step1 (ID+duplicate), Step2 (DM/ML/Dönüşüm), Step3 (Raporlama)</footer>
+<footer class="footer">Feedback Dağılım — Raporlama | TP Analitik Uzman Araçları</footer>
 <script src="js/theme.js"></script>
 <script src="js/feedbackdagilim.js"></script>
 </body>
