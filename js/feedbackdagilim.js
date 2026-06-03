@@ -17,7 +17,6 @@ function formatDateForFilename() {
   const d = new Date();
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
 }
-
 // Adım geçiş
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.step-btn').forEach(btn => {
@@ -31,9 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ==================== STEP 1 ====================
+// ==================== STEP 1 (Monitoring ID + duplicate + renklendirme) ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
-let markedForDeletion = new Set();   // sarı yapılacak satır indexleri (0-based)
+let markedForDeletion = new Set();   // sarı yapılacak satır indexleri
 let clickedRows = new Set();         // yeşil yapılacak satır indexleri
 
 const fileInputStep1      = document.getElementById('fileInputStep1');
@@ -85,9 +84,7 @@ async function processFileStep1(file) {
     const identCol = findColumnName(columns, ['Ident', 'ident', 'ID', 'Id']);
     if (!monCol)   throw new Error(`'Monitoring ID' sütunu yok: ${columns.join(', ')}`);
     if (!identCol) throw new Error(`'Ident' sütunu yok: ${columns.join(', ')}`);
-
     currentDataStep1 = rows;
-
     // Duplicate gruplama (sadece geçerli ID'ler)
     const idMap = new Map(); // key = monitoringId, value = [{ rowIndex, rowNum, identRaw }]
     rows.forEach((row, idx) => {
@@ -103,7 +100,6 @@ async function processFileStep1(file) {
         });
       }
     });
-
     // Her duplicate grubunda rastgele bir satırı sarıya işaretle
     const toDeleteSet = new Set();
     for (let [id, entries] of idMap.entries()) {
@@ -112,7 +108,6 @@ async function processFileStep1(file) {
         if (selected) toDeleteSet.add(selected.rowIndex);
       }
     }
-
     // Hata listesi oluştur
     const duplicateGroups = new Map();
     for (let [id, entries] of idMap.entries()) {
@@ -144,7 +139,6 @@ async function processFileStep1(file) {
         });
       }
     });
-
     // Monitoring ID'ye göre sırala (numerik)
     errorRowsStep1 = errors.sort((a, b) => {
       const idA = a.monitoringIdRaw, idB = b.monitoringIdRaw;
@@ -156,7 +150,6 @@ async function processFileStep1(file) {
       if (isNaN(numB)) return -1;
       return numA - numB;
     });
-
     const total = rows.length, errCount = errorRowsStep1.length;
     totalCountSpanStep1.textContent = total;
     errorCountSpanStep1.textContent = errCount;
@@ -171,7 +164,7 @@ async function processFileStep1(file) {
   }
 }
 function renderErrorTable() {
-  // Tablo başlıklarını güncelle (Ident sütununu kaldır)
+  // Tablo başlıklarını güncelle (Ident sütununu kaldır, İşlemler ekle)
   const thead = document.querySelector('#errorsSectionStep1 .error-table thead');
   if (thead) {
     thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
@@ -201,7 +194,7 @@ function renderErrorTable() {
       </tr>
     `;
   }).join('');
-  // Event listener'ları bağla (link ve sil butonlarına tıklayınca yeşil yap)
+  // Event listener'ları bağla (tıklayınca yeşil yap)
   document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
     btn.removeEventListener('click', handleStep1LinkClick);
     btn.addEventListener('click', handleStep1LinkClick);
@@ -213,10 +206,11 @@ function handleStep1LinkClick(e) {
   const rowIndex = parseInt(btn.getAttribute('data-row-index'));
   if (!isNaN(rowIndex) && !clickedRows.has(rowIndex)) {
     clickedRows.add(rowIndex);
-    renderErrorTable(); // yeniden render (yeşil olur)
+    renderErrorTable();
   }
   window.open(btn.href, '_blank');
 }
+// Step1 eventler
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -237,16 +231,19 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   validCountSpanStep1.textContent = '0';
 });
 // CSS stilleri
-const style = document.createElement('style');
-style.textContent = `
-  .delete-row { background-color: #fff3cd !important; }
-  .clicked-row { background-color: #d4edda !important; }
-  .delete-link-btn { background-color: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 2rem; text-decoration: none; font-size: 0.75rem; margin-left: 5px; display: inline-flex; align-items: center; gap: 0.25rem; }
-  .delete-link-btn:hover { filter: brightness(0.9); }
-`;
-document.head.appendChild(style);
+if (!document.querySelector('#step1-styles')) {
+  const style = document.createElement('style');
+  style.id = 'step1-styles';
+  style.textContent = `
+    .delete-row { background-color: #fff3cd !important; }
+    .clicked-row { background-color: #d4edda !important; }
+    .delete-link-btn { background-color: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 2rem; text-decoration: none; font-size: 0.75rem; margin-left: 5px; display: inline-flex; align-items: center; gap: 0.25rem; }
+    .delete-link-btn:hover { filter: brightness(0.9); }
+  `;
+  document.head.appendChild(style);
+}
 
-// ==================== STEP 2 (DM, ML, Dönüşüm) ====================
+// ==================== STEP 2 ====================
 let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
 let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
@@ -584,10 +581,7 @@ async function loadRefFileStep2(file) {
 function setupDrop(dropId, inputId, func) {
   const drop = document.getElementById(dropId);
   const inp = document.getElementById(inputId);
-  if (!drop || !inp) {
-    console.error(`setupDrop: ${dropId} veya ${inputId} bulunamadı`);
-    return;
-  }
+  if (!drop || !inp) { console.error(`setupDrop: ${dropId} veya ${inputId} bulunamadı`); return; }
   drop.addEventListener('click', () => inp.click());
   inp.addEventListener('change', e => { if (e.target.files[0]) func(e.target.files[0]); });
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
@@ -639,14 +633,6 @@ function findColumnNameStep3(columns, possibleNames) {
     if (idx !== -1) return columns[idx];
   }
   return null;
-}
-function formatReviewerName(name) {
-  if (!name) return '';
-  const commaIdx = name.indexOf(',');
-  if (commaIdx === -1) return name.trim();
-  const soyisim = name.substring(0, commaIdx).trim();
-  const isim = name.substring(commaIdx + 1).trim();
-  return isim ? `${isim} ${soyisim}` : soyisim;
 }
 function loadMainExcelS3(file) {
   if (!file) return;
@@ -787,10 +773,10 @@ function generateReportS3() {
   else tabKisi.classList.replace('btn-ghost', 'btn-primary');
 }
 function renderReportTableS3(headers, rows) {
-  reportHeaderS3.innerHTML = `<td>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+  reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
   reportBodyS3.innerHTML = rows.length
     ? rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
-    : `<td><td colspan="${headers.length}">Veri yok</td></tr>`;
+    : `<tr><td colspan="${headers.length}">Veri yok</td></tr>`;
 }
 function exportReportS3() {
   if (!reportMainData.length) {
