@@ -191,10 +191,22 @@ async function processFileStep1(file) {
   }
 }
 
-// Tabloyu render et (sarı/yeşil renkler, link ve sil butonu)
+// Tablo başlıklarını dinamik olarak güncelle
+const thead = document.querySelector('#errorsSectionStep1 .error-table thead');
+if (thead) {
+  thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
+}
+
+// Tabloyu render et (başlıklar: # Satır, Monitoring ID, Hata Nedeni, İşlemler)
 function renderErrorTable() {
+  // Önce tablo başlıklarını güncelle (HTML'deki eski başlıkları geçersiz kıl)
+  const thead = document.querySelector('#errorsSectionStep1 .error-table thead');
+  if (thead) {
+    thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
+  }
+
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<td><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></table>`;
+    errorTableBodyStep1.innerHTML = `</table><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
 
@@ -202,8 +214,30 @@ function renderErrorTable() {
     const normalLink = buildActionLink(err.identRaw, 'CHECKLIST');
     const deleteLink = buildActionLink(err.identRaw, 'DELETE');
     const normalLinkHtml = `<a href="${normalLink}" target="_blank" class="link-btn" data-row-index="${err.rowIndex}">🔗 Link</a>`;
-    const deleteLinkHtml = `<a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}" style="background-color:#dc3545; margin-left:5px;">🗑️ Sil</a>`;
+    const deleteLinkHtml = `<a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}" style="background-color:#dc3545; color:white; padding:0.25rem 0.75rem; border-radius:2rem; text-decoration:none; font-size:0.75rem; margin-left:5px;">🗑️ Sil</a>`;
 
+    let rowClass = '';
+    if (clickedRows.has(err.rowIndex)) {
+      rowClass = 'clicked-row';
+    } else if (err.markedForDeletion) {
+      rowClass = 'delete-row';
+    }
+
+    return `
+      <tr class="${rowClass}" data-row-index="${err.rowIndex}">
+        <td>${err.rowNumber}</td>
+        <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
+        <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
+        <td>${normalLinkHtml} ${deleteLinkHtml}</td>
+      </tr>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
+    btn.removeEventListener('click', handleLinkClick);
+    btn.addEventListener('click', handleLinkClick);
+  });
+}
     // Renk belirleme
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
