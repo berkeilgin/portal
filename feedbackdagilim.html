@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feedback Dağılım Aracı</title>
+<title>Feedback Dağılım — DM / ML / Dönüşüm + Raporlama</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* Tüm stiller aynen korundu (kısaltmak için sadece eklemeler) */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; line-height:1.5; }
 .header { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; gap:1rem; }
@@ -60,26 +59,29 @@ td { color:var(--text); }
 .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }
 .modal-content { background:var(--surface); border-radius:1rem; max-width:80%; max-height:80%; overflow:auto; padding:1rem; }
 .report-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; }
-@media (max-width:680px) { .main{padding:0 1rem;} .panel{padding:1.25rem;} .upload-grid{grid-template-columns:1fr;} }
+.delete-icon { cursor:pointer; margin-left:8px; font-size:16px; color:#ff6b6b; }
+.delete-icon:hover { opacity:0.7; }
+.row-highlight { background-color: #fff3cd !important; }
+.row-resolved { background-color: #d4edda !important; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div class="logo">📊 Feedback Dağılım — Raporlama</div>
+  <div class="logo">📊 Feedback Dağılım — DM / ML / Dönüşüm + Raporlama</div>
   <div class="header-controls"><div class="theme-switch"></div><button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfa</button></div>
 </div>
 <div class="main">
   <div class="panel">
     <div class="step-buttons">
-      <button class="btn btn-primary step-btn" data-step="step1">🔍 Monitoring ID Kontrolü</button>
-      <button class="btn btn-ghost step-btn" data-step="step2">📦 Dağıtım</button>
-      <button class="btn btn-ghost step-btn" data-step="step3">📊 Raporlama</button>
+      <button class="btn btn-primary step-btn" data-step="step1">🔍 Step 1: Monitoring ID</button>
+      <button class="btn btn-ghost step-btn" data-step="step2">📦 Step 2: Dağıtım</button>
+      <button class="btn btn-ghost step-btn" data-step="step3">📊 Step 3: Raporlama</button>
     </div>
 
     <!-- STEP 1 -->
     <div id="step1" class="step-content active">
       <div class="pt">Monitoring ID <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Doğrulama & Duplicate</em></div>
-      <div class="sdesc">📄 CSV / Excel yükleyin. Monitoring ID 8 haneli sayı olmalı, tekrar eden tüm satırlar hata olarak listelenir.</div>
+      <div class="sdesc">📄 CSV / Excel yükleyin. Monitoring ID 8 haneli sayı olmalı, tekrar eden ID'lerden rastgele biri silinecek olarak işaretlenir.</div>
       <div class="upload-area" id="uploadAreaStep1" style="background:var(--bg); border:2px dashed var(--border2); border-radius:1.25rem; padding:2rem; text-align:center; cursor:pointer; margin-bottom:1.5rem;">
         <div style="font-size:3rem;">📂</div><div>Dosyayı sürükleyin veya tıklayın</div>
         <input type="file" id="fileInputStep1" accept=".xlsx,.xls,.csv" style="display:none;">
@@ -91,15 +93,15 @@ td { color:var(--text); }
         <div class="stat-card"><div class="stat-label">✅ Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div>
       </div>
       <div class="errors-section" id="errorsSectionStep1" style="display:none;">
-        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th><tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
+        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Durum</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="6" class="empty-state">Henüz veri yok</td></tr></tbody><tr></div>
       </div>
       <div style="display:flex; justify-content:flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
 
-    <!-- STEP 2 -->
+    <!-- STEP 2 (kısa, önceki gibi) -->
     <div id="step2" class="step-content">
       <div class="pt">DM / ML / Dönüşüm <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Özel Kurallar</em></div>
-      <div class="sdesc">ML: Sadece kalite uzmanına ait görüşmeler dağıtılacak. HP German/Dutch olarak ayrı dağıtılacak.</div>
+      <div class="sdesc">ML: position_code_type_full_name içinde "Quality Assurance Analyst" olmalı. HP için özel dağıtıcılar.</div>
       <div class="upload-grid">
         <div class="upload-card"><h3>📞 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep2"><input type="file" id="mainFileInputStep2" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep2">Henüz yüklenmedi</div></div>
         <div class="upload-card"><h3>🗑️ 2. Silinenler</h3><div class="file-drop" id="dropDeletedStep2"><input type="file" id="deletedFileInputStep2" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Ident sütunu zorunlu</div></div><div class="upload-status" id="deletedStatusStep2">Henüz yüklenmedi</div></div>
@@ -117,16 +119,16 @@ td { color:var(--text); }
       </div>
       <div><button class="btn btn-primary" id="calculateBtnStep2">📐 Dağıtımı Hesapla</button>
       <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & 3 Excel İndir</button></div>
-      <div id="previewAreaStep2" style="display:none; margin-top:1rem;"><h3>📋 Önizleme</h3><div class="table-wrapper"><table class="preview-table"><thead><tr><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Ident</th><th>Link</th></tr></thead><tbody id="previewBodyStep2"></tbody></table></div></div>
+      <div id="previewAreaStep2" style="display:none; margin-top:1rem;"><h3>📋 Önizleme</h3><div class="table-wrapper"><table class="preview-table"><thead><tr><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Ident</th><th>Link</th><tr></thead><tbody id="previewBodyStep2"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep2"><div class="loader-bar-inner"></div></div>
     </div>
 
-    <!-- STEP 3 -->
+    <!-- STEP 3 (Güncel) -->
     <div id="step3" class="step-content">
       <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Bekleyen</em></div>
-      <div class="sdesc">Görüşme listesi ile dağıtım geçmişi eşleştirilir.</div>
+      <div class="sdesc">Görüşme listesi (Monitoring ID) ile dağıtım geçmişi (emp_monitor_ident) eşleştirilir. İsimler "İsim Soyisim" formatında gösterilir.</div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>📄 Görüşme Listesi (Step1 formatında)</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID, Ident, client_name, FeedbackCreatorName, CheckListCreated</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
+        <div class="upload-card"><h3>📄 Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID, Ident, FeedbackCreatorName (Soyisim, İsim), CheckListCreated</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
         <div class="upload-card"><h3>🗂️ Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
       </div>
       <div class="report-tabs">
@@ -141,7 +143,7 @@ td { color:var(--text); }
     </div>
   </div>
 </div>
-<footer class="footer">Feedback Dağılım — Raporlama | TP Analitik Uzman Araçları</footer>
+<footer class="footer">Feedback Dağılım — Step1 (ID+duplicate+silinecek işareti), Step2 (DM/ML/Dönüşüm), Step3 (Raporlama)</footer>
 <script src="js/theme.js"></script>
 <script src="js/feedbackdagilim.js"></script>
 </body>
