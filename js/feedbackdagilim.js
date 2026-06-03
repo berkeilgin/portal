@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== STEP 1 (Monitoring ID + duplicate + renklendirme) ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
-let markedForDeletion = new Set();   // sarı yapılacak satır numaraları
+let markedForDeletion = new Set();   // sarı yapılacak satır numaraları (gerçek satır indexi)
 let clickedRows = new Set();         // linke tıklanmış satırlar (yeşil)
 
 const fileInputStep1      = document.getElementById('fileInputStep1');
@@ -63,7 +63,16 @@ function getErrorReason(v) {
   return 'Geçersiz format';
 }
 
-// Rastgele bir satır seç
+// Link oluştur (normal veya delete)
+function buildActionLink(ident, action = 'CHECKLIST') {
+  if (!ident) return '#';
+  const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
+  let frmOption = 'OPTION';
+  if (action === 'DELETE') frmOption = 'DELETE';
+  return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=${frmOption}`;
+}
+
+// Rastgele bir satır seç (duplicate grubundan)
 function selectRandomRow(rowsArray) {
   if (!rowsArray.length) return null;
   const randomIndex = Math.floor(Math.random() * rowsArray.length);
@@ -90,15 +99,16 @@ async function processFileStep1(file) {
 
     currentDataStep1 = rows;
 
-    // 1. Tüm duplicate ID'leri grupla
-    const idMap = new Map(); // key = monitoringId, value = [{ rowNum, identRaw, monitoringIdRaw }]
+    // 1. Tüm duplicate ID'leri grupla (sadece geçerli Monitoring ID'ler için)
+    const idMap = new Map(); // key = monitoringId, value = [{ rowIndex, rowNum, identRaw, monitoringIdRaw }]
     rows.forEach((row, idx) => {
       const mid = row[monCol];
       const midStr = mid != null ? String(mid).trim() : null;
       if (midStr && isValidMonitoringId(mid)) {
         if (!idMap.has(midStr)) idMap.set(midStr, []);
         idMap.get(midStr).push({
-          rowNum: idx + 2,
+          rowIndex: idx,                // 0-based index
+          rowNum: idx + 2,              // görünen satır numarası
           identRaw: row[identCol] != null ? String(row[identCol]) : '',
           monitoringIdRaw: midStr
         });
@@ -106,11 +116,11 @@ async function processFileStep1(file) {
     });
 
     // 2. Her duplicate grubu için rastgele bir satırı silinecek (sarı) olarak işaretle
-    const toDeleteSet = new Set();
+    const toDeleteSet = new Set(); // rowNum değil, rowIndex tutuyoruz (daha sonra eşleme için)
     for (let [id, entries] of idMap.entries()) {
       if (entries.length > 1) {
         const selected = selectRandomRow(entries);
-        if (selected) toDeleteSet.add(selected.rowNum);
+        if (selected) toDeleteSet.add(selected.rowIndex);
       }
     }
 
@@ -122,7 +132,7 @@ async function processFileStep1(file) {
       }
     }
 
-    const errors = [];
+    const errors = []; // { rowIndex, rowNum, monitoringIdRaw, identRaw, reason, markedForDeletion }
     rows.forEach((row, idx) => {
       const mid = row[monCol];
       const ident = row[identCol];
@@ -141,25 +151,39 @@ async function processFileStep1(file) {
 
       if (reason) {
         errors.push({
+          rowIndex: idx,
           rowNumber: rowNum,
           monitoringIdRaw: mid != null ? String(mid) : '(boş)',
           identRaw: ident != null ? String(ident) : '',
           reason: reason,
-          markedForDeletion: toDeleteSet.has(rowNum)   // sarı yapılacak mı?
+          markedForDeletion: toDeleteSet.has(idx)   // sarı yapılacak mı?
         });
       }
     });
 
-    errorRowsStep1 = errors;
+    // 4. Monitoring ID'ye göre sırala (alfabetik/numerik)
+    errorRowsStep1 = errors.sort((a, b) => {
+      const idA = a.monitoringIdRaw;
+      const idB = b.monitoringIdRaw;
+      // Boş değerleri sona at
+      if (idA === '(boş)') return 1;
+      if (idB === '(boş)') return -1;
+      // Sayısal karşılaştırma
+      const numA = parseInt(idA, 10);
+      const numB = parseInt(idB, 10);
+      if (isNaN(numA)) return 1;
+      if (isNaN(numB)) return -1;
+      return numA - numB;
+    });
 
-    const total = rows.length, errCount = errors.length;
+    const total = rows.length, errCount = errorRowsStep1.length;
     totalCountSpanStep1.textContent = total;
     errorCountSpanStep1.textContent = errCount;
     validCountSpanStep1.textContent = total - errCount;
     statsContainerStep1.style.display = 'flex';
     errorsSectionStep1.style.display  = 'block';
 
-    renderErrorTable(); // ayrı fonksiyon (renkler ve ikonlar için)
+    renderErrorTable();
   } catch (err) {
     alert('Hata: ' + err.message);
   } finally {
@@ -167,75 +191,58 @@ async function processFileStep1(file) {
   }
 }
 
-// Tabloyu render et (sarı/yeşil renkler ve ikonlarla)
+// Tabloyu render et (sarı/yeşil renkler, link ve sil butonu)
 function renderErrorTable() {
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<td><td colspan="5" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `<td><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></table>`;
     return;
   }
 
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
-    const link = buildMonitorLink(err.identRaw);
-    const linkHtml = link
-      ? `<a href="${link}" target="_blank" class="link-btn" data-row="${err.rowNumber}">🔗 Link</a>`
-      : `<span class="badge-error">Ident eksik</span>`;
+    const normalLink = buildActionLink(err.identRaw, 'CHECKLIST');
+    const deleteLink = buildActionLink(err.identRaw, 'DELETE');
+    const normalLinkHtml = `<a href="${normalLink}" target="_blank" class="link-btn" data-row-index="${err.rowIndex}">🔗 Link</a>`;
+    const deleteLinkHtml = `<a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}" style="background-color:#dc3545; margin-left:5px;">🗑️ Sil</a>`;
 
-    // Renk belirleme: önce link tıklanmış mı? -> yeşil, yoksa silinecek mi? -> sarı
+    // Renk belirleme
     let rowClass = '';
-    if (clickedRows.has(err.rowNumber)) {
+    if (clickedRows.has(err.rowIndex)) {
       rowClass = 'clicked-row';   // yeşil
     } else if (err.markedForDeletion) {
       rowClass = 'delete-row';     // sarı
     }
 
-    // Silme ikonu (sadece silinecek olanlara)
-    const deleteIcon = err.markedForDeletion
-      ? `<span class="delete-icon" data-row="${err.rowNumber}" style="cursor:pointer; margin-left:8px; font-size:1.1rem;" title="Silinecek olarak işaretlendi">🗑️</span>`
-      : '';
-
     return `
-      <tr class="${rowClass}" data-row="${err.rowNumber}">
+      <tr class="${rowClass}" data-row-index="${err.rowIndex}">
         <td>${err.rowNumber}</td>
         <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
-        <td><code>${escapeHtml(err.identRaw) || '—'}</code>${deleteIcon}</td>
         <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
-        <td>${linkHtml}</td>
-       </tr>
+        <td>${normalLinkHtml} ${deleteLinkHtml}</td>
+      </table>
     `;
   }).join('');
 
-  // Event listener'ları bağla (link tıklama ve silme ikonu)
-  document.querySelectorAll('.link-btn').forEach(btn => {
+  // Event listener'ları bağla (link tıklama ile yeşil yap)
+  document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
     btn.removeEventListener('click', handleLinkClick);
     btn.addEventListener('click', handleLinkClick);
   });
-  document.querySelectorAll('.delete-icon').forEach(icon => {
-    icon.removeEventListener('click', handleDeleteIconClick);
-    icon.addEventListener('click', handleDeleteIconClick);
-  });
 }
 
-// Link tıklama: o satırı yeşil yap
+// Link veya sil butonuna tıklama: o satırı yeşil yap
 function handleLinkClick(e) {
   e.preventDefault();
-  const link = e.currentTarget;
-  const rowNum = parseInt(link.getAttribute('data-row'));
-  if (rowNum && !clickedRows.has(rowNum)) {
-    clickedRows.add(rowNum);
-    renderErrorTable(); // yeniden render
+  const btn = e.currentTarget;
+  const rowIndex = parseInt(btn.getAttribute('data-row-index'));
+  if (!isNaN(rowIndex) && !clickedRows.has(rowIndex)) {
+    clickedRows.add(rowIndex);
+    renderErrorTable(); // yeniden render (yeşil olur)
   }
   // Linki yeni sekmede aç
-  window.open(link.href, '_blank');
+  window.open(btn.href, '_blank');
 }
 
-// Silme ikonuna tıklama: bilgilendirme
-function handleDeleteIconClick(e) {
-  e.stopPropagation();
-  const rowNum = e.currentTarget.getAttribute('data-row');
-  alert(`Satır ${rowNum} silinecek olarak işaretlendi. (Bu özellik sadece görsel uyarıdır.)`);
-}
-
-// Event listener'lar (upload, reset vb.)
+// Event listener'lar (upload, reset)
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -254,7 +261,7 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   fileInputStep1.value = '';
   statsContainerStep1.style.display = 'none';
   errorsSectionStep1.style.display  = 'none';
-  errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>`;
+  errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">Henüz veri yok</td></table>`;
   totalCountSpanStep1.textContent = '0';
   errorCountSpanStep1.textContent = '0';
   validCountSpanStep1.textContent = '0';
@@ -265,7 +272,8 @@ const style = document.createElement('style');
 style.textContent = `
   .delete-row { background-color: #fff3cd !important; }
   .clicked-row { background-color: #d4edda !important; }
-  .delete-icon:hover { opacity: 0.7; transform: scale(1.1); display: inline-block; }
+  .delete-link-btn { background-color: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 2rem; text-decoration: none; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem; }
+  .delete-link-btn:hover { filter: brightness(0.9); }
 `;
 document.head.appendChild(style);
 
