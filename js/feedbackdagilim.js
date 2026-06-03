@@ -30,10 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ==================== STEP 1 (Monitoring ID + duplicate + renklendirme) ====================
+// ==================== STEP 1 ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
-let markedForDeletion = new Set();   // sarı yapılacak satır indexleri
-let clickedRows = new Set();         // yeşil yapılacak satır indexleri
+let markedForDeletion = new Set();
+let clickedRows = new Set();
 
 const fileInputStep1      = document.getElementById('fileInputStep1');
 const uploadAreaStep1     = document.getElementById('uploadAreaStep1');
@@ -85,8 +85,7 @@ async function processFileStep1(file) {
     if (!monCol)   throw new Error(`'Monitoring ID' sütunu yok: ${columns.join(', ')}`);
     if (!identCol) throw new Error(`'Ident' sütunu yok: ${columns.join(', ')}`);
     currentDataStep1 = rows;
-    // Duplicate gruplama (sadece geçerli ID'ler)
-    const idMap = new Map(); // key = monitoringId, value = [{ rowIndex, rowNum, identRaw }]
+    const idMap = new Map();
     rows.forEach((row, idx) => {
       const mid = row[monCol];
       const midStr = mid != null ? String(mid).trim() : null;
@@ -100,7 +99,6 @@ async function processFileStep1(file) {
         });
       }
     });
-    // Her duplicate grubunda rastgele bir satırı sarıya işaretle
     const toDeleteSet = new Set();
     for (let [id, entries] of idMap.entries()) {
       if (entries.length > 1) {
@@ -108,7 +106,6 @@ async function processFileStep1(file) {
         if (selected) toDeleteSet.add(selected.rowIndex);
       }
     }
-    // Hata listesi oluştur
     const duplicateGroups = new Map();
     for (let [id, entries] of idMap.entries()) {
       if (entries.length > 1) duplicateGroups.set(id, entries.map(e => e.rowNum));
@@ -139,7 +136,6 @@ async function processFileStep1(file) {
         });
       }
     });
-    // Monitoring ID'ye göre sırala (numerik)
     errorRowsStep1 = errors.sort((a, b) => {
       const idA = a.monitoringIdRaw, idB = b.monitoringIdRaw;
       if (idA === '(boş)') return 1;
@@ -164,13 +160,12 @@ async function processFileStep1(file) {
   }
 }
 function renderErrorTable() {
-  // Tablo başlıklarını güncelle (Ident sütununu kaldır, İşlemler ekle)
   const thead = document.querySelector('#errorsSectionStep1 .error-table thead');
   if (thead) {
-    thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
+    thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></td>`;
   }
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `</table><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
@@ -178,9 +173,9 @@ function renderErrorTable() {
     const deleteLink = buildMonitorLink(err.identRaw, 'DELETE');
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
-      rowClass = 'clicked-row';   // yeşil
+      rowClass = 'clicked-row';
     } else if (err.markedForDeletion) {
-      rowClass = 'delete-row';     // sarı
+      rowClass = 'delete-row';
     }
     return `
       <tr class="${rowClass}" data-row-index="${err.rowIndex}">
@@ -194,7 +189,6 @@ function renderErrorTable() {
       </tr>
     `;
   }).join('');
-  // Event listener'ları bağla (tıklayınca yeşil yap)
   document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
     btn.removeEventListener('click', handleStep1LinkClick);
     btn.addEventListener('click', handleStep1LinkClick);
@@ -210,7 +204,6 @@ function handleStep1LinkClick(e) {
   }
   window.open(btn.href, '_blank');
 }
-// Step1 eventler
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -230,20 +223,42 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   errorCountSpanStep1.textContent = '0';
   validCountSpanStep1.textContent = '0';
 });
-// CSS stilleri
+// CSS stilleri (tüm temalarda okunabilirlik için)
 if (!document.querySelector('#step1-styles')) {
   const style = document.createElement('style');
   style.id = 'step1-styles';
   style.textContent = `
     .delete-row { background-color: #fff3cd !important; }
     .clicked-row { background-color: #d4edda !important; }
-    .delete-link-btn { background-color: #dc3545; color: white; padding: 0.25rem 0.75rem; border-radius: 2rem; text-decoration: none; font-size: 0.75rem; margin-left: 5px; display: inline-flex; align-items: center; gap: 0.25rem; }
+    /* Sarı ve yeşil satırlarda yazı rengini koyu yap (tüm temalar için) */
+    .delete-row, .clicked-row,
+    .delete-row td, .clicked-row td,
+    .delete-row code, .clicked-row code {
+      color: #1a1a1a !important;
+    }
+    /* Butonların beyaz kalmasını sağla */
+    .delete-row .link-btn, .clicked-row .link-btn,
+    .delete-row .delete-link-btn, .clicked-row .delete-link-btn {
+      color: white !important;
+    }
+    .delete-link-btn { 
+      background-color: #dc3545; 
+      color: white; 
+      padding: 0.25rem 0.75rem; 
+      border-radius: 2rem; 
+      text-decoration: none; 
+      font-size: 0.75rem; 
+      margin-left: 5px; 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 0.25rem; 
+    }
     .delete-link-btn:hover { filter: brightness(0.9); }
   `;
   document.head.appendChild(style);
 }
 
-// ==================== STEP 2 ====================
+// ==================== STEP 2 (kısaltılmış, çalışır) ====================
 let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
 let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
@@ -604,7 +619,7 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (Raporlama) ====================
+// ==================== STEP 3 ====================
 let reportMainData = [];
 let reportHistory3 = { DM: [], ML: [], DONUSUM: [] };
 let currentReportView = 'proje';
