@@ -1,51 +1,12 @@
-// ==================== ORTAK YARDIMCILAR ====================
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-}
-function showLoader(step, show) {
-  const el = document.getElementById(`loader${step}`);
-  if (el) el.classList.toggle('visible', show);
-}
-function buildMonitorLink(ident) {
-  if (!ident) return '#';
-  return `https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=OPTION`;
-}
-function formatDateForFilename() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-}
-// İsim formatı: "Soyisim, İsim" -> "İsim Soyisim"
-function formatName(name) {
-  if (!name) return '';
-  const parts = name.split(',');
-  if (parts.length === 2) {
-    return `${parts[1].trim()} ${parts[0].trim()}`;
-  }
-  return name.trim();
-}
-
-// Adım geçiş
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.step-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stepId = btn.dataset.step;
-      document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-      document.getElementById(stepId).classList.add('active');
-      document.querySelectorAll('.step-btn').forEach(b => b.classList.replace('btn-primary','btn-ghost'));
-      btn.classList.replace('btn-ghost','btn-primary');
-    });
-  });
-});
-
-// ==================== STEP 1 (Monitoring ID + duplicate + silinecek işareti) ====================
+// ==================== STEP 1 (Monitoring ID + duplicate + rastgele silinecek + link click ile yeşil) ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
-let duplicateDeleteStatus = {}; // satır indexi -> { markedForDelete: bool, resolved: bool }
+let markedForDeletion = new Set();        // satır numarası (rowNumber) tutar, sarı olanlar
+let clickedRows = new Set();              // linke tıklanmış satırlar (yeşil)
 
-const fileInputStep1 = document.getElementById('fileInputStep1');
-const uploadAreaStep1 = document.getElementById('uploadAreaStep1');
+const fileInputStep1      = document.getElementById('fileInputStep1');
+const uploadAreaStep1     = document.getElementById('uploadAreaStep1');
 const statsContainerStep1 = document.getElementById('statsContainerStep1');
-const errorsSectionStep1 = document.getElementById('errorsSectionStep1');
+const errorsSectionStep1  = document.getElementById('errorsSectionStep1');
 const totalCountSpanStep1 = document.getElementById('totalCountStep1');
 const errorCountSpanStep1 = document.getElementById('errorCountStep1');
 const validCountSpanStep1 = document.getElementById('validCountStep1');
@@ -53,171 +14,199 @@ const errorTableBodyStep1 = document.getElementById('errorTableBodyStep1');
 
 function findColumnName(columns, possibleNames) {
   const lower = columns.map(c => String(c).trim().toLowerCase());
-  for (let name of possibleNames) {
+  for (const name of possibleNames) {
     const idx = lower.indexOf(name.toLowerCase());
     if (idx !== -1) return columns[idx];
   }
   return null;
 }
+
 function isValidMonitoringId(v) {
   if (v == null) return false;
-  let s = String(v).trim();
-  return /^\d{8}$/.test(s);
+  return /^\d{8}$/.test(String(v).trim());
 }
+
 function getErrorReason(v) {
-  if (v == null || String(v).trim() === "") return "Boş değer";
-  let s = String(v).trim();
-  if (!/^\d+$/.test(s)) return "Sayısal değil";
+  if (v == null || String(v).trim() === '') return 'Boş değer';
+  const s = String(v).trim();
+  if (!/^\d+$/.test(s)) return 'Sayısal değil';
   if (s.length !== 8) return `${s.length} haneli (8 gerekli)`;
-  return "Geçersiz format";
+  return 'Geçersiz format';
+}
+
+// Rastgele seçim (duplicate grubundan bir satır seç)
+function selectRandomRow(rowsArray) {
+  if (!rowsArray.length) return null;
+  const randomIndex = Math.floor(Math.random() * rowsArray.length);
+  return rowsArray[randomIndex];
 }
 
 async function processFileStep1(file) {
   if (!file) return;
-  if (typeof XLSX === 'undefined') { alert("XLSX kütüphanesi yüklenemedi."); return; }
+  if (typeof XLSX === 'undefined') { alert('XLSX kütüphanesi yüklenemedi.'); return; }
   showLoader('Step1', true);
   statsContainerStep1.style.display = 'none';
-  errorsSectionStep1.style.display = 'none';
+  errorsSectionStep1.style.display  = 'none';
+  markedForDeletion.clear();
+  clickedRows.clear();
   try {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: 'array', defval: "" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    const wb      = XLSX.read(await file.arrayBuffer(), { type: 'array', defval: '' });
+    const rows    = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
     if (!rows.length) throw new Error('Dosya boş');
     const columns = Object.keys(rows[0]);
-    const monCol = findColumnName(columns, ['Monitoring ID','monitoring id','MonitoringId']);
+    const monCol  = findColumnName(columns, ['Monitoring ID','monitoring id','MonitoringId']);
     const identCol = findColumnName(columns, ['Ident','ident','ID','Id']);
-    if (!monCol) throw new Error(`'Monitoring ID' sütunu yok: ${columns.join(', ')}`);
+    if (!monCol)   throw new Error(`'Monitoring ID' sütunu yok: ${columns.join(', ')}`);
     if (!identCol) throw new Error(`'Ident' sütunu yok: ${columns.join(', ')}`);
+
     currentDataStep1 = rows;
-    
-    // Hata tespiti: format + duplicate
-    const errors = [];
-    const idMap = new Map(); // monitoringId -> array of { rowNum, rowIndex, ident }
+
+    // 1. Tüm duplicate ID'leri grupla
+    const idMap = new Map(); // key = monitoringId, value = [{ rowNum, ident, raw }]
     rows.forEach((row, idx) => {
       const mid = row[monCol];
       const midStr = mid != null ? String(mid).trim() : null;
-      if (midStr) {
+      if (midStr && isValidMonitoringId(mid)) {
         if (!idMap.has(midStr)) idMap.set(midStr, []);
-        idMap.get(midStr).push({ rowNum: idx + 2, rowIndex: idx, ident: row[identCol] });
-      }
-    });
-    
-    // Duplicate olan ID'ler için rastgele bir tanesini "silinecek" seç
-    duplicateDeleteStatus = {};
-    for (let [id, positions] of idMap.entries()) {
-      if (positions.length > 1) {
-        // Rastgele bir taneyi silinecek seç
-        const randomIndex = Math.floor(Math.random() * positions.length);
-        positions.forEach((pos, i) => {
-          const key = `row_${pos.rowIndex}`;
-          duplicateDeleteStatus[key] = {
-            markedForDelete: (i === randomIndex),
-            resolved: false,
-            monitoringId: id,
-            ident: pos.ident
-          };
+        idMap.get(midStr).push({
+          rowNum: idx + 2,
+          identRaw: row[identCol] != null ? String(row[identCol]) : '',
+          monitoringIdRaw: midStr
         });
       }
+    });
+
+    // 2. Her duplicate grubu için rastgele bir satırı "silinecek" olarak işaretle
+    const toDeleteSet = new Set(); // rowNumber'lar
+    for (let [id, entries] of idMap.entries()) {
+      if (entries.length > 1) {
+        const selected = selectRandomRow(entries);
+        if (selected) toDeleteSet.add(selected.rowNum);
+      }
     }
-    
+
+    // 3. Hata listesini oluştur (format hatası + duplicate bilgisi)
+    const errors = [];
+    const duplicateGroups = new Map(); // id -> rowNum listesi (sadece duplicate olanlar için)
+    for (let [id, entries] of idMap.entries()) {
+      if (entries.length > 1) {
+        duplicateGroups.set(id, entries.map(e => e.rowNum));
+      }
+    }
+
     rows.forEach((row, idx) => {
       const mid = row[monCol];
       const ident = row[identCol];
       const rowNum = idx + 2;
       let reason = null;
-      const key = `row_${idx}`;
-      const status = duplicateDeleteStatus[key];
-      
+
       if (!isValidMonitoringId(mid)) {
         reason = getErrorReason(mid);
       } else {
         const midStr = String(mid).trim();
-        if (idMap.get(midStr)?.length > 1) {
-          if (status?.markedForDelete) {
-            reason = `Duplicate ID - SİLİNECEK (rastgele seçildi)`;
-          } else {
-            reason = `Duplicate ID - KORUNACAK`;
-          }
+        if (duplicateGroups.has(midStr)) {
+          const otherRows = duplicateGroups.get(midStr).filter(r => r !== rowNum);
+          reason = `Tekrar eden ID (${otherRows.map(r => `${r}. satır`).join(', ')})`;
         }
       }
+
       if (reason) {
         errors.push({
           rowNumber: rowNum,
-          rowIndex: idx,
-          monitoringIdRaw: mid != null ? String(mid) : "(boş)",
-          identRaw: ident != null ? String(ident) : "",
+          monitoringIdRaw: mid != null ? String(mid) : '(boş)',
+          identRaw: ident != null ? String(ident) : '',
           reason: reason,
-          isMarkedForDelete: status?.markedForDelete || false,
-          resolved: status?.resolved || false
+          markedForDeletion: toDeleteSet.has(rowNum)  // sarı yapılacak mı?
         });
       }
     });
-    
+
     errorRowsStep1 = errors;
-    const total = rows.length, errCount = errors.length, valid = total - errCount;
+
+    const total = rows.length, errCount = errors.length;
     totalCountSpanStep1.textContent = total;
     errorCountSpanStep1.textContent = errCount;
-    validCountSpanStep1.textContent = valid;
+    validCountSpanStep1.textContent = total - errCount;
     statsContainerStep1.style.display = 'flex';
-    
-    renderErrorTable();
-    
+    errorsSectionStep1.style.display  = 'block';
+
+    renderErrorTable(); // ayrı fonksiyonda render (çünkü link tıklamaları da yeniden render yapacak)
+
   } catch (err) {
-    alert("Hata: " + err.message);
+    alert('Hata: ' + err.message);
   } finally {
     showLoader('Step1', false);
   }
 }
 
+// Tabloyu render et (sarı/yeşil renkler ve ikonlarla)
 function renderErrorTable() {
-  if (errorRowsStep1.length === 0) {
-    errorsSectionStep1.style.display = 'block';
-    errorTableBodyStep1.innerHTML = `<tr><td colspan="6" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+  if (!errorRowsStep1.length) {
+    errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
-  errorsSectionStep1.style.display = 'block';
-  let html = '';
-  errorRowsStep1.forEach((err, idx) => {
+
+  errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
     const link = buildMonitorLink(err.identRaw);
-    const linkHtml = link ? `<a href="${link}" target="_blank" class="link-btn" data-rowidx="${idx}" data-ident="${err.identRaw}">🔗 Link</a>` : `<span class="badge-error">Ident eksik</span>`;
-    const deleteIcon = err.isMarkedForDelete && !err.resolved ? `<span class="delete-icon" data-rowidx="${idx}" title="Silinecek olarak işaretlendi, tıklandığında yeşile döner">🗑️</span>` : '';
-    const rowClass = err.resolved ? 'row-resolved' : (err.isMarkedForDelete ? 'row-highlight' : '');
-    html += `<tr class="${rowClass}" data-erroridx="${idx}">
-      <td>${err.rowNumber}</td>
-      <td><code>${escapeHtml(err.monitoringIdRaw)}</code> ${deleteIcon}</td>
-      <td><code>${escapeHtml(err.identRaw) || "—"}</code></td>
-      <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
-      <td>${err.resolved ? '✅ Çözüldü' : (err.isMarkedForDelete ? '🗑️ Silinecek' : '⚠️ Hatalı')}</td>
-      <td>${linkHtml}</td>
-    </tr>`;
+    const linkHtml = link
+      ? `<a href="${link}" target="_blank" class="link-btn" data-row="${err.rowNumber}">🔗 Link</a>`
+      : `<span class="badge-error">Ident eksik</span>`;
+
+    // Renk belirleme: önce link tıklanmış mı? -> yeşil, yoksa silinecek mi? -> sarı
+    let rowClass = '';
+    if (clickedRows.has(err.rowNumber)) {
+      rowClass = 'clicked-row';  // yeşil
+    } else if (err.markedForDeletion) {
+      rowClass = 'delete-row';    // sarı
+    }
+
+    // Silme ikonu (sadece silinecek olanlara)
+    const deleteIcon = err.markedForDeletion ? `<span class="delete-icon" data-row="${err.rowNumber}" style="cursor:pointer; margin-left:8px; font-size:1.1rem;">🗑️</span>` : '';
+
+    return `
+      <tr class="${rowClass}" data-row="${err.rowNumber}">
+        <td>${err.rowNumber}</td>
+        <td><code>${escapeHtml(err.monitoringIdRaw)}</code></td>
+        <td><code>${escapeHtml(err.identRaw) || '—'}</code>${deleteIcon}</td>
+        <td><span class="badge-error">⚠️ ${escapeHtml(err.reason)}</span></td>
+        <td>${linkHtml}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Event listener'ları yeniden bağla (link tıklama ve silme ikonu)
+  document.querySelectorAll('.link-btn').forEach(btn => {
+    btn.removeEventListener('click', handleLinkClick);
+    btn.addEventListener('click', handleLinkClick);
   });
-  errorTableBodyStep1.innerHTML = html;
-  
-  // Delete icon'larına tıklama ve link'e tıklama eventleri
   document.querySelectorAll('.delete-icon').forEach(icon => {
-    icon.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const rowIdx = icon.getAttribute('data-rowidx');
-      if (rowIdx !== null) {
-        errorRowsStep1[rowIdx].resolved = true;
-        // Aynı monitoringId'ye sahip diğer satırları da "korunacak" olarak işaretle? Hayır, sadece bu satır çözüldü.
-        renderErrorTable();
-      }
-    });
-  });
-  
-  document.querySelectorAll('.link-btn').forEach(link => {
-    link.addEventListener('click', (e) => {
-      const rowIdx = link.getAttribute('data-rowidx');
-      if (rowIdx !== null && errorRowsStep1[rowIdx] && errorRowsStep1[rowIdx].isMarkedForDelete && !errorRowsStep1[rowIdx].resolved) {
-        errorRowsStep1[rowIdx].resolved = true;
-        renderErrorTable();
-      }
-    });
+    icon.removeEventListener('click', handleDeleteIconClick);
+    icon.addEventListener('click', handleDeleteIconClick);
   });
 }
 
+// Link tıklama: o satırı yeşil yap
+function handleLinkClick(e) {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const rowNum = parseInt(link.getAttribute('data-row'));
+  if (rowNum && !clickedRows.has(rowNum)) {
+    clickedRows.add(rowNum);
+    // Eğer daha önce sarı idiyse, clickedRows'a ekleyince render'da yeşil olacak
+    renderErrorTable();
+  }
+  // Linki yeni sekmede aç (orijinal işlevi koru)
+  window.open(link.href, '_blank');
+}
+
+// Silme ikonuna tıklama: sadece uyarı göster (isteğe bağlı)
+function handleDeleteIconClick(e) {
+  e.stopPropagation();
+  const rowNum = e.currentTarget.getAttribute('data-row');
+  alert(`Satır ${rowNum} silinecek olarak işaretlendi. (Bu özellik henüz veritabanı işlemi yapmaz, sadece görsel uyarıdır.)`);
+}
+
+// Event listener'lar (upload, reset vb.)
 uploadAreaStep1.addEventListener('click', () => fileInputStep1.click());
 fileInputStep1.addEventListener('change', e => { if (e.target.files[0]) processFileStep1(e.target.files[0]); });
 uploadAreaStep1.addEventListener('dragover', e => { e.preventDefault(); uploadAreaStep1.classList.add('drag'); });
@@ -227,359 +216,30 @@ uploadAreaStep1.addEventListener('drop', e => {
   uploadAreaStep1.classList.remove('drag');
   if (e.dataTransfer.files[0]) processFileStep1(e.dataTransfer.files[0]);
 });
+
 document.getElementById('resetStep1Btn').addEventListener('click', () => {
-  currentDataStep1 = []; errorRowsStep1 = []; duplicateDeleteStatus = {};
+  currentDataStep1 = [];
+  errorRowsStep1 = [];
+  markedForDeletion.clear();
+  clickedRows.clear();
   fileInputStep1.value = '';
-  statsContainerStep1.style.display = 'none'; errorsSectionStep1.style.display = 'none';
-  errorTableBodyStep1.innerHTML = '<tr><td colspan="6" class="empty-state">Henüz veri yok</td></tr>';
-  totalCountSpanStep1.textContent = '0'; errorCountSpanStep1.textContent = '0'; validCountSpanStep1.textContent = '0';
+  statsContainerStep1.style.display = 'none';
+  errorsSectionStep1.style.display = 'none';
+  errorTableBodyStep1.innerHTML = '<td><td colspan="5" class="empty-state">Henüz veri yok</td></tr>';
+  totalCountSpanStep1.textContent = '0';
+  errorCountSpanStep1.textContent = '0';
+  validCountSpanStep1.textContent = '0';
 });
 
-// ==================== STEP 2 (Kısa, önceki gibi - buraya mevcut STEP2 kodunuzu koyun) ====================
-// Not: STEP2 kodunuzu buraya ekleyin. Uzunluk nedeniyle burada tekrar yazmıyorum, mevcut kodunuzu aynen koruyun.
-// Aşağıda STEP2 için sadece placeholder var, gerçek kodunuzu ekleyin.
-// (Mevcut STEP2 kodunuzu buraya kopyalayın)
+// CSS stilleri (sarı ve yeşil arka plan) – HTML dosyasının <style> içine eklenmeli
+const style = document.createElement('style');
+style.textContent = `
+  .delete-row { background-color: #fff3cd !important; }
+  .clicked-row { background-color: #d4edda !important; }
+  .delete-icon:hover { opacity: 0.7; transform: scale(1.1); display: inline-block; }
+`;
+document.head.appendChild(style);
 
-// ==================== STEP 3 (Güncel - İsim düzeltme, client_name JSON'dan, DONUSUM yazımı) ====================
-let reportMainData = [];
-let reportHistory = { DM: [], ML: [], DONUSUM: [] };
-let currentReportView = 'proje';
-
-const mainFileInputStep3 = document.getElementById('mainFileInputStep3');
-const historyFileInputStep3 = document.getElementById('historyFileInputStep3');
-const mainStatusStep3 = document.getElementById('mainStatusStep3');
-const historyStatusStep3 = document.getElementById('historyStatusStep3');
-const calculateReportBtn = document.getElementById('calculateReportBtnStep3');
-const exportReportBtn = document.getElementById('exportReportBtnStep3');
-const reportBody = document.getElementById('reportBodyStep3');
-const reportHeader = document.getElementById('reportHeaderStep3');
-const reportArea = document.getElementById('reportAreaStep3');
-const tabProje = document.getElementById('reportTabProje');
-const tabProjeKisi = document.getElementById('reportTabProjeKisi');
-const tabKisi = document.getElementById('reportTabKisi');
-
-function findColumnNameStep3(columns, possibleNames) {
-  const lower = columns.map(c => String(c).trim().toLowerCase());
-  for (let name of possibleNames) {
-    const idx = lower.indexOf(name.toLowerCase());
-    if (idx !== -1) return columns[idx];
-  }
-  return null;
-}
-
-function showLoaderStep3(show) {
-  const loader = document.getElementById('loaderStep3');
-  if (loader) loader.classList.toggle('visible', show);
-}
-
-// Görüşme listesi yükleme (Monitoring ID, Ident, FeedbackCreatorName)
-async function loadMainForReport(file) {
-  if (!file) return;
-  showLoaderStep3(true);
-  mainStatusStep3.innerHTML = '⏳ Yükleniyor...';
-  mainStatusStep3.style.color = 'var(--muted)';
-  try {
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: 'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    if (!rows.length) throw new Error('Dosya boş');
-    const columns = Object.keys(rows[0]);
-    const monCol = findColumnNameStep3(columns, ['Monitoring ID', 'monitoring id', 'MonitoringId']);
-    const identCol = findColumnNameStep3(columns, ['Ident', 'ident', 'ID']);
-    const fbCol = findColumnNameStep3(columns, ['FeedbackCreatorName', 'feedbackcreatorname', 'Reviewer Name']);
-    if (!monCol) throw new Error(`Monitoring ID bulunamadı: ${columns.join(', ')}`);
-    if (!identCol) throw new Error(`Ident bulunamadı`);
-    if (!fbCol) throw new Error(`FeedbackCreatorName bulunamadı`);
-    
-    const checkCol = columns.find(c => c.toLowerCase().includes('checklistcreated'));
-    reportMainData = rows.filter(row => {
-      if (checkCol) {
-        const val = row[checkCol];
-        return val === 0 || val === '0' || val === 0.0;
-      }
-      return true;
-    }).map(row => ({
-      monitoringId: String(row[monCol] || '').trim(),
-      ident: String(row[identCol] || '').trim(),
-      feedbackCreatorNameRaw: String(row[fbCol] || '').trim(),
-      feedbackCreatorName: formatName(String(row[fbCol] || '').trim())
-    }));
-    mainStatusStep3.innerHTML = `✅ ${reportMainData.length} kayıt yüklendi. İsimler formatlandı.`;
-    mainStatusStep3.style.color = 'var(--accent)';
-    if (reportHistory.DM.length || reportHistory.ML.length || reportHistory.DONUSUM.length) generateReport();
-  } catch (err) {
-    console.error(err);
-    mainStatusStep3.innerHTML = `❌ Hata: ${err.message}`;
-    mainStatusStep3.style.color = 'var(--accent3)';
-    reportMainData = [];
-  } finally {
-    showLoaderStep3(false);
-  }
-}
-
-// Geçmiş JSON yükleme
-function loadHistoryForReport(file) {
-  if (!file) return;
-  showLoaderStep3(true);
-  historyStatusStep3.innerHTML = '⏳ Yükleniyor...';
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
-        reportHistory = parsed;
-        historyStatusStep3.innerHTML = `✅ Geçmiş yüklendi (DM:${reportHistory.DM.length}, ML:${reportHistory.ML.length}, Dönüşüm Projeleri:${reportHistory.DONUSUM.length})`;
-        historyStatusStep3.style.color = 'var(--accent)';
-        if (reportMainData.length) generateReport();
-      } else throw new Error('JSON yapısı hatalı');
-    } catch (err) {
-      historyStatusStep3.innerHTML = `❌ Geçersiz JSON: ${err.message}`;
-      reportHistory = { DM: [], ML: [], DONUSUM: [] };
-    } finally {
-      showLoaderStep3(false);
-    }
-  };
-  reader.onerror = () => {
-    historyStatusStep3.innerHTML = `❌ Dosya okunamadı`;
-    showLoaderStep3(false);
-  };
-  reader.readAsText(file);
-}
-
-// Rapor oluşturma
-function generateReport() {
-  if (!reportMainData.length) {
-    alert('Önce görüşme listesini yükleyin.');
-    return;
-  }
-  // Dağıtılan ident'leri topla (emp_monitor_ident ile eşleşecek)
-  const distributedMap = new Map(); // ident -> { group, client_name, ... } bilgilerini de sakla
-  for (let g of ['DM', 'ML', 'DONUSUM']) {
-    const groupName = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
-    const hist = reportHistory[g] || [];
-    for (let entry of hist) {
-      if (entry && Array.isArray(entry.assignments)) {
-        entry.assignments.forEach(ass => {
-          const ident = String(ass.emp_monitor_ident || '').trim();
-          if (ident) {
-            distributedMap.set(ident, {
-              group: groupName,
-              client_name: ass.client_name || '',
-              reviewer: ass.FeedbackCreatorName || ''
-            });
-          }
-        });
-      }
-    }
-  }
-  
-  // Her satır için dağıtılmış mı kontrol et
-  const enrichedData = reportMainData.map(rec => ({
-    ...rec,
-    isDistributed: distributedMap.has(rec.monitoringId),
-    distributedInfo: distributedMap.get(rec.monitoringId) || null
-  }));
-  
-  // Raporlama
-  if (currentReportView === 'proje') {
-    const projMap = new Map();
-    for (let rec of enrichedData) {
-      if (!rec.isDistributed) continue;
-      const proj = rec.distributedInfo?.client_name;
-      if (!proj) continue;
-      if (!projMap.has(proj)) projMap.set(proj, { total: 0, distributed: 0 });
-      projMap.get(proj).distributed++;
-    }
-    // Bekleyenler: görüşme listesindeki tüm kayıtlar içinde dağıtılmamış olanlar
-    const pendingByProj = new Map();
-    for (let rec of enrichedData) {
-      if (!rec.isDistributed) {
-        const proj = rec.distributedInfo?.client_name; // dağıtılmamışsa proje bilgisi yok, JSON'dan gelmez. O yüzden bu mantık hatalı.
-        // Aslında burada görüşme listesinde proje bilgisi yok. Proje bazlı raporlama JSON'dan gelen client_name'e göre yapılır.
-        // Bu nedenle proje bazlı raporda sadece dağıtılanlar gösterilir. Bekleyenler için ayrı bir hesaplama yapılamaz.
-      }
-    }
-    // Daha doğru: Proje bazlı raporda, JSON'daki tüm dağıtılmış kayıtları proje bazında grupla
-    const projDist = new Map();
-    for (let [ident, info] of distributedMap.entries()) {
-      const proj = info.client_name;
-      if (!proj) continue;
-      if (!projDist.has(proj)) projDist.set(proj, { distributed: 0 });
-      projDist.get(proj).distributed++;
-    }
-    const headers = ['Proje Adı', 'Dağıtılan Adet'];
-    const rows = Array.from(projDist.entries()).map(([proj, stat]) => [proj, stat.distributed]);
-    renderReportTable(headers, rows);
-  } 
-  else if (currentReportView === 'projekisi') {
-    const keyMap = new Map();
-    for (let [ident, info] of distributedMap.entries()) {
-      const key = `${info.client_name}|${info.reviewer}`;
-      if (!keyMap.has(key)) keyMap.set(key, { proje: info.client_name, kisi: formatName(info.reviewer), distributed: 0 });
-      keyMap.get(key).distributed++;
-    }
-    const headers = ['Proje', 'Değerlendirici', 'Dağıtılan Adet'];
-    const rows = Array.from(keyMap.values()).map(v => [v.proje, v.kisi, v.distributed]);
-    renderReportTable(headers, rows);
-  } 
-  else { // kişi bazlı
-    const kisiMap = new Map();
-    for (let [ident, info] of distributedMap.entries()) {
-      const kisi = formatName(info.reviewer);
-      if (!kisiMap.has(kisi)) kisiMap.set(kisi, { distributed: 0 });
-      kisiMap.get(kisi).distributed++;
-    }
-    const headers = ['Değerlendirici', 'Dağıtılan Adet'];
-    const rows = Array.from(kisiMap.entries()).map(([kisi, stat]) => [kisi, stat.distributed]);
-    renderReportTable(headers, rows);
-  }
-  
-  reportArea.style.display = 'block';
-  exportReportBtn.disabled = false;
-  tabProje.style.display = 'inline-flex';
-  tabProjeKisi.style.display = 'inline-flex';
-  tabKisi.style.display = 'inline-flex';
-}
-
-function renderReportTable(headers, rows) {
-  reportHeader.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-  reportBody.innerHTML = rows.map(row => `<td>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
-  if (rows.length === 0) reportBody.innerHTML = '<tr><td colspan="10">Rapor verisi yok</td></tr>';
-}
-
-// Excel export (tüm görünümler + raw datalar)
-function exportReport() {
-  if (!reportMainData.length) { alert('Rapor verisi yok'); return; }
-  const wb = XLSX.utils.book_new();
-  
-  // 1. Proje Bazlı
-  const projData = [];
-  for (let [ident, info] of getDistributedMap().entries()) {
-    projData.push({ 'Proje Adı': info.client_name, 'Dağıtılan Adet': 1 });
-  }
-  const projAgg = projData.reduce((acc, curr) => {
-    acc[curr['Proje Adı']] = (acc[curr['Proje Adı']] || 0) + 1;
-    return acc;
-  }, {});
-  const projRows = Object.entries(projAgg).map(([proj, count]) => ({ 'Proje Adı': proj, 'Dağıtılan Adet': count }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(projRows), 'Proje Bazlı');
-  
-  // 2. Proje+Kişi Bazlı
-  const projKisiAgg = new Map();
-  for (let [ident, info] of getDistributedMap().entries()) {
-    const key = `${info.client_name}|${formatName(info.reviewer)}`;
-    projKisiAgg.set(key, { Proje: info.client_name, Değerlendirici: formatName(info.reviewer), Dağıtılan: (projKisiAgg.get(key)?.Dağıtılan || 0) + 1 });
-  }
-  const projKisiRows = Array.from(projKisiAgg.values()).map(v => ({ Proje: v.Proje, Değerlendirici: v.Değerlendirici, 'Dağıtılan Adet': v.Dağıtılan }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(projKisiRows), 'Proje+Kişi Bazlı');
-  
-  // 3. Kişi Bazlı
-  const kisiAgg = new Map();
-  for (let [ident, info] of getDistributedMap().entries()) {
-    const kisi = formatName(info.reviewer);
-    kisiAgg.set(kisi, (kisiAgg.get(kisi) || 0) + 1);
-  }
-  const kisiRows = Array.from(kisiAgg.entries()).map(([kisi, count]) => ({ Değerlendirici: kisi, 'Dağıtılan Adet': count }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kisiRows), 'Kişi Bazlı');
-  
-  // 4. RAW Dağıtım Detayları
-  const rawDist = [];
-  for (let g of ['DM', 'ML', 'DONUSUM']) {
-    const groupName = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
-    const hist = reportHistory[g] || [];
-    for (let entry of hist) {
-      (entry.assignments || []).forEach(ass => {
-        rawDist.push({
-          Grup: groupName,
-          Hafta: entry.week,
-          Tarih: entry.date ? new Date(entry.date).toLocaleString() : '',
-          Değerlendirici: formatName(ass.FeedbackCreatorName),
-          Proje: ass.client_name,
-          Ident: ass.emp_monitor_ident
-        });
-      });
-    }
-  }
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawDist), 'RAW_Dagıtım_Detay');
-  
-  // 5. RAW Görüşme Listesi
-  const rawInterview = reportMainData.map(rec => ({
-    'Monitoring ID': rec.monitoringId,
-    'Ident': rec.ident,
-    'Değerlendirici (Orijinal)': rec.feedbackCreatorNameRaw,
-    'Değerlendirici (Formatlı)': rec.feedbackCreatorName
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawInterview), 'RAW_Gorusme_Listesi');
-  
-  XLSX.writeFile(wb, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
-}
-
-function getDistributedMap() {
-  const map = new Map();
-  for (let g of ['DM', 'ML', 'DONUSUM']) {
-    const hist = reportHistory[g] || [];
-    for (let entry of hist) {
-      if (entry && Array.isArray(entry.assignments)) {
-        entry.assignments.forEach(ass => {
-          const ident = String(ass.emp_monitor_ident || '').trim();
-          if (ident) {
-            map.set(ident, {
-              group: g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g,
-              client_name: ass.client_name || '',
-              reviewer: ass.FeedbackCreatorName || ''
-            });
-          }
-        });
-      }
-    }
-  }
-  return map;
-}
-
-function setReportView(view) {
-  currentReportView = view;
-  [tabProje, tabProjeKisi, tabKisi].forEach(btn => btn.classList.remove('btn-primary'));
-  if (view === 'proje') tabProje.classList.add('btn-primary');
-  else if (view === 'projekisi') tabProjeKisi.classList.add('btn-primary');
-  else tabKisi.classList.add('btn-primary');
-  if (reportMainData.length) generateReport();
-}
-
-// Drop zone setup
-function setupDropStep3(dropId, inputId, loadFunc) {
-  const drop = document.getElementById(dropId);
-  const inp = document.getElementById(inputId);
-  if (!drop || !inp) return;
-  drop.addEventListener('click', () => inp.click());
-  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
-  drop.addEventListener('drop', e => {
-    e.preventDefault();
-    drop.classList.remove('drag');
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      inp.files = e.dataTransfer.files;
-      loadFunc(e.dataTransfer.files[0]);
-    }
-  });
-}
-
-setupDropStep3('dropMainStep3', 'mainFileInputStep3', loadMainForReport);
-setupDropStep3('dropHistoryStep3', 'historyFileInputStep3', loadHistoryForReport);
-
-calculateReportBtn.addEventListener('click', generateReport);
-exportReportBtn.addEventListener('click', exportReport);
-tabProje.addEventListener('click', () => setReportView('proje'));
-tabProjeKisi.addEventListener('click', () => setReportView('projekisi'));
-tabKisi.addEventListener('click', () => setReportView('kisi'));
-
-tabProje.style.display = 'none';
-tabProjeKisi.style.display = 'none';
-tabKisi.style.display = 'none';
-reportArea.style.display = 'none';
-exportReportBtn.disabled = true;
-
-console.log('Step3 hazır, bekleniyor...');
 // ==================== STEP 2 (DM, ML, Dönüşüm + özel kurallar) ====================
 let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
 let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
