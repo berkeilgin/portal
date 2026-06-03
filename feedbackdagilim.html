@@ -9,37 +9,6 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* ========== EKLENEN/YENİLENEN STILLER ========== */
-/* Tüm temalarda buton renkleri düzeltildi */
-.btn-primary {
-  background: var(--accent2);
-  color: white;
-  border: none;
-}
-.btn-primary:hover {
-  filter: brightness(0.9);
-}
-.btn-ghost {
-  background: var(--card2);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-.btn-ghost:hover {
-  background: var(--border);
-  color: var(--text);
-}
-/* Başlık ve gradient metinler için düzeltme */
-.pt em {
-  font-style: normal;
-  background: linear-gradient(135deg, var(--accent2), var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-/* İkonlar (emoji) için özel bir stil yok, sistem varsayılanını kullan */
-/* Tablo başlıkları ve hücreler zaten tema değişkenlerini kullanıyor */
-</style>
-<style>
 /* Tüm stiller aynen korundu (kısaltmak için sadece eklemeler) */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; line-height:1.5; }
@@ -47,6 +16,10 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.5rem; background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .header-controls { display:flex; gap:0.75rem; align-items:center; }
 .btn { border:none; background:transparent; padding:0.5rem 1.25rem; border-radius:2rem; font-weight:500; font-size:0.875rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; }
+.btn-ghost { background:var(--card2); border:1px solid var(--border); color:var(--text); }
+.btn-ghost:hover { background:var(--border); }
+.btn-primary { background:var(--accent2); color:white; }
+.btn-primary:hover { filter:brightness(0.9); }
 .main { max-width:1400px; margin:2rem auto; padding:0 1.5rem; }
 .panel { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:2rem; }
 .step-buttons { display:flex; gap:1rem; margin-bottom:2rem; flex-wrap:wrap; }
@@ -118,8 +91,7 @@ td { color:var(--text); }
         <div class="stat-card"><div class="stat-label">✅ Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div>
       </div>
       <div class="errors-section" id="errorsSectionStep1" style="display:none;">
-        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody>
-        </table></div>
+        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th><tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
       </div>
       <div style="display:flex; justify-content:flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
@@ -164,7 +136,7 @@ td { color:var(--text); }
       </div>
       <div><button class="btn btn-primary" id="calculateReportBtnStep3">📊 Raporu Oluştur</button>
       <button class="btn btn-primary" id="exportReportBtnStep3" disabled>💾 Excel İndir</button></div>
-      <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><div class="table-wrapper"><table class="report-table"><thead id="reportHeaderStep3"></thead><tbody id="reportBodyStep3"></tbody></td></div></div>
+      <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><div class="table-wrapper"><table class="report-table"><thead id="reportHeaderStep3"></thead><tbody id="reportBodyStep3"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
     </div>
   </div>
