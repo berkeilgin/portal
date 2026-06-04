@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Portal — Tanıtım</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #09090f;
+  --surface: #111118;
+  --card: #16161f;
+  --card2: #1c1c28;
+  --border: rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --text: #e8e8f0;
+  --muted: #6b6b80;
+  --accent:  #06d6a0;
+  --accent2: #7c6dfa;
+  --accent3: #ff6b6b;
+  --accent4: #ffd166;
+  --grad: linear-gradient(135deg, #06d6a0, #7c6dfa);
+  --radius: 14px;
+  --mono: 'DM Mono', monospace;
+  --display: 'Syne', sans-serif;
+  --font: 'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.6; overflow-x: hidden; }
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: .4;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 16px 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(9,9,15,.9); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { font-family: var(--mono); font-size: 14px; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a { font-size: 12px; color: var(--muted); text-decoration: none; font-family: var(--mono); letter-spacing: .5px; transition: color .2s; }
+.nav-links a:hover { color: var(--text); }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 100px 24px 80px; position: relative; overflow: hidden; text-align: center;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,109,250,.13) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 10% 80%, rgba(6,214,160,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 70%, rgba(255,107,107,.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 100%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 18px;
+  background: rgba(124,109,250,.1); border: 1px solid rgba(124,109,250,.22); border-radius: 100px;
+  font-family: var(--mono); font-size: 10px; color: var(--accent2); letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 36px; animation: fadeUp .6s ease both;
+}
+.hero-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: blink 2s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+.hero-title { font-family: var(--display); font-size: clamp(56px, 9vw, 100px); font-weight: 800; line-height: .93; letter-spacing: -3px; animation: fadeUp .6s .1s ease both; }
+.hero-title .t1 { display: block; color: var(--text); }
+.hero-title .t2 { display: block; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+.hero-sub { margin-top: 28px; font-size: 17px; color: var(--muted); font-weight: 300; max-width: 520px; animation: fadeUp .6s .2s ease both; line-height: 1.7; }
+
+.hero-pills { display: flex; gap: 10px; margin-top: 40px; flex-wrap: wrap; justify-content: center; animation: fadeUp .6s .3s ease both; }
+.hero-pill {
+  padding: 8px 18px; border-radius: 100px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .5px;
+  border: 1px solid var(--border2); color: var(--muted);
+}
+.hero-pill.g { border-color: rgba(6,214,160,.3); color: var(--accent); background: rgba(6,214,160,.07); }
+.hero-pill.p { border-color: rgba(124,109,250,.3); color: var(--accent2); background: rgba(124,109,250,.07); }
+
+.scroll-hint { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; animation: fadeUp .6s .5s ease both; }
+.scroll-hint span { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+.scroll-line { width: 1px; height: 44px; background: linear-gradient(to bottom, var(--accent), transparent); animation: scrl 2s ease infinite; }
+@keyframes scrl { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform:scaleY(1);transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+
+/* SHARED */
+.wrap { max-width: 1080px; margin: 0 auto; padding: 100px 24px; }
+.wrap-alt { max-width: 1080px; margin: 0 auto; padding: 100px 24px; }
+.alt-bg { background: var(--surface); }
+
+.sec-tag { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.sec-tag::before { content: ''; width: 20px; height: 1px; background: var(--accent); }
+.sec-title { font-family: var(--display); font-size: clamp(32px, 5vw, 54px); font-weight: 800; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 16px; }
+.sec-title em { font-style: normal; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.sec-sub { font-size: 15px; color: var(--muted); max-width: 500px; line-height: 1.75; }
+
+/* OVERVIEW CARDS */
+.ov-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 56px; }
+@media(max-width:760px){.ov-grid{grid-template-columns:1fr;}}
+.ov-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; position: relative; overflow: hidden; transition: border-color .3s, transform .3s; }
+.ov-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 80% 20%, rgba(124,109,250,.05), transparent 60%); pointer-events: none; }
+.ov-card:hover { transform: translateY(-3px); border-color: var(--border2); }
+.ov-icon { font-size: 32px; margin-bottom: 18px; display: block; }
+.ov-title { font-family: var(--display); font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.ov-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* TOOLS */
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; margin-top: 56px; }
+.t-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; transition: transform .3s, border-color .3s, box-shadow .3s; }
+.t-card:hover { transform: translateY(-4px); border-color: var(--border2); box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+.t-stripe { height: 3px; }
+.t-body { padding: 26px 26px 18px; flex: 1; }
+.t-emoji { font-size: 30px; margin-bottom: 14px; display: block; }
+.t-name { font-family: var(--display); font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+.t-desc { font-size: 13px; color: var(--muted); line-height: 1.68; margin-bottom: 18px; }
+.t-list { display: flex; flex-direction: column; gap: 7px; }
+.t-item { display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; color: var(--muted); }
+.t-item::before { content: '›'; color: var(--accent); font-size: 14px; line-height: 1.3; flex-shrink: 0; }
+.t-foot { padding: 12px 26px; background: var(--card2); border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
+.t-tag { font-size: 10px; font-family: var(--mono); padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border2); color: var(--muted); }
+.t-tag.g { border-color: rgba(6,214,160,.25); color: var(--accent); background: rgba(6,214,160,.06); }
+.t-tag.p { border-color: rgba(124,109,250,.25); color: var(--accent2); background: rgba(124,109,250,.06); }
+.t-tag.r { border-color: rgba(255,107,107,.25); color: var(--accent3); background: rgba(255,107,107,.06); }
+.t-tag.y { border-color: rgba(255,209,102,.25); color: var(--accent4); background: rgba(255,209,102,.06); }
+
+/* WORKFLOW */
+.wf-list { display: flex; flex-direction: column; margin-top: 56px; position: relative; }
+.wf-list::before { content: ''; position: absolute; left: 27px; top: 30px; bottom: 30px; width: 1px; background: linear-gradient(to bottom, var(--accent), var(--accent2), var(--accent3)); opacity: .4; }
+.wf-row { display: flex; gap: 28px; align-items: flex-start; padding: 26px 0; border-bottom: 1px solid var(--border); }
+.wf-row:last-child { border-bottom: none; }
+.wf-circle { width: 54px; height: 54px; border-radius: 50%; background: var(--card2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; color: var(--accent); flex-shrink: 0; position: relative; z-index: 1; }
+.wf-body { flex: 1; padding-top: 6px; }
+.wf-title { font-family: var(--display); font-size: 17px; font-weight: 700; margin-bottom: 5px; }
+.wf-desc { font-size: 13px; color: var(--muted); line-height: 1.68; max-width: 600px; }
+.wf-desc strong { color: var(--text); font-weight: 500; }
+
+/* PLATFORM FEATURES */
+.pf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 56px; }
+@media(max-width:680px){.pf-grid{grid-template-columns:1fr;}}
+.pf-card { padding: 30px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); display: flex; gap: 18px; align-items: flex-start; transition: border-color .3s; }
+.pf-card:hover { border-color: var(--border2); }
+.pf-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.pf-title { font-family: var(--display); font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.pf-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+/* FOOTER */
+footer { padding: 60px 24px; border-top: 1px solid var(--border); text-align: center; }
+.ft-logo { font-family: var(--display); font-size: 22px; font-weight: 800; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+.ft-copy { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+/* DIVIDER */
+.div-line { height: 1px; background: linear-gradient(to right, transparent, var(--border2), transparent); max-width: 1080px; margin: 0 auto; }
+
+/* REVEAL */
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .55s ease, transform .55s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:600px){nav{padding:14px 20px} .nav-links{display:none} .wf-list::before{display:none}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">QA Portal</div>
+  <ul class="nav-links">
+    <li><a href="#tools">Araçlar</a></li>
+    <li><a href="#workflow">Akış</a></li>
+    <li><a href="#platform">Platform</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <div class="hero-badge">Dahili Araç Paketi</div>
+
+  <h1 class="hero-title">
+    <span class="t1">Kalite Ekibinin</span>
+    <span class="t2">QA Portal</span>
+  </h1>
+
+  <p class="hero-sub">
+    Veri temizlemeden rapora, örneklemeden dağıtıma — QA süreçlerinin tamamı tek çatı altında.
+  </p>
+
+  <div class="hero-pills">
+    <span class="hero-pill g">8 Araç Modülü</span>
+    <span class="hero-pill p">Tarayıcıda Çalışır</span>
+    <span class="hero-pill g">Türkçe Arayüz</span>
+    <span class="hero-pill p">AI Destekli Analiz</span>
+    <span class="hero-pill">Kurulum Gerektirmez</span>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>Keşfet</span>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="wrap">
+  <div class="sec-tag">Portal Hakkında</div>
+  <h2 class="sec-title">Her Şey <em>Bir Arada</em></h2>
+  <p class="sec-sub">Farklı sistemlerden gelen veriyi işlemek, raporlamak ve dağıtmak için ayrı ayrı araç aramaya gerek yok.</p>
+
+  <div class="ov-grid">
+    <div class="ov-card reveal">
+      <span class="ov-icon">⚡</span>
+      <div class="ov-title">Hızlı Erişim</div>
+      <div class="ov-desc">Tüm araçlar tek bir sayfadan açılır. Sık kullandıklarınızı favorilere ekleyin, son kullandıklarınız otomatik listelenir.</div>
+    </div>
+    <div class="ov-card reveal">
+      <span class="ov-icon">🔒</span>
+      <div class="ov-title">Veri Gizliliği</div>
+      <div class="ov-desc">Yüklenen hiçbir dosya sunucuya gönderilmez. Tüm işlemler tarayıcınızda gerçekleşir — şirket verisi bilgisayarınızı terk etmez.</div>
+    </div>
+    <div class="ov-card reveal">
+      <span class="ov-icon">🎨</span>
+      <div class="ov-title">Kolay Kullanım</div>
+      <div class="ov-desc">Sürükle-bırak dosya yükleme, adım adım kılavuzlar ve anlık önizlemeler ile teknik bilgiye ihtiyaç duymadan çalışılır.</div>
+    </div>
+  </div>
+</div>
+
+<div class="div-line"></div>
+
+<!-- TOOLS -->
+<div class="alt-bg" id="tools">
+  <div class="wrap-alt">
+    <div class="sec-tag">Araç Kataloğu</div>
+    <h2 class="sec-title">8 <em>Güçlü Modül</em></h2>
+    <p class="sec-sub">Her araç belirli bir iş sürecini çözmek için tasarlandı.</p>
+
+    <div class="tools-grid">
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#06d6a0,#3bf7d4)"></div>
+        <div class="t-body">
+          <span class="t-emoji">📊</span>
+          <div class="t-name">CSV Dönüştürücü</div>
+          <div class="t-desc">Sistemden indirilen ham dosyaları düzgün formatlı Excel'e çevirir. Tarihler, sayılar ve özel sütunlar otomatik tanınır.</div>
+          <div class="t-list">
+            <div class="t-item">Aynı anda birden fazla dosya işlenir</div>
+            <div class="t-item">Tarihler gün.ay.yıl formatına alınır</div>
+            <div class="t-item">İstenmeyen kolonlar kolayca çıkarılır</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag g">CSV</span>
+          <span class="t-tag g">Excel</span>
+          <span class="t-tag">Çoklu Dosya</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#7c6dfa,#a78bfa)"></div>
+        <div class="t-body">
+          <span class="t-emoji">🔗</span>
+          <div class="t-name">Korelasyon Analizi</div>
+          <div class="t-desc">KPI'lar arasındaki ilişkileri renkli ısı haritası ile görselleştirir. Hangi metriğin hangisini etkilediğini tek bakışta gösterir.</div>
+          <div class="t-list">
+            <div class="t-item">İnteraktif ısı haritası</div>
+            <div class="t-item">AI destekli yorum ve öneriler</div>
+            <div class="t-item">PDF ve Excel raporu indirme</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag p">AI Yorum</span>
+          <span class="t-tag p">PDF</span>
+          <span class="t-tag">Isı Haritası</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#f97316,#fb923c)"></div>
+        <div class="t-body">
+          <span class="t-emoji">🛒</span>
+          <div class="t-name">Trendyol CSV Aracı</div>
+          <div class="t-desc">Trendyol'dan indirilen Özet ve Detay dosyalarını birleştirir. İptal kayıtları otomatik çıkarılır, tarihler Türkçe formatlanır.</div>
+          <div class="t-list">
+            <div class="t-item">Özet + Detay verisi tek dosyaya</div>
+            <div class="t-item">İptal kayıtları otomatik filtre</div>
+            <div class="t-item">Birden fazla hafta tek seferde</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag y">Trendyol</span>
+          <span class="t-tag g">Otomatik Filtre</span>
+          <span class="t-tag">Birleştirme</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#ff6b6b,#ff8e8e)"></div>
+        <div class="t-body">
+          <span class="t-emoji">📂</span>
+          <div class="t-name">BSH Örnekleme Dağıtımı</div>
+          <div class="t-desc">Büyük veri setlerinden belirli aralıklarda kayıt seçer ve farklı gruplar için ayrı ayrı çıktı üretir.</div>
+          <div class="t-list">
+            <div class="t-item">Birden fazla veri seti aynı anda</div>
+            <div class="t-item">Esnek aralık ve kural ayarı</div>
+            <div class="t-item">Tüm çıktılar paketli indirilir</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag r">BSH</span>
+          <span class="t-tag">Örnekleme</span>
+          <span class="t-tag">Toplu İndirme</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#ffd166,#f4a261)"></div>
+        <div class="t-body">
+          <span class="t-emoji">🎲</span>
+          <div class="t-name">Randomizer</div>
+          <div class="t-desc">Listeden rastgele görüşme seçer ya da "kaçıncıyı dinlemeliyim?" sorusuna anında yanıt verir. Dinleme geçmişi kaydedilir.</div>
+          <div class="t-list">
+            <div class="t-item">Excel'den rastgele satır seçimi</div>
+            <div class="t-item">Manuel 1-N arası sayı üreteci</div>
+            <div class="t-item">Seçilen görüşmeleri dışa aktar</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag y">Rastgele Seçim</span>
+          <span class="t-tag">2 Mod</span>
+          <span class="t-tag">Geçmiş</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#06d6a0,#7c6dfa)"></div>
+        <div class="t-body">
+          <span class="t-emoji">📈</span>
+          <div class="t-name">Kalite Raporu Hazırlama</div>
+          <div class="t-desc">Değerlendirme verisinden sıfırdan kalite raporu üretir. Birden fazla proje aynı anda işlenebilir, çıktı hazır Excel raporudur.</div>
+          <div class="t-list">
+            <div class="t-item">Birden fazla proje (LOB) desteği</div>
+            <div class="t-item">Kriter seçimi ve outlier yönetimi</div>
+            <div class="t-item">Özet, değerlendirici ve kriter sayfaları</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag g">Yeni Rapor</span>
+          <span class="t-tag p">Çok Proje</span>
+          <span class="t-tag">Excel Çıktı</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#7c6dfa,#06d6a0)"></div>
+        <div class="t-body">
+          <span class="t-emoji">🔄</span>
+          <div class="t-name">Kalite Raporu Güncelleme</div>
+          <div class="t-desc">Hazır raporlara yeni değerlendirme verisi ekler. Tekrarlanan kayıtları otomatik tespit eder, sadece yeni veriler eklenir.</div>
+          <div class="t-list">
+            <div class="t-item">Mevcut raporu yükle, yeni veri ekle</div>
+            <div class="t-item">Tekrar eden kayıtlar otomatik çıkar</div>
+            <div class="t-item">Günlük / haftalık / aylık güncelleme</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag p">Güncelleme</span>
+          <span class="t-tag g">Duplikasyon Kontrolü</span>
+        </div>
+      </div>
+
+      <div class="t-card reveal">
+        <div class="t-stripe" style="background:linear-gradient(90deg,#ff6b6b,#7c6dfa)"></div>
+        <div class="t-body">
+          <span class="t-emoji">📨</span>
+          <div class="t-name">Feedback Dağılım</div>
+          <div class="t-desc">Görüşme listesini doğrular, değerlendiricilere haftalık kurala göre dağıtır ve dağıtım raporunu üretir.</div>
+          <div class="t-list">
+            <div class="t-item">ID doğrulama ve hata tespiti</div>
+            <div class="t-item">Proje + değerlendirici bazlı dağıtım</div>
+            <div class="t-item">Geçmişe dönük raporlama</div>
+          </div>
+        </div>
+        <div class="t-foot">
+          <span class="t-tag r">ID Doğrulama</span>
+          <span class="t-tag">3 Adım</span>
+          <span class="t-tag p">Raporlama</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- WORKFLOW -->
+<div class="wrap" id="workflow">
+  <div class="sec-tag">Tipik Kullanım Akışı</div>
+  <h2 class="sec-title">Bir Haftanın<br><em>QA Döngüsü</em></h2>
+  <p class="sec-sub">Hangi araç ne zaman devreye girer — adım adım örnek senaryo.</p>
+
+  <div class="wf-list">
+    <div class="wf-row reveal">
+      <div class="wf-circle">01</div>
+      <div class="wf-body">
+        <div class="wf-title">Ham Veriyi Temizle</div>
+        <div class="wf-desc"><strong>CSV Dönüştürücü</strong> ile sistemden indirilen dosyaları düzgün formatlı Excel'e çevirin. Tarihler ve sayılar otomatik düzenlenir.</div>
+      </div>
+    </div>
+    <div class="wf-row reveal">
+      <div class="wf-circle">02</div>
+      <div class="wf-body">
+        <div class="wf-title">Görüşme Seç</div>
+        <div class="wf-desc"><strong>Randomizer</strong> ile dinlenecek görüşmeleri belirleyin. Listeden tarafsız rastgele seçim yapılır, kaçıncıyı dinleyeceğinizi anında öğrenirsiniz.</div>
+      </div>
+    </div>
+    <div class="wf-row reveal">
+      <div class="wf-circle">03</div>
+      <div class="wf-body">
+        <div class="wf-title">Kalite Raporu Üret</div>
+        <div class="wf-desc"><strong>Kalite Raporu Hazırlama</strong> ile değerlendirme verisini yükleyin, kriterleri ve hedefleri ayarlayın. Raporunuz hazır Excel olarak indirilir.</div>
+      </div>
+    </div>
+    <div class="wf-row reveal">
+      <div class="wf-circle">04</div>
+      <div class="wf-body">
+        <div class="wf-title">Kalite Raporunu Güncelle</div>
+        <div class="wf-desc">Yeni değerlendirmeler geldikçe <strong>Kalite Raporu Güncelleme</strong> aracıyla mevcut rapora ekleyin. Tekrar eden kayıtlar otomatik çıkarılır.</div>
+      </div>
+    </div>
+    <div class="wf-row reveal">
+      <div class="wf-circle">05</div>
+      <div class="wf-body">
+        <div class="wf-title">KPI'ları Analiz Et</div>
+        <div class="wf-desc"><strong>Korelasyon Analizi</strong> ile KPI'lar arasındaki ilişkileri keşfedin. Hangi metrik hangisini etkiliyor — AI otomatik yorum üretir, PDF rapor tek tıkla hazırlanır.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="div-line"></div>
+
+<!-- PLATFORM -->
+<div class="alt-bg" id="platform">
+  <div class="wrap-alt">
+    <div class="sec-tag">Platform Özellikleri</div>
+    <h2 class="sec-title">Kullanımı <em>Kolaylaştıran</em><br>Detaylar</h2>
+    <p class="sec-sub">Her araçta ortak çalışan özellikler.</p>
+
+    <div class="pf-grid">
+      <div class="pf-card reveal">
+        <span class="pf-icon">🌙</span>
+        <div>
+          <div class="pf-title">Koyu / Açık Tema</div>
+          <div class="pf-desc">Tercih ettiğiniz renk teması kaydedilir ve her araçta tutarlı şekilde uygulanır.</div>
+        </div>
+      </div>
+      <div class="pf-card reveal">
+        <span class="pf-icon">⭐</span>
+        <div>
+          <div class="pf-title">Favoriler & Son Kullanılan</div>
+          <div class="pf-desc">Sık kullandığınız araçları favorilerinize ekleyin. Son 5 araç da otomatik listelenir.</div>
+        </div>
+      </div>
+      <div class="pf-card reveal">
+        <span class="pf-icon">🌐</span>
+        <div>
+          <div class="pf-title">Türkçe / İngilizce</div>
+          <div class="pf-desc">Arayüz dili tek tıkla değiştirilebilir. Araç isimleri ve kategoriler her iki dilde görüntülenir.</div>
+        </div>
+      </div>
+      <div class="pf-card reveal">
+        <span class="pf-icon">📢</span>
+        <div>
+          <div class="pf-title">Duyuru Sistemi</div>
+          <div class="pf-desc">Önemli güncellemeler veya bilgilendirmeler portal üst bandında tüm kullanıcılara iletilir.</div>
+        </div>
+      </div>
+      <div class="pf-card reveal">
+        <span class="pf-icon">📱</span>
+        <div>
+          <div class="pf-title">Kurulum Gerektirmez</div>
+          <div class="pf-desc">Herhangi bir program yüklemeye gerek yok. Tarayıcınızı açın, adrese gidin, kullanmaya başlayın.</div>
+        </div>
+      </div>
+      <div class="pf-card reveal">
+        <span class="pf-icon">🤖</span>
+        <div>
+          <div class="pf-title">AI Destekli Yorumlama</div>
+          <div class="pf-desc">Korelasyon analizinde yapay zeka otomatik içgörü ve öneri üretir. Uzman gözüyle sunmadan önce kontrol edin.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="ft-logo">QA Portal</div>
+  <div class="ft-copy">Kalite Ekibi Dahili Araç Paketi &nbsp;·&nbsp; Tüm hakları saklıdır</div>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const siblings = [...(e.target.parentElement?.querySelectorAll('.reveal') || [])];
+    siblings.forEach((s, i) => {
+      if (!s.classList.contains('in')) {
+        setTimeout(() => s.classList.add('in'), i * 75);
+      }
+    });
+    obs.unobserve(e.target);
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
