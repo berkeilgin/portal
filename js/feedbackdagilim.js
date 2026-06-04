@@ -560,7 +560,28 @@ async function loadMainFileStep2(file) {
     const required = ['FeedbackCreatorName', 'client_name', 'emp_monitor_ident', 'CheckListCreated'];
     const missing = required.filter(c => !(c in rows[0]));
     if (missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
-    mainDataStep2 = rows.filter(r => r.CheckListCreated === 0 || r.CheckListCreated === '0');
+    
+    // Manager_name sütunu var mı kontrol et
+    const hasManager = 'Manager_name' in rows[0];
+    
+    mainDataStep2 = rows.filter(r => r.CheckListCreated === 0 || r.CheckListCreated === '0').map(r => {
+      let feedbackName = String(r.FeedbackCreatorName || '').trim();
+      // FeedbackCreatorName 'null' (string) veya boş ise Manager_name'i dene
+      if (feedbackName === '' || feedbackName.toLowerCase() === 'null') {
+        if (hasManager) {
+          feedbackName = String(r.Manager_name || '').trim();
+          if (feedbackName.toLowerCase() === 'null') feedbackName = '';
+        } else {
+          feedbackName = '';
+        }
+      }
+      // Diğer alanları olduğu gibi kopyala, sadece FeedbackCreatorName'i güncelle
+      return { ...r, FeedbackCreatorName: feedbackName };
+    });
+    
+    // İsteğe bağlı: boş FeedbackCreatorName olanları filtrelemek isterseniz aşağıdaki satırı aktif edin
+    // mainDataStep2 = mainDataStep2.filter(r => r.FeedbackCreatorName !== '');
+    
     statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt (CheckListCreated=0) yüklendi.`;
     statusEl.style.color = 'var(--accent)';
   } catch (err) {
