@@ -274,20 +274,20 @@ const HP_RULES = {
 const groups = {
   DM: {
     key: 'DM', name: 'DM',
-    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM' && ref['Dağıtım Türü'] === 'Proje',
+    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',  // Dağıtım Türü kontrolü yok
     sheetPerProject: true,
     fileName: () => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   ML: {
     key: 'ML', name: 'ML',
-    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML' && ref['Dağıtım Türü'] === 'Proje',
+    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML',  // Dağıtım Türü kontrolü yok
     extraFilter: rec => String(rec.position_code_type_full_name || '').toLowerCase().includes('quality assurance analyst'),
     sheetPerProject: true,
     fileName: () => `ML_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   DONUSUM: {
     key: 'DONUSUM', name: 'Dönüşüm Projeleri',
-    filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM' && ref['Dağıtım Türü'] === '1. Değerlendirici',
+    filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
     sheetPerProject: false,
     fileName: () => `Dönüşüm Projeleri_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   }
@@ -421,7 +421,7 @@ function calculateDistributionForGroup(gk, week, groupDef) {
   }
   const categoryMap = new Map();
   available.forEach(rec => {
-    const key = gk === 'DONUSUM' ? `${rec.FeedbackCreatorName}|${rec.client_name}` : rec.client_name;
+    const key = `${rec.FeedbackCreatorName}|${rec.client_name}`;
     if (!categoryMap.has(key)) categoryMap.set(key, []);
     categoryMap.get(key).push(rec);
   });
