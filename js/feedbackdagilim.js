@@ -378,12 +378,31 @@ function getCumulativeCountsForGroup(gk, week) {
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
+    // 1. CheckListCreated = 0 olmalı
     if (!(rec.CheckListCreated === 0 || rec.CheckListCreated === '0')) return false;
-    const ident = String(rec.emp_monitor_ident || '');
+    
+    // 2. emp_monitor_ident boş veya null olmamalı
+    const ident = String(rec.emp_monitor_ident || '').trim();
+    if (ident === '') return false;
+    
+    // 3. Silinenlerde veya daha önce dağıtılmış olmamalı
     if (deletedIdentsStep2.has(ident) || distributed.has(ident)) return false;
-    const ref = getRefInfo(rec.client_name);
+    
+    // 4. client_name boş veya null olmamalı
+    const client = String(rec.client_name || '').trim();
+    if (client === '') return false;
+    
+    // 5. FeedbackCreatorName boş veya null olmamalı
+    const creator = String(rec.FeedbackCreatorName || '').trim();
+    if (creator === '') return false;
+    
+    // 6. Referans listesinde proje olmalı ve filtreye uymalı
+    const ref = getRefInfo(client);
     if (!ref || !groupFilter(ref)) return false;
+    
+    // 7. Varsa ek filtre (örneğin ML için pozisyon kontrolü)
     if (extraFilter && !extraFilter(rec)) return false;
+    
     return true;
   });
 }
