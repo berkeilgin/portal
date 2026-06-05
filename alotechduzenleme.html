@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/components.css">
   <style>
+    /* Genel stiller */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
     .file-item { display: flex; align-items: center; gap: 12px; background: var(--card2); padding: 10px 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border); flex-wrap: wrap; }
@@ -29,22 +30,35 @@
     .theme-btn.active { background: var(--accent2); color: #fff; }
     .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
     .logo { font-weight: 700; font-size: 1.2rem; font-family: var(--display); }
+    
+    /* Loading overlay */
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; }
     .loading-overlay.active { display: flex; }
     .loading-text { color: white; font-family: var(--mono); font-size: 14px; background: var(--card); padding: 12px 24px; border-radius: 40px; border: 1px solid var(--border); }
     .spinner-large { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* Modal Popup */
+    
+    /* Modal (önizleme pop-up) */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; }
     .modal.active { display: flex; }
-    .modal-content { background: var(--card); border-radius: 20px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .modal-header h3 { margin: 0; }
+    .modal-content { background: var(--card); border-radius: 20px; max-width: 90vw; max-height: 85vh; width: 1000px; display: flex; flex-direction: column; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .modal-header h3 { margin: 0; font-family: var(--display); }
     .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); }
-    .preview-options { margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .preview-options select, .preview-options button { padding: 6px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); }
-    .table-wrapper { overflow-x: auto; max-height: 60vh; }
-    .table-wrapper table { font-size: 11px; }
+    .modal-close:hover { color: var(--accent3); }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .preview-controls { margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .preview-controls label { font-size: 12px; font-family: var(--mono); }
+    .preview-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 8px; font-family: var(--mono); }
+    .preview-table-wrapper { overflow-x: auto; max-height: 60vh; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .preview-table th, .preview-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+    .preview-table th { background: var(--surface); position: sticky; top: 0; }
+    
+    /* Siyah tema düzeltmeleri (kontrast) */
+    body.dark { --text: #f0f0f0; --muted: #b0b0d0; --card: #1e1e2a; --card2: #2a2a36; --surface: #161622; --border: rgba(255,255,255,0.15); }
+    body.dark .file-name { color: #a9a9ff; }
+    body.dark .stat-badge { background: #2a2a36; color: #ccc; }
   </style>
 </head>
 <body class="grey">
@@ -56,64 +70,71 @@
 
   <div class="main" style="max-width: 1400px;">
     <div class="grid-2">
+      <!-- Özet Data (20 sütun beklenir) -->
       <div class="panel">
         <div class="section-header">
           <h2>📑 Özet Data</h2>
           <div class="stat-badge" id="summaryStats">0 dosya, 0 satır</div>
         </div>
         <div class="drop-zone" id="summaryDropZone">
-          📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px;">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
+          📂 Özet dosyaları (20 sütun, CSV/Excel)
+          <div style="font-size: 10px; margin-top: 6px;">Sadece 20 sütunlu dosyalar kabul edilir</div>
           <input type="file" id="summaryFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="summaryFileList" style="margin-top: 16px;"></div>
       </div>
+
+      <!-- Detay Data (18 sütun beklenir) -->
       <div class="panel">
         <div class="section-header">
           <h2>🔍 Detay Data</h2>
           <div class="stat-badge" id="detailStats">0 dosya, 0 satır</div>
         </div>
         <div class="drop-zone" id="detailDropZone">
-          📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px;">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
+          📂 Detay dosyaları (18 sütun, CSV/Excel)
+          <div style="font-size: 10px; margin-top: 6px;">Sadece 18 sütunlu dosyalar kabul edilir</div>
           <input type="file" id="detailFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="detailFileList" style="margin-top: 16px;"></div>
       </div>
     </div>
+
     <div class="action-bar">
       <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
       <button class="btn btn-primary" id="exportAllDataBtn">📎 Tümünü Dışarı Aktar</button>
     </div>
     <div id="globalStatus" class="status-bar"></div>
   </div>
+
   <footer class="footer">
-    <div class="copyright-text">CSV: noktalı virgül/virgül otomatik, tırnak içi satır sonu korunur. İptal=Evet olanlar ikinci sayfada.</div>
+    <div class="copyright-text">Özet: 20 sütun zorunlu | Detay: 18 sütun zorunlu | Iptal=Evet olanlar ayrı sheet'te</div>
   </footer>
 
+  <!-- Loading overlay -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner-large"></div>
-    <div class="loading-text">Dosyalar yükleniyor...</div>
+    <div class="loading-text">Dosyalar yükleniyor, lütfen bekleyin...</div>
   </div>
 
-  <!-- Modal Preview -->
+  <!-- Modal (önizleme) -->
   <div id="previewModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>📋 Veri Önizleme</h3>
+        <h3 id="modalTitle">Dosya Önizleme</h3>
         <button class="modal-close" id="closeModalBtn">&times;</button>
       </div>
-      <div class="preview-options">
-        <span>Gösterilecek satır:</span>
-        <select id="previewRowCount">
-          <option value="20">20 satır</option>
-          <option value="50">50 satır</option>
-          <option value="100">100 satır</option>
-          <option value="999999">Maks (tümü)</option>
-        </select>
-        <button id="refreshPreviewBtn" class="btn btn-sm btn-primary">Yenile</button>
+      <div class="modal-body">
+        <div class="preview-controls">
+          <label>Gösterilecek satır sayısı:</label>
+          <select id="previewLimitSelect" class="preview-select">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="max">Maks (rastgele 500)</option>
+          </select>
+        </div>
+        <div id="previewContent" class="preview-table-wrapper">Veri yükleniyor...</div>
       </div>
-      <div id="previewTableContainer" class="table-wrapper"></div>
     </div>
   </div>
 
