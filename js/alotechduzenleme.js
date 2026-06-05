@@ -9,10 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDropZone('summaryDropZone', 'summaryFileInput', 'summary');
   setupDropZone('detailDropZone', 'detailFileInput', 'detail');
   
-  document.getElementById('summaryExportAllBtn')?.addEventListener('click', () => exportAllCategory('summary'));
-  document.getElementById('detailExportAllBtn')?.addEventListener('click', () => exportAllCategory('detail'));
+  // Tek bir export butonu
+  document.getElementById('exportAllDataBtn')?.addEventListener('click', exportAllData);
   document.getElementById('resetAllBtn')?.addEventListener('click', resetEverything);
-  document.getElementById('calculateBtn')?.addEventListener('click', performCalculation);
   
   renderCategoryUI('summary');
   renderCategoryUI('detail');
@@ -33,71 +32,52 @@ function decodeUTF8(buffer) {
   return decoder.decode(buffer);
 }
 
-// Otomatik ayırıcı algılama ve CSV ayrıştırma (tırnaklara saygılı, veriyi değiştirmez)
-function parseCSVWithDelimiter(text) {
-  // Olası ayırıcılar
+// Otomatik delimiter algılama (virgül, noktalı virgül, tab, pipe)
+function detectDelimiter(line) {
   const delimiters = [',', ';', '\t', '|'];
-  let bestDelimiter = ',';
-  let maxCols = 0;
-  
-  // İlk satırı al (başlık satırı)
-  const firstLine = text.split(/\r?\n/)[0];
+  let bestDelim = ',';
+  let maxCount = 0;
   for (const delim of delimiters) {
-    // Basit bir say: tırnak dikkate alınmadan böl (hızlı tahmin)
-    const parts = firstLine.split(delim);
-    if (parts.length > maxCols) {
-      maxCols = parts.length;
-      bestDelimiter = delim;
+    const count = (line.match(new RegExp(`\\${delim}`, 'g')) || []).length;
+    if (count > maxCount) {
+      maxCount = count;
+      bestDelim = delim;
     }
   }
-  console.log(`Algılanan ayırıcı: "${bestDelimiter}" (${maxCols} sütun)`);
-  
-  // Şimdi gerçek parser: tırnak içindeki ayırıcıları yoksay
-  const rows = [];
-  let currentRow = [];
-  let currentField = '';
-  let insideQuotes = false;
-  
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    const nextCh = text[i+1];
-    
-    if (ch === '"') {
-      // Tırnak karakteri
-      if (insideQuotes && nextCh === '"') {
-        // Çift tırnak escape -> tek tırnak ekle
-        currentField += '"';
-        i++; // atla
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (!insideQuotes && (ch === bestDelimiter || ch === '\n')) {
-      // Alan bitti
-      currentRow.push(currentField);
-      currentField = '';
-      if (ch === '\n') {
-        // Satır bitti
-        if (currentRow.length > 0 || rows.length === 0) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-      }
-    } else {
-      currentField += ch;
-    }
-  }
-  // Son alanı ekle
-  if (currentField !== '' || currentRow.length > 0) {
-    currentRow.push(currentField);
-    if (currentRow.length > 0) rows.push(currentRow);
-  }
-  
-  // Boş satırları temizle (sadece boş stringlerden oluşan satırları sil)
-  const nonEmptyRows = rows.filter(row => row.some(cell => cell && cell.trim() !== ''));
-  return nonEmptyRows;
+  return bestDelim;
 }
 
-// Dosya ayrıştırma
+// Gelişmiş CSV parser (tırnak duyarlı, delimiter otomatik)
+function parseCSVAdvanced(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+  if (lines.length === 0) return [];
+  
+  // İlk satırdan delimiter algıla
+  const delimiter = detectDelimiter(lines[0]);
+  
+  const rows = [];
+  for (let line of lines) {
+    const row = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === delimiter && !inQuotes) {
+        row.push(field);
+        field = '';
+      } else {
+        field += ch;
+      }
+    }
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+// Dosya ayrıştırma (CSV: ArrayBuffer ile UTF-8, delimiter algılama)
 async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -116,28 +96,25 @@ async function parseFileToData(file) {
             return (val !== undefined && val !== null) ? String(val) : "";
           }));
         } else {
-          // CSV
-          let buffer = e.target.result;
+          // CSV dosyası - UTF-8 decoding
           let text;
-          if (buffer instanceof ArrayBuffer) {
-            text = decodeUTF8(buffer);
+          if (e.target.result instanceof ArrayBuffer) {
+            text = decodeUTF8(e.target.result);
           } else {
-            text = buffer;
+            text = e.target.result;
           }
-          // BOM sil
+          // BOM silme
           if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-          
-          const rows = parseCSVWithDelimiter(text);
+          const rows = parseCSVAdvanced(text);
           if (rows.length === 0) throw new Error('CSV dosyası boş');
           headers = rows[0].map(h => (h === undefined || h === '') ? `Kolon_${Math.random()}` : h);
-          dataRows = rows.slice(1).map(row => {
-            // Sütun sayısını eşitle
-            while (row.length < headers.length) row.push('');
-            return row.slice(0, headers.length).map(cell => cell || "");
+          dataRows = rows.slice(1).map(r => {
+            while (r.length < headers.length) r.push('');
+            return r.slice(0, headers.length).map(cell => cell || "");
           });
         }
-        // Tamamen boş satırları filtrele
-        const nonEmptyRows = dataRows.filter(row => row.some(cell => cell && cell.trim() !== ''));
+        // Boş satırları temizle
+        const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
           baseName: file.name.replace(/\.[^/.]+$/, ''),
@@ -274,17 +251,70 @@ function renderCategoryUI(category) {
   });
 }
 
-function exportAllCategory(category) {
-  const filesArray = category === 'summary' ? summaryFiles : detailFiles;
-  if (filesArray.length === 0) { showGlobalMessage(`${category === 'summary' ? 'Özet' : 'Detay'} verisi yok`, 'warn'); return; }
-  filesArray.forEach(file => {
-    const sheetData = [file.headers, ...file.data];
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    XLSX.writeFile(wb, `${file.baseName}_${category}_all.xlsx`);
-  });
-  showGlobalMessage(`📦 ${filesArray.length} dosya dışa aktarıldı`, 'ok');
+// Tarih formatı YYYYMMDD
+function getTodayString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+// Tek bir dosyayı Excel'e export et (verilen adla)
+function exportSingleFile(file, fileNamePrefix, categoryName) {
+  const sheetData = [file.headers, ...file.data];
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, categoryName);
+  XLSX.writeFile(wb, `${fileNamePrefix}.xlsx`);
+}
+
+// Tüm verileri dışa aktar (Özet ve Detay ayrı ayrı)
+function exportAllData() {
+  const today = getTodayString();
+  let exportedCount = 0;
+  
+  // Özet data export
+  if (summaryFiles.length > 0) {
+    // Eğer birden fazla özet dosyası varsa, her birini ayrı indir? İstek: "Alotech_OzetData_Bugün" - tek dosya mı? Genelde tüm özet dosyaları birleştirilir mi?
+    // Kullanıcı "Tümünü Dışarı Aktar" butonu iki datayı da indirsin demiş, ama her bir kategori altında birden fazla dosya olabilir.
+    // Mantıklı olan: her kategori için TÜM dosyaları tek bir Excel'de birleştirmek? Hayır, her dosya ayrı Excel olarak indirilsin daha güvenli.
+    // Ama isimlendirme: "Alotech_OzetData_Bugün" + dosya adı? Karışık. Basitçe: her özet dosyasını "Alotech_OzetData_Bugün_dosyaadi.xlsx" olarak indirelim.
+    // Daha temiz: Özet kategorisindeki TÜM dosyaları tek bir Excel'de ayrı sheetler olarak? Karmaşık. Kullanıcı "İki datayı indirsin" demiş, yani özet ve detay ayrı ayrı ama her birinin içinde birden fazla dosya varsa ne olacak?
+    // En güvenlisi: Her bir dosyayı ayrı indir, ama isimlendirme: "Alotech_OzetData_Bugün_originalname.xlsx"
+    summaryFiles.forEach(file => {
+      const fileName = `Alotech_OzetData_${today}_${file.baseName}.xlsx`;
+      const sheetData = [file.headers, ...file.data];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'ÖzetData');
+      XLSX.writeFile(wb, fileName);
+      exportedCount++;
+    });
+  } else {
+    showGlobalMessage('⚠️ Özet data yok, sadece detay export edilecek', 'warn');
+  }
+  
+  // Detay data export
+  if (detailFiles.length > 0) {
+    detailFiles.forEach(file => {
+      const fileName = `Alotech_DetayData_${today}_${file.baseName}.xlsx`;
+      const sheetData = [file.headers, ...file.data];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'DetayData');
+      XLSX.writeFile(wb, fileName);
+      exportedCount++;
+    });
+  } else {
+    showGlobalMessage('⚠️ Detay data yok, sadece özet export edildi', 'warn');
+  }
+  
+  if (exportedCount === 0) {
+    showGlobalMessage('❌ Hiç veri yok, export yapılamadı', 'err');
+  } else {
+    showGlobalMessage(`📦 ${exportedCount} dosya export edildi (Özet/Detay)`, 'ok');
+  }
 }
 
 function resetEverything() {
@@ -295,21 +325,7 @@ function resetEverything() {
   showGlobalMessage('🧹 Tüm veriler sıfırlandı', 'ok');
 }
 
-function performCalculation() {
-  if (summaryFiles.length === 0 && detailFiles.length === 0) {
-    showGlobalMessage('⚠️ Lütfen önce Özet ve/veya Detay dosyaları yükleyin', 'err');
-    return;
-  }
-  console.group('🧮 Hesaplama Demo');
-  console.log('Özet:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.log('Detay:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.groupEnd();
-  const sumRows = summaryFiles.reduce((a,b) => a + b.rowCount, 0);
-  const detRows = detailFiles.reduce((a,b) => a + b.rowCount, 0);
-  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.`);
-  showGlobalMessage('✅ Hesaplama tamam', 'ok');
-}
-
+// Drop zone kurulumu
 function setupDropZone(zoneId, inputId, category) {
   const zone = document.getElementById(zoneId);
   const input = document.getElementById(inputId);
