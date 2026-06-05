@@ -134,7 +134,7 @@ function previewHandler(e) {
     html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`;
   });
   if (file.data.length > maxPreviewRows) html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${file.data.length - maxPreviewRows} satır daha</td></tr>`;
-  html += `</tbody></table></div><div style="margin-top:8px; font-size:11px; color:var(--muted);">📌 Sütun yapısı: ${headers.join(' | ')}</div>`;
+  html += `</tbody>}</div><div style="margin-top:8px; font-size:11px; color:var(--muted);">📌 Sütun yapısı: ${headers.join(' | ')}</div>`;
   previewDiv.innerHTML = html;
 }
 
