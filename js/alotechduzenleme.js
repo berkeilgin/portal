@@ -27,10 +27,75 @@ function showGlobalMessage(msg, type = 'ok') {
   setTimeout(() => { if (statusDiv.style.display === 'block') statusDiv.style.display = 'none'; }, 3500);
 }
 
+// Gelişmiş CSV parse: UTF-8 (BOM'lu veya BOM'suz) ve ayraç otomatik algılama (virgül veya noktalı virgül)
+async function parseCSV(arrayBuffer) {
+  // UTF-8 decode (BOM kontrolü)
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let str;
+  if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
+    // BOM var, ilk 3 byte'ı at
+    str = new TextDecoder('utf-8').decode(uint8Array.slice(3));
+  } else {
+    str = new TextDecoder('utf-8').decode(uint8Array);
+  }
+  
+  // Satırları ayır (CRLF, LF, CR)
+  let lines = str.split(/\r?\n|\r/);
+  lines = lines.filter(line => line.trim().length > 0);
+  if (lines.length === 0) throw new Error('CSV dosyası boş');
+  
+  // Ayraç algılama: ilk satırda virgül ve noktalı virgül sayısını karşılaştır
+  const firstLine = lines[0];
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const delimiter = semicolonCount > commaCount ? ';' : ',';
+  
+  // CSV satırlarını parse et (tırnak içindeki alanları destekler)
+  function parseCSVLine(line, delim) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === delim && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    // Tırnak içindeki çift tırnakları temizle ve baştaki/sondaki tırnakları kaldır
+    return result.map(field => {
+      let trimmed = field.trim();
+      if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+        trimmed = trimmed.slice(1, -1).replace(/""/g, '"');
+      }
+      return trimmed;
+    });
+  }
+  
+  const headers = parseCSVLine(lines[0], delimiter);
+  const dataRows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const row = parseCSVLine(lines[i], delimiter);
+    // Sütun sayısını eşitle
+    while (row.length < headers.length) row.push('');
+    if (row.length > headers.length) row.length = headers.length;
+    // Tamamen boş satırları atlama (opsiyonel)
+    if (row.some(cell => cell && cell.trim() !== '')) {
+      dataRows.push(row);
+    }
+  }
+  return { headers, dataRows };
+}
+
 async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         let dataRows = [], headers = [];
         if (file.name.match(/\.xlsx?$/i)) {
@@ -41,26 +106,11 @@ async function parseFileToData(file) {
           headers = json[0].map(cell => (cell === undefined || cell === null) ? `Sütun_${Math.random()}` : String(cell).trim());
           dataRows = json.slice(1).map(row => headers.map((_, idx) => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]) : ""));
         } else {
-          const text = e.target.result;
-          const rows = [];
-          let field = '', inQuote = false, row = [];
-          for (let i = 0; i < text.length; i++) {
-            const ch = text[i];
-            if (ch === '"') inQuote = !inQuote;
-            else if ((ch === ',' || ch === '\n') && !inQuote) {
-              row.push(field);
-              field = '';
-              if (ch === '\n') { rows.push(row); row = []; }
-            } else field += ch;
-          }
-          if (field !== '') row.push(field);
-          if (row.length) rows.push(row);
-          if (rows.length === 0) throw new Error('CSV dosyası boş');
-          headers = rows[0].map(h => (h === undefined || h === '') ? `Kolon_${Math.random()}` : h.trim());
-          dataRows = rows.slice(1).map(r => {
-            while (r.length < headers.length) r.push('');
-            return r.slice(0, headers.length);
-          });
+          // CSV: ArrayBuffer olarak okuyup UTF-8 decode et
+          const arrayBuffer = e.target.result;
+          const { headers: csvHeaders, dataRows: csvData } = await parseCSV(arrayBuffer);
+          headers = csvHeaders;
+          dataRows = csvData;
         }
         const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
@@ -70,11 +120,17 @@ async function parseFileToData(file) {
           data: nonEmptyRows,
           rowCount: nonEmptyRows.length
         });
-      } catch (err) { reject(err); }
+      } catch (err) {
+        reject(err);
+      }
     };
     reader.onerror = () => reject(new Error('Dosya okuma hatası'));
-    if (file.name.match(/\.xlsx?$/i)) reader.readAsArrayBuffer(file);
-    else reader.readAsText(file, 'UTF-8');
+    if (file.name.match(/\.xlsx?$/i)) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      // CSV için ArrayBuffer ile oku
+      reader.readAsArrayBuffer(file);
+    }
   });
 }
 
@@ -87,7 +143,7 @@ async function addFilesToCategory(category, fileList) {
       const newFile = { id: nextId++, ...parsed };
       if (existingIndex !== -1) targetArray[existingIndex] = newFile;
       else targetArray.push(newFile);
-      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır)`, 'ok');
+      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır, ${parsed.headers.length} sütun)`, 'ok');
     } catch (err) {
       showGlobalMessage(`❌ ${file.name}: ${err.message}`, 'err');
     }
@@ -119,10 +175,10 @@ function previewHandler(e) {
   const maxRows = 15;
   const headers = file.headers;
   const sample = file.data.slice(0, maxRows);
-  let html = `<div class="table-wrapper"><table><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
   sample.forEach(row => { html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`; });
-  if (file.data.length > maxRows) html += `<tr><td colspan="${headers.length}">... ve ${file.data.length - maxRows} satır daha</td></tr>`;
-  html += `</tbody>}</div><div style="margin-top:8px; font-size:10px; color:var(--muted);">Sütunlar: ${headers.join(' | ')}</div>`;
+  if (file.data.length > maxRows) html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${file.data.length - maxRows} satır daha</td></tr>`;
+  html += `</tbody></table></div><div style="margin-top:8px; font-size:10px; color:var(--muted);">📌 Sütunlar: ${headers.join(' | ')}</div><div style="font-size:10px; color:var(--accent);">🔍 Ayraç otomatik algılandı, UTF-8 desteği aktif.</div>`;
   previewDiv.innerHTML = html;
 }
 
@@ -138,7 +194,7 @@ function exportHandler(e) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
   XLSX.writeFile(wb, `${file.baseName}_${category}_export.xlsx`);
-  showGlobalMessage(`📎 ${file.name} dışa aktarıldı`, 'ok');
+  showGlobalMessage(`📎 ${file.name} dışa aktarıldı (${file.rowCount} satır)`, 'ok');
 }
 
 function deleteHandler(e) {
@@ -224,7 +280,7 @@ function performCalculation() {
   console.groupEnd();
   const sumRows = summaryFiles.reduce((a,b) => a + b.rowCount, 0);
   const detRows = detailFiles.reduce((a,b) => a + b.rowCount, 0);
-  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.`);
+  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.\n\nDetaylı bilgi için konsolu açın (F12).`);
   showGlobalMessage('✅ Hesaplama tamam, konsola bakın', 'ok');
 }
 
@@ -251,8 +307,13 @@ function initTheme() {
   document.body.className = saved;
   const container = document.getElementById('themeSwitch');
   if (container) {
-    const themes = ['grey', 'dark', 'light', 'tp'];
-    container.innerHTML = themes.map(t => `<button class="theme-btn ${t === saved ? 'active' : ''}" data-theme="${t}">${t === 'grey' ? 'Gri' : t === 'dark' ? 'Koyu' : t === 'light' ? 'Açık' : 'Neon'}</button>`).join('');
+    const themes = [
+      { id: 'grey', name: 'Gri' },
+      { id: 'dark', name: 'Siyah' },
+      { id: 'light', name: 'Beyaz' },
+      { id: 'tp', name: 'TP' }
+    ];
+    container.innerHTML = themes.map(t => `<button class="theme-btn ${t.id === saved ? 'active' : ''}" data-theme="${t.id}">${t.name}</button>`).join('');
     document.querySelectorAll('.theme-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const theme = btn.dataset.theme;
