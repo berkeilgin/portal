@@ -18,7 +18,6 @@
     .file-rows { font-family: var(--mono); font-size: 10px; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 20px; }
     .file-del { background: none; border: none; color: var(--accent3); cursor: pointer; font-size: 16px; font-weight: bold; opacity: 0.7; }
     .file-del:hover { opacity: 1; }
-    .preview-btn { font-size: 10px; padding: 4px 10px; margin-left: auto; }
     .section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
     .stat-badge { font-size: 11px; background: var(--surface); padding: 4px 10px; border-radius: 30px; font-family: var(--mono); }
     .action-bar { margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; }
@@ -30,25 +29,22 @@
     .theme-btn.active { background: var(--accent2); color: #fff; }
     .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
     .logo { font-weight: 700; font-size: 1.2rem; font-family: var(--display); }
-    /* Loading overlay */
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 16px; }
     .loading-overlay.active { display: flex; }
     .loading-text { color: white; font-family: var(--mono); font-size: 14px; background: var(--card); padding: 12px 24px; border-radius: 40px; border: 1px solid var(--border); }
     .spinner-large { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* Modal popup */
+    /* Modal Popup */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; }
     .modal.active { display: flex; }
-    .modal-content { background: var(--card); border-radius: 20px; max-width: 90%; max-height: 90%; width: 900px; display: flex; flex-direction: column; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
-    .modal-header h3 { margin: 0; font-family: var(--display); }
-    .modal-body { padding: 20px; overflow: auto; flex: 1; }
-    .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
-    .preview-row-select { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-    .preview-row-select label { font-size: 12px; color: var(--muted); }
-    .preview-table-wrapper { overflow-x: auto; max-height: 500px; }
-    .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); }
-    .close-modal:hover { color: var(--accent3); }
+    .modal-content { background: var(--card); border-radius: 20px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .modal-header h3 { margin: 0; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); }
+    .preview-options { margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .preview-options select, .preview-options button { padding: 6px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); }
+    .table-wrapper { overflow-x: auto; max-height: 60vh; }
+    .table-wrapper table { font-size: 11px; }
   </style>
 </head>
 <body class="grey">
@@ -60,7 +56,6 @@
 
   <div class="main" style="max-width: 1400px;">
     <div class="grid-2">
-      <!-- Özet Data -->
       <div class="panel">
         <div class="section-header">
           <h2>📑 Özet Data</h2>
@@ -68,13 +63,11 @@
         </div>
         <div class="drop-zone" id="summaryDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır, UTF-8</div>
+          <div style="font-size: 10px; margin-top: 6px;">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
           <input type="file" id="summaryFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="summaryFileList" style="margin-top: 16px;"></div>
       </div>
-
-      <!-- Detay Data -->
       <div class="panel">
         <div class="section-header">
           <h2>🔍 Detay Data</h2>
@@ -82,50 +75,45 @@
         </div>
         <div class="drop-zone" id="detailDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır, UTF-8</div>
+          <div style="font-size: 10px; margin-top: 6px;">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
           <input type="file" id="detailFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="detailFileList" style="margin-top: 16px;"></div>
       </div>
     </div>
-
     <div class="action-bar">
       <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
       <button class="btn btn-primary" id="exportAllDataBtn">📎 Tümünü Dışarı Aktar</button>
     </div>
     <div id="globalStatus" class="status-bar"></div>
   </div>
-
   <footer class="footer">
-    <div class="copyright-text">CSV dosyaları noktalı virgül (;) veya virgül (,) ile ayrılmış olabilir. İptal edilenler ayrı sheet'te.</div>
+    <div class="copyright-text">CSV: noktalı virgül/virgül otomatik, tırnak içi satır sonu korunur. İptal=Evet olanlar ikinci sayfada.</div>
   </footer>
 
-  <!-- Loading overlay -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner-large"></div>
-    <div class="loading-text">Dosyalar yükleniyor, lütfen bekleyin...</div>
+    <div class="loading-text">Dosyalar yükleniyor...</div>
   </div>
 
   <!-- Modal Preview -->
   <div id="previewModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="previewTitle">Veri Önizleme</h3>
-        <button class="close-modal" onclick="closePreviewModal()">&times;</button>
+        <h3>📋 Veri Önizleme</h3>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="preview-row-select">
-          <label>📄 Gösterilecek satır:</label>
-          <button class="btn btn-sm btn-ghost preview-row-btn" data-rows="20">20</button>
-          <button class="btn btn-sm btn-ghost preview-row-btn" data-rows="50">50</button>
-          <button class="btn btn-sm btn-ghost preview-row-btn" data-rows="100">100</button>
-          <button class="btn btn-sm btn-ghost preview-row-btn" data-rows="max">Maks</button>
-        </div>
-        <div id="previewTableContainer" class="preview-table-wrapper"></div>
+      <div class="preview-options">
+        <span>Gösterilecek satır:</span>
+        <select id="previewRowCount">
+          <option value="20">20 satır</option>
+          <option value="50">50 satır</option>
+          <option value="100">100 satır</option>
+          <option value="999999">Maks (tümü)</option>
+        </select>
+        <button id="refreshPreviewBtn" class="btn btn-sm btn-primary">Yenile</button>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closePreviewModal()">Kapat</button>
-      </div>
+      <div id="previewTableContainer" class="table-wrapper"></div>
     </div>
   </div>
 
