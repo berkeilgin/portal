@@ -1,17 +1,14 @@
 // ==================== STATE ====================
-let summaryFiles = [];   // { id, name, baseName, headers, data, rowCount }
+let summaryFiles = [];
 let detailFiles = [];
 let nextId = 1;
 
-// Beklenen sütun sayıları
 const EXPECTED_SUMMARY_COLS = 20;
 const EXPECTED_DETAIL_COLS = 18;
 
-// Modal ve önizleme için değişkenler
 let currentPreviewFile = null;
 let currentPreviewCategory = null;
 
-// Loading overlay
 function showLoading(show, text = 'Dosyalar yükleniyor, lütfen bekleyin...') {
   const overlay = document.getElementById('loadingOverlay');
   if (!overlay) return;
@@ -33,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('resetAllBtn')?.addEventListener('click', resetEverything);
   document.getElementById('exportAllDataBtn')?.addEventListener('click', exportAllData);
   
-  // Modal kapama
   const modal = document.getElementById('previewModal');
   const closeBtn = document.getElementById('closeModalBtn');
   closeBtn?.addEventListener('click', () => modal.classList.remove('active'));
@@ -53,20 +49,16 @@ function showGlobalMessage(msg, type = 'ok') {
   setTimeout(() => { if (statusDiv.style.display === 'block') statusDiv.style.display = 'none'; }, 3500);
 }
 
-// UTF-8 decode
 function decodeUTF8(buffer) {
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(buffer);
+  return new TextDecoder('utf-8').decode(buffer);
 }
 
-// Otomatik delimiter algılama (noktalı virgül veya virgül)
 function detectDelimiter(firstLine) {
   const semicolonCount = (firstLine.match(/;/g) || []).length;
   const commaCount = (firstLine.match(/,/g) || []).length;
   return semicolonCount >= commaCount ? ';' : ',';
 }
 
-// Gelişmiş CSV ayrıştırıcı (tırnak içinde satır sonlarını korur)
 function parseCSVAdvanced(text) {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
   const delimiter = detectDelimiter(text.split(/\r?\n/)[0]);
@@ -84,12 +76,11 @@ function parseCSVAdvanced(text) {
       currentRow.push(currentField);
       currentField = '';
     } else if ((ch === '\n' || (ch === '\r' && text[i+1] === '\n')) && !inQuotes) {
-      // satır sonu
       currentRow.push(currentField);
       if (currentRow.length > 0) rows.push(currentRow);
       currentRow = [];
       currentField = '';
-      if (ch === '\r') i++; // CRLF atla
+      if (ch === '\r') i++;
     } else {
       currentField += ch;
     }
@@ -102,7 +93,6 @@ function parseCSVAdvanced(text) {
   return rows;
 }
 
-// Dosya ayrıştırma ve sütun sayısı kontrolü
 async function parseFileToData(file, category) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -128,7 +118,6 @@ async function parseFileToData(file, category) {
           });
         }
         
-        // Sütun sayısı kontrolü
         const colCount = headers.length;
         if (category === 'summary' && colCount !== EXPECTED_SUMMARY_COLS) {
           throw new Error(`Özet data ${EXPECTED_SUMMARY_COLS} sütun bekler, bu dosya ${colCount} sütun içeriyor.`);
@@ -137,7 +126,6 @@ async function parseFileToData(file, category) {
           throw new Error(`Detay data ${EXPECTED_DETAIL_COLS} sütun bekler, bu dosya ${colCount} sütun içeriyor.`);
         }
         
-        // Boş satırları temizle
         const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
@@ -156,7 +144,6 @@ async function parseFileToData(file, category) {
   });
 }
 
-// Dosya ekleme (kategori bazlı)
 async function addFilesToCategory(category, fileList) {
   const targetArray = category === 'summary' ? summaryFiles : detailFiles;
   showLoading(true, `${category === 'summary' ? 'Özet' : 'Detay'} dosyaları yükleniyor...`);
@@ -183,7 +170,6 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Önizleme modalını aç
 function openPreview(file, category) {
   currentPreviewFile = file;
   currentPreviewCategory = category;
@@ -193,7 +179,6 @@ function openPreview(file, category) {
   document.getElementById('previewModal').classList.add('active');
 }
 
-// Önizleme yenileme (seçilen satır sayısına göre)
 function refreshPreview() {
   if (!currentPreviewFile) return;
   const limitSelect = document.getElementById('previewLimitSelect');
@@ -202,7 +187,6 @@ function refreshPreview() {
   const allData = currentPreviewFile.data;
   
   if (limit === 'max') {
-    // Maks: rastgele 500 satır (performans için)
     const sampleSize = Math.min(500, allData.length);
     if (sampleSize === allData.length) {
       dataToShow = allData;
@@ -221,7 +205,7 @@ function refreshPreview() {
   }
   
   const headers = currentPreviewFile.headers;
-  let html = `<table class="preview-table"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<table class="preview-table"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</thead><tbody>`;
   for (const row of dataToShow) {
     html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 100))}</td>`).join('')}</tr>`;
   }
@@ -230,7 +214,6 @@ function refreshPreview() {
   document.getElementById('previewContent').innerHTML = html;
 }
 
-// Delete handler
 function deleteHandler(e) {
   const btn = e.currentTarget;
   const fileId = parseInt(btn.dataset.id);
@@ -245,7 +228,6 @@ function deleteHandler(e) {
   showGlobalMessage('🗑️ Dosya kaldırıldı', 'warn');
 }
 
-// UI render (önizleme butonlu)
 function renderCategoryUI(category) {
   const filesArray = category === 'summary' ? summaryFiles : detailFiles;
   const container = document.getElementById(`${category}FileList`);
@@ -267,12 +249,10 @@ function renderCategoryUI(category) {
     </div>
   `).join('');
   
-  // Önizleme butonları
   document.querySelectorAll(`.preview-btn[data-cat="${category}"]`).forEach(btn => {
     btn.removeEventListener('click', previewClickHandler);
     btn.addEventListener('click', previewClickHandler);
   });
-  // Delete butonları
   document.querySelectorAll(`.file-del[data-cat="${category}"]`).forEach(btn => {
     btn.removeEventListener('click', deleteHandler);
     btn.addEventListener('click', deleteHandler);
@@ -288,15 +268,12 @@ function previewClickHandler(e) {
   if (file) openPreview(file, category);
 }
 
-// Tüm verileri dışa aktar (Özet ve Detay birlikte)
 async function exportAllData() {
   if (summaryFiles.length === 0 && detailFiles.length === 0) {
     showGlobalMessage('⚠️ Hiç dosya yüklenmemiş', 'warn');
     return;
   }
-  
   showLoading(true, 'Dosyalar hazırlanıyor, dışa aktarılıyor...');
-  
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -304,11 +281,9 @@ async function exportAllData() {
   const dateStr = `${day}-${month}-${year}`;
   
   try {
-    // Özet Data işleme
     if (summaryFiles.length > 0) {
-      await exportCategoryData(summaryFiles, 'OzetData', dateStr, EXPECTED_SUMMARY_COLS);
+      await exportCategoryData(summaryFiles, 'OzetData', dateStr, EXPECTED_SUMMARY_COLS, false);
     }
-    // Detay Data işleme (Başarı_Oranı eklenir)
     if (detailFiles.length > 0) {
       await exportCategoryData(detailFiles, 'DetayData', dateStr, EXPECTED_DETAIL_COLS, true);
     }
@@ -320,6 +295,7 @@ async function exportAllData() {
   }
 }
 
+// YENİ: Sayısal dönüşüm desteği eklenmiş export fonksiyonu
 async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, addSuccessRate = false) {
   const mainSheetData = [];
   const iptalSheetData = [];
@@ -332,14 +308,11 @@ async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, add
     if (!mainHeaders) {
       mainHeaders = [...file.headers];
       iptalHeaders = [...file.headers];
-      // Başarı_Oranı ekle (detay için)
       if (addSuccessRate) {
         mainHeaders.push('Başarı_Oranı');
         iptalHeaders.push('Başarı_Oranı');
       }
-      // "Iptal" sütunu indeksi
       iptalColIndex = mainHeaders.findIndex(h => h.toLowerCase() === 'iptal');
-      // "Puan" sütunu indeksi (detay için)
       if (addSuccessRate) {
         puanColIndex = mainHeaders.findIndex(h => h.toLowerCase() === 'puan');
       }
@@ -348,15 +321,16 @@ async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, add
     }
     
     for (const row of file.data) {
-      // Satırı mainHeaders uzunluğuna tamamla
       let paddedRow = [...row];
       while (paddedRow.length < file.headers.length) paddedRow.push('');
-      // Başarı_Oranı hesapla (detay)
+      
+      // Başarı_Oranı hesapla (detay için)
       let successRate = '';
       if (addSuccessRate && puanColIndex !== -1 && puanColIndex < paddedRow.length) {
         const puan = parseFloat(paddedRow[puanColIndex]);
-        successRate = (!isNaN(puan) && puan > 0) ? '1' : '0';
+        successRate = (!isNaN(puan) && puan > 0) ? 1 : 0;  // sayısal olarak
       }
+      
       // Iptal kontrolü
       let isIptal = false;
       if (iptalColIndex !== -1 && iptalColIndex < paddedRow.length) {
@@ -364,19 +338,33 @@ async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, add
         if (val === 'evet') isIptal = true;
       }
       
+      // Ana satırı hazırla (Puan sütununu sayısal yap)
+      const mainRow = paddedRow.map((cell, idx) => {
+        // Sadece "Puan" sütunu için sayısal dönüşüm (hem özet hem detay)
+        if (mainHeaders && idx < mainHeaders.length && mainHeaders[idx].toLowerCase() === 'puan') {
+          const num = parseFloat(cell);
+          return isNaN(num) ? (cell === '' ? null : cell) : num;
+        }
+        return cell;
+      });
+      if (addSuccessRate) mainRow.push(successRate);
+      
       if (isIptal) {
-        const iptalRow = [...paddedRow];
+        const iptalRow = paddedRow.map((cell, idx) => {
+          if (mainHeaders && idx < mainHeaders.length && mainHeaders[idx].toLowerCase() === 'puan') {
+            const num = parseFloat(cell);
+            return isNaN(num) ? (cell === '' ? null : cell) : num;
+          }
+          return cell;
+        });
         if (addSuccessRate) iptalRow.push(successRate);
         iptalSheetData.push(iptalRow);
       } else {
-        const mainRow = [...paddedRow];
-        if (addSuccessRate) mainRow.push(successRate);
         mainSheetData.push(mainRow);
       }
     }
   }
   
-  // Excel oluştur
   const wb = XLSX.utils.book_new();
   if (mainSheetData.length > 1) {
     const wsMain = XLSX.utils.aoa_to_sheet(mainSheetData);
@@ -399,7 +387,6 @@ function resetEverything() {
   showGlobalMessage('🧹 Tüm veriler sıfırlandı', 'ok');
 }
 
-// Drag & drop
 function setupDropZone(zoneId, inputId, category) {
   const zone = document.getElementById(zoneId);
   const input = document.getElementById(inputId);
@@ -418,7 +405,6 @@ function setupDropZone(zoneId, inputId, category) {
   });
 }
 
-// Tema (Gri, Siyah, Beyaz, TP) + siyah tema düzeltmesi
 function initTheme() {
   const saved = localStorage.getItem('alotech_theme') || 'grey';
   document.body.className = saved;
@@ -440,7 +426,6 @@ function initTheme() {
       });
     });
   }
-  // Siyah tema için ek kontrast (eğer theme.css yetersizse)
   if (saved === 'dark') {
     document.body.style.setProperty('--text', '#f0f0f0');
     document.body.style.setProperty('--muted', '#c0c0e0');
