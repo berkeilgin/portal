@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Rapor Hazırlama | Seçim Ekranı</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Mevcut CSS dosyaları (tema ve bileşenler) -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    /* Özel stiller - Modal ve kartlar */
+    .selection-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 70vh;
+      gap: 40px;
+      flex-wrap: wrap;
+      padding: 40px 20px;
+    }
+    .option-card {
+      background: var(--card);
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      padding: 32px 24px;
+      width: 280px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+    }
+    .option-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+      border-color: var(--accent2);
+    }
+    .option-logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin-bottom: 20px;
+      border-radius: 20px;
+    }
+    .option-title {
+      font-family: var(--display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .option-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .btn-back {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      z-index: 100;
+    }
+    /* Modal stilleri */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: var(--card);
+      border-radius: 32px;
+      max-width: 400px;
+      width: 90%;
+      padding: 32px 24px;
+      text-align: center;
+      border: 1px solid var(--border);
+      box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+      animation: fadeInUp 0.3s ease;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 20px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+    .modal-buttons .btn {
+      min-width: 100px;
+    }
+    .modal-title {
+      font-family: var(--display);
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+    }
+    .modal-message {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    /* Responsive */
+    @media (max-width: 700px) {
+      .selection-container { gap: 20px; }
+      .option-card { width: 240px; padding: 24px 16px; }
+      .option-logo { width: 90px; height: 90px; }
+    }
+  </style>
+</head>
+<body class="grey">
+  <div class="header">
+    <div class="logo">📊 Rapor Hazırlama Portalı</div>
+    <div class="theme-switch" id="themeSwitch"></div>
+  </div>
+
+  <div class="main" style="max-width: 1200px;">
+    <div class="selection-container">
+      <!-- BMS Datası Hazırla -->
+      <div class="option-card" data-target="bms">
+        <img src="logos/tp_bms.png" alt="BMS Logo" class="option-logo" onerror="this.src='https://placehold.co/120x120?text=BMS'">
+        <div class="option-title">BMS Datası Hazırla</div>
+        <div class="option-desc">Kalite raporu için BMS verilerini düzenleyin</div>
+      </div>
+
+      <!-- Alotech Datası Hazırla -->
+      <div class="option-card" data-target="alotech">
+        <img src="logos/alotech.png" alt="Alotech Logo" class="option-logo" onerror="this.src='https://placehold.co/120x120?text=Alotech'">
+        <div class="option-title">Alotech Datası Hazırla</div>
+        <div class="option-desc">Alotech düzenleme aracı ile detaylı işlemler</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Geri butonu (Ana Sayfa) -->
+  <div class="btn-back">
+    <button class="btn btn-ghost" id="backToHomeBtn">← Geri / Ana Sayfa</button>
+  </div>
+
+  <!-- Modal (Onay Popup) -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <img id="modalLogo" src="" alt="Logo" class="modal-logo">
+      <div class="modal-title" id="modalTitle"></div>
+      <div class="modal-message" id="modalMessage">Bu işleme devam etmek istediğinize emin misiniz?</div>
+      <div class="modal-buttons">
+        <button class="btn btn-ghost" id="modalCancelBtn">Vazgeç</button>
+        <button class="btn btn-primary" id="modalConfirmBtn">Devam Et</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="copyright-text">Rapor hazırlama araçlarına hoş geldiniz. Lütfen bir seçenek belirleyin.</div>
+  </footer>
+
+  <script>
+    // Tema yönetimi (mevcut tema yapınızla uyumlu)
+    function initTheme() {
+      const saved = localStorage.getItem('alotech_theme') || 'grey';
+      document.body.className = saved;
+      const container = document.getElementById('themeSwitch');
+      if (container) {
+        const themes = [
+          { id: 'grey', name: 'Gri' },
+          { id: 'dark', name: 'Siyah' },
+          { id: 'light', name: 'Beyaz' },
+          { id: 'tp', name: 'TP' }
+        ];
+        container.innerHTML = themes.map(t => `<button class="theme-btn ${t.id === saved ? 'active' : ''}" data-theme="${t.id}">${t.name}</button>`).join('');
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            document.body.className = theme;
+            localStorage.setItem('alotech_theme', theme);
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+          });
+        });
+      }
+      // Siyah tema kontrast düzeltmesi
+      if (saved === 'dark') {
+        document.body.style.setProperty('--text', '#f0f0f0');
+        document.body.style.setProperty('--muted', '#c0c0e0');
+      }
+    }
+
+    // Modal kontrolü
+    let pendingTarget = null;
+
+    function showModal(target) {
+      pendingTarget = target;
+      const modal = document.getElementById('confirmModal');
+      const modalLogo = document.getElementById('modalLogo');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalMessage = document.getElementById('modalMessage');
+
+      if (target === 'bms') {
+        modalLogo.src = 'logos/tp_bms.png';
+        modalLogo.alt = 'BMS Logo';
+        modalTitle.innerText = 'BMS Datası Hazırlama';
+        modalMessage.innerText = 'Kalite raporu için BMS veri düzenleme aracına yönlendirileceksiniz. Devam etmek istiyor musunuz?';
+      } else if (target === 'alotech') {
+        modalLogo.src = 'logos/alotech.png';
+        modalLogo.alt = 'Alotech Logo';
+        modalTitle.innerText = 'Alotech Datası Hazırlama';
+        modalMessage.innerText = 'Alotech düzenleme aracına yönlendirileceksiniz. Devam etmek istiyor musunuz?';
+      }
+      modal.classList.add('active');
+    }
+
+    function hideModal() {
+      document.getElementById('confirmModal').classList.remove('active');
+      pendingTarget = null;
+    }
+
+    function redirectTo(target) {
+      if (target === 'bms') {
+        window.location.href = 'kaliterapor.html';
+      } else if (target === 'alotech') {
+        window.location.href = 'alotechduzenleme.html';
+      }
+    }
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+
+      // Kart tıklamaları
+      const bmsCard = document.querySelector('.option-card[data-target="bms"]');
+      const alotechCard = document.querySelector('.option-card[data-target="alotech"]');
+      
+      bmsCard?.addEventListener('click', () => showModal('bms'));
+      alotechCard?.addEventListener('click', () => showModal('alotech'));
+
+      // Modal butonları
+      document.getElementById('modalConfirmBtn')?.addEventListener('click', () => {
+        if (pendingTarget) redirectTo(pendingTarget);
+        hideModal();
+      });
+      document.getElementById('modalCancelBtn')?.addEventListener('click', hideModal);
+      
+      // Modal dışına tıklayınca kapat
+      const modal = document.getElementById('confirmModal');
+      modal?.addEventListener('click', (e) => {
+        if (e.target === modal) hideModal();
+      });
+
+      // Geri butonu - ana sayfa index.html'e yönlendir
+      document.getElementById('backToHomeBtn')?.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+    });
+  </script>
+</body>
+</html>
