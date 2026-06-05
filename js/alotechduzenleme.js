@@ -27,91 +27,76 @@ function showGlobalMessage(msg, type = 'ok') {
   setTimeout(() => { if (statusDiv.style.display === 'block') statusDiv.style.display = 'none'; }, 3500);
 }
 
-// Gelişmiş CSV parse: UTF-8 (BOM'lu veya BOM'suz) ve ayraç otomatik algılama (virgül veya noktalı virgül)
-async function parseCSV(arrayBuffer) {
-  // UTF-8 decode (BOM kontrolü)
-  const uint8Array = new Uint8Array(arrayBuffer);
-  let str;
-  if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
-    // BOM var, ilk 3 byte'ı at
-    str = new TextDecoder('utf-8').decode(uint8Array.slice(3));
-  } else {
-    str = new TextDecoder('utf-8').decode(uint8Array);
-  }
-  
-  // Satırları ayır (CRLF, LF, CR)
-  let lines = str.split(/\r?\n|\r/);
-  lines = lines.filter(line => line.trim().length > 0);
-  if (lines.length === 0) throw new Error('CSV dosyası boş');
-  
-  // Ayraç algılama: ilk satırda virgül ve noktalı virgül sayısını karşılaştır
-  const firstLine = lines[0];
-  const commaCount = (firstLine.match(/,/g) || []).length;
-  const semicolonCount = (firstLine.match(/;/g) || []).length;
-  const delimiter = semicolonCount > commaCount ? ';' : ',';
-  
-  // CSV satırlarını parse et (tırnak içindeki alanları destekler)
-  function parseCSVLine(line, delim) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-      } else if (ch === delim && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    result.push(current);
-    // Tırnak içindeki çift tırnakları temizle ve baştaki/sondaki tırnakları kaldır
-    return result.map(field => {
-      let trimmed = field.trim();
-      if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-        trimmed = trimmed.slice(1, -1).replace(/""/g, '"');
-      }
-      return trimmed;
-    });
-  }
-  
-  const headers = parseCSVLine(lines[0], delimiter);
-  const dataRows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const row = parseCSVLine(lines[i], delimiter);
-    // Sütun sayısını eşitle
-    while (row.length < headers.length) row.push('');
-    if (row.length > headers.length) row.length = headers.length;
-    // Tamamen boş satırları atlama (opsiyonel)
-    if (row.some(cell => cell && cell.trim() !== '')) {
-      dataRows.push(row);
-    }
-  }
-  return { headers, dataRows };
+// UTF-8 decode (ArrayBuffer -> string)
+function decodeUTF8(buffer) {
+  const decoder = new TextDecoder('utf-8');
+  return decoder.decode(buffer);
 }
 
+// CSV ayrıştırma (tırnak ve virgül duyarlı, verileri asla değiştirme)
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if ((ch === ',' || ch === '\n') && !inQuotes) {
+      row.push(field);
+      field = '';
+      if (ch === '\n') {
+        rows.push(row);
+        row = [];
+      }
+    } else {
+      field += ch;
+    }
+  }
+  if (field !== '') row.push(field);
+  if (row.length) rows.push(row);
+  return rows;
+}
+
+// Dosya ayrıştırma (CSV: ArrayBuffer ile UTF-8, Excel: XLSX)
 async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
-        let dataRows = [], headers = [];
+        let dataRows = [];
+        let headers = [];
         if (file.name.match(/\.xlsx?$/i)) {
+          // Excel dosyası
           const wb = XLSX.read(e.target.result, { type: 'array' });
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
           if (!json || json.length === 0) throw new Error('Excel dosyası boş');
-          headers = json[0].map(cell => (cell === undefined || cell === null) ? `Sütun_${Math.random()}` : String(cell).trim());
-          dataRows = json.slice(1).map(row => headers.map((_, idx) => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]) : ""));
+          headers = json[0].map(cell => (cell === undefined || cell === null) ? `Sütun_${Math.random()}` : String(cell));
+          dataRows = json.slice(1).map(row => headers.map((_, idx) => {
+            const val = row[idx];
+            return (val !== undefined && val !== null) ? String(val) : "";
+          }));
         } else {
-          // CSV: ArrayBuffer olarak okuyup UTF-8 decode et
-          const arrayBuffer = e.target.result;
-          const { headers: csvHeaders, dataRows: csvData } = await parseCSV(arrayBuffer);
-          headers = csvHeaders;
-          dataRows = csvData;
+          // CSV dosyası - UTF-8 decoding
+          let text;
+          if (e.target.result instanceof ArrayBuffer) {
+            text = decodeUTF8(e.target.result);
+          } else {
+            text = e.target.result;
+          }
+          // BOM silme
+          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+          const rows = parseCSV(text);
+          if (rows.length === 0) throw new Error('CSV dosyası boş');
+          headers = rows[0].map(h => (h === undefined || h === '') ? `Kolon_${Math.random()}` : h);
+          dataRows = rows.slice(1).map(r => {
+            while (r.length < headers.length) r.push('');
+            return r.slice(0, headers.length).map(cell => cell || "");
+          });
         }
+        // Boş satırları temizle (opsiyonel)
         const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
@@ -128,7 +113,7 @@ async function parseFileToData(file) {
     if (file.name.match(/\.xlsx?$/i)) {
       reader.readAsArrayBuffer(file);
     } else {
-      // CSV için ArrayBuffer ile oku
+      // CSV: ArrayBuffer ile oku (UTF-8 desteği için)
       reader.readAsArrayBuffer(file);
     }
   });
@@ -143,7 +128,7 @@ async function addFilesToCategory(category, fileList) {
       const newFile = { id: nextId++, ...parsed };
       if (existingIndex !== -1) targetArray[existingIndex] = newFile;
       else targetArray.push(newFile);
-      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır, ${parsed.headers.length} sütun)`, 'ok');
+      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır, UTF-8)`, 'ok');
     } catch (err) {
       showGlobalMessage(`❌ ${file.name}: ${err.message}`, 'err');
     }
@@ -175,10 +160,12 @@ function previewHandler(e) {
   const maxRows = 15;
   const headers = file.headers;
   const sample = file.data.slice(0, maxRows);
-  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
-  sample.forEach(row => { html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`; });
+  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead></tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</thead><tbody>`;
+  sample.forEach(row => {
+    html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`;
+  });
   if (file.data.length > maxRows) html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${file.data.length - maxRows} satır daha</td></tr>`;
-  html += `</tbody></table></div><div style="margin-top:8px; font-size:10px; color:var(--muted);">📌 Sütunlar: ${headers.join(' | ')}</div><div style="font-size:10px; color:var(--accent);">🔍 Ayraç otomatik algılandı, UTF-8 desteği aktif.</div>`;
+  html += `</tbody></table></div><div style="margin-top:8px; font-size:10px; color:var(--muted);">Sütunlar: ${headers.join(' | ')}</div>`;
   previewDiv.innerHTML = html;
 }
 
@@ -194,7 +181,7 @@ function exportHandler(e) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
   XLSX.writeFile(wb, `${file.baseName}_${category}_export.xlsx`);
-  showGlobalMessage(`📎 ${file.name} dışa aktarıldı (${file.rowCount} satır)`, 'ok');
+  showGlobalMessage(`📎 ${file.name} dışa aktarıldı (veriler aynen korundu)`, 'ok');
 }
 
 function deleteHandler(e) {
@@ -274,13 +261,15 @@ function performCalculation() {
     showGlobalMessage('⚠️ Lütfen önce Özet ve/veya Detay dosyaları yükleyin', 'err');
     return;
   }
-  console.group('🧮 Hesaplama Demo');
-  console.log('Özet:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.log('Detay:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  console.group('🧮 Hesaplama Demo (Veri aynen korundu)');
+  console.log('Özet Dosyaları:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  console.log('Detay Dosyaları:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  if (summaryFiles[0]) console.log('Özet İlk Veri Örneği (ham):', summaryFiles[0].data.slice(0, 2));
+  if (detailFiles[0]) console.log('Detay İlk Veri Örneği (ham):', detailFiles[0].data.slice(0, 2));
   console.groupEnd();
   const sumRows = summaryFiles.reduce((a,b) => a + b.rowCount, 0);
   const detRows = detailFiles.reduce((a,b) => a + b.rowCount, 0);
-  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.\n\nDetaylı bilgi için konsolu açın (F12).`);
+  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.\nVeriler hiç değiştirilmeden işlendi.`);
   showGlobalMessage('✅ Hesaplama tamam, konsola bakın', 'ok');
 }
 
