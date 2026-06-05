@@ -282,10 +282,10 @@ async function exportAllData() {
   
   try {
     if (summaryFiles.length > 0) {
-      await exportCategoryData(summaryFiles, 'OzetData', dateStr, EXPECTED_SUMMARY_COLS, false);
+      await exportCategoryData(summaryFiles, 'OzetData', dateStr, false);
     }
     if (detailFiles.length > 0) {
-      await exportCategoryData(detailFiles, 'DetayData', dateStr, EXPECTED_DETAIL_COLS, true);
+      await exportCategoryData(detailFiles, 'DetayData', dateStr, true);
     }
     showGlobalMessage(`✅ Dışa aktarma tamamlandı`, 'ok');
   } catch (err) {
@@ -295,8 +295,15 @@ async function exportAllData() {
   }
 }
 
-// YENİ: Sayısal dönüşüm desteği eklenmiş export fonksiyonu
-async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, addSuccessRate = false) {
+// Sayısal dönüşüm için yardımcı fonksiyon
+function toNumberIfPossible(val) {
+  if (val === undefined || val === null || val === '') return null;
+  const str = String(val).trim().replace(',', '.'); // virgülü noktaya çevir
+  const num = parseFloat(str);
+  return isNaN(num) ? val : num;
+}
+
+async function exportCategoryData(files, sheetPrefix, dateStr, addSuccessRate = false) {
   const mainSheetData = [];
   const iptalSheetData = [];
   let mainHeaders = null;
@@ -324,11 +331,12 @@ async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, add
       let paddedRow = [...row];
       while (paddedRow.length < file.headers.length) paddedRow.push('');
       
-      // Başarı_Oranı hesapla (detay için)
-      let successRate = '';
+      // Başarı_Oranı hesapla (detay için) – sayısal
+      let successRate = null;
       if (addSuccessRate && puanColIndex !== -1 && puanColIndex < paddedRow.length) {
-        const puan = parseFloat(paddedRow[puanColIndex]);
-        successRate = (!isNaN(puan) && puan > 0) ? 1 : 0;  // sayısal olarak
+        const puanVal = toNumberIfPossible(paddedRow[puanColIndex]);
+        const puan = (typeof puanVal === 'number') ? puanVal : parseFloat(String(paddedRow[puanColIndex]).replace(',', '.'));
+        successRate = (!isNaN(puan) && puan > 0) ? 1 : 0;
       }
       
       // Iptal kontrolü
@@ -338,40 +346,55 @@ async function exportCategoryData(files, sheetPrefix, dateStr, expectedCols, add
         if (val === 'evet') isIptal = true;
       }
       
-      // Ana satırı hazırla (Puan sütununu sayısal yap)
-      const mainRow = paddedRow.map((cell, idx) => {
-        // Sadece "Puan" sütunu için sayısal dönüşüm (hem özet hem detay)
+      // Satırı işle: Puan sütununu sayısal yap, diğerlerini olduğu gibi bırak
+      const processedRow = paddedRow.map((cell, idx) => {
         if (mainHeaders && idx < mainHeaders.length && mainHeaders[idx].toLowerCase() === 'puan') {
-          const num = parseFloat(cell);
-          return isNaN(num) ? (cell === '' ? null : cell) : num;
+          return toNumberIfPossible(cell);
         }
         return cell;
       });
-      if (addSuccessRate) mainRow.push(successRate);
+      
+      if (addSuccessRate) processedRow.push(successRate);
       
       if (isIptal) {
-        const iptalRow = paddedRow.map((cell, idx) => {
-          if (mainHeaders && idx < mainHeaders.length && mainHeaders[idx].toLowerCase() === 'puan') {
-            const num = parseFloat(cell);
-            return isNaN(num) ? (cell === '' ? null : cell) : num;
-          }
-          return cell;
-        });
-        if (addSuccessRate) iptalRow.push(successRate);
-        iptalSheetData.push(iptalRow);
+        iptalSheetData.push(processedRow);
       } else {
-        mainSheetData.push(mainRow);
+        mainSheetData.push(processedRow);
       }
     }
   }
   
+  // Workbook oluştur ve hücre tiplerini zorla (sayısal hücreler için 'n')
   const wb = XLSX.utils.book_new();
   if (mainSheetData.length > 1) {
     const wsMain = XLSX.utils.aoa_to_sheet(mainSheetData);
+    // Sayısal hücreleri 'n' tipine zorla (otomatik algılamazsa)
+    for (let r = 1; r < mainSheetData.length; r++) {
+      for (let c = 0; c < mainSheetData[r].length; c++) {
+        const cellValue = mainSheetData[r][c];
+        if (typeof cellValue === 'number') {
+          const cellRef = XLSX.utils.encode_cell({ r: r, c: c });
+          if (!wsMain[cellRef]) wsMain[cellRef] = {};
+          wsMain[cellRef].t = 'n';
+          wsMain[cellRef].v = cellValue;
+        }
+      }
+    }
     XLSX.utils.book_append_sheet(wb, wsMain, sheetPrefix);
   }
   if (iptalSheetData.length > 1) {
     const wsIptal = XLSX.utils.aoa_to_sheet(iptalSheetData);
+    for (let r = 1; r < iptalSheetData.length; r++) {
+      for (let c = 0; c < iptalSheetData[r].length; c++) {
+        const cellValue = iptalSheetData[r][c];
+        if (typeof cellValue === 'number') {
+          const cellRef = XLSX.utils.encode_cell({ r: r, c: c });
+          if (!wsIptal[cellRef]) wsIptal[cellRef] = {};
+          wsIptal[cellRef].t = 'n';
+          wsIptal[cellRef].v = cellValue;
+        }
+      }
+    }
     XLSX.utils.book_append_sheet(wb, wsIptal, 'İptal Edilenler');
   }
   if (wb.SheetNames.length > 0) {
