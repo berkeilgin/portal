@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Portal — İnfografik</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#09090f;--s1:#111118;--s2:#15151f;
+  --b1:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);
+  --tx:#eaeaf2;--mu:#6b6b80;--mu2:#4a4a60;
+  --a1:#06d6a0;--a2:#7c6dfa;--a3:#ff6b6b;--a4:#ffd166;
+  --gr:linear-gradient(135deg,#06d6a0,#7c6dfa);
+  --mono:'DM Mono',monospace;--dp:'Syne',sans-serif;--fn:'DM Sans',sans-serif;
+}
+body{background:#0d0d14;font-family:var(--fn);color:var(--tx);
+  display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px}
+
+/* PRINT */
+@media print{
+  body{background:white;padding:0}
+  .sheet{box-shadow:none}
+}
+
+.sheet{width:900px;background:var(--bg);border-radius:20px;overflow:hidden;
+  box-shadow:0 40px 120px rgba(0,0,0,.8);position:relative}
+
+/* ── HEADER ───────────────────────────────── */
+.hd{
+  background:linear-gradient(160deg,#0e0e1a 0%,#12101e 60%,#0a0e16 100%);
+  padding:56px 56px 48px;position:relative;overflow:hidden;
+  border-bottom:1px solid var(--b1)}
+.hd-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 100% 100% at 50% 0%,black 30%,transparent 100%)}
+.hd-orb1{position:absolute;width:500px;height:300px;top:-80px;left:50%;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse,rgba(124,109,250,.18),transparent 70%);pointer-events:none}
+.hd-orb2{position:absolute;width:300px;height:300px;bottom:-80px;right:-60px;
+  background:radial-gradient(circle,rgba(6,214,160,.1),transparent 70%);pointer-events:none}
+
+.hd-inner{position:relative;display:flex;justify-content:space-between;align-items:flex-end}
+.hd-left{}
+.hd-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;
+  background:rgba(124,109,250,.12);border:1px solid rgba(124,109,250,.25);
+  border-radius:100px;font-family:var(--mono);font-size:9px;color:var(--a2);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:20px}
+.hd-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--a1)}
+.hd-title{font-family:var(--dp);font-size:64px;font-weight:800;line-height:.9;letter-spacing:-2.5px}
+.hd-t1{display:block;color:rgba(255,255,255,.55);font-size:26px;letter-spacing:-0.5px;
+  margin-bottom:6px;font-weight:700}
+.hd-t2{display:block;background:var(--gr);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text}
+.hd-sub{margin-top:16px;font-size:13px;color:var(--mu);max-width:380px;line-height:1.65}
+
+.hd-stats{display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+.hd-stat{text-align:right}
+.hd-sn{font-family:var(--dp);font-size:38px;font-weight:800;line-height:1;
+  background:var(--gr);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hd-sl{font-family:var(--mono);font-size:9px;color:var(--mu);
+  letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+
+/* ── SECTION LABEL ────────────────────────── */
+.sec{padding:40px 56px}
+.sec-alt{background:var(--s1)}
+.sec-label{display:flex;align-items:center;gap:10px;font-family:var(--mono);
+  font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--a1);margin-bottom:24px}
+.sec-label::before{content:'';width:20px;height:1px;background:var(--a1)}
+.sec-title{font-family:var(--dp);font-size:26px;font-weight:800;letter-spacing:-0.8px;margin-bottom:24px}
+.sec-title em{font-style:normal;background:var(--gr);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── WHY ROW ──────────────────────────────── */
+.why-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.wc{background:var(--s2);border:1px solid var(--b1);border-radius:12px;
+  padding:20px;display:flex;flex-direction:column;gap:8px}
+.wc-top{display:flex;align-items:center;gap:10px}
+.wc-icon{font-size:22px}
+.wc-title{font-family:var(--dp);font-size:13px;font-weight:700}
+.wc-desc{font-size:11.5px;color:var(--mu);line-height:1.6}
+
+/* ── DIVIDER ──────────────────────────────── */
+.div{height:1px;background:linear-gradient(to right,transparent,var(--b2),transparent);margin:0 56px}
+
+/* ── TOOLS GRID ───────────────────────────── */
+.tg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tc{background:var(--s2);border:1px solid var(--b1);border-radius:11px;overflow:hidden}
+.tc-stripe{height:2.5px}
+.tc-body{padding:16px 16px 10px}
+.tc-emo{font-size:22px;margin-bottom:8px;display:block}
+.tc-name{font-family:var(--dp);font-size:12.5px;font-weight:700;margin-bottom:5px;line-height:1.2}
+.tc-desc{font-size:10.5px;color:var(--mu);line-height:1.55;margin-bottom:8px}
+.tc-feats{display:flex;flex-direction:column;gap:3px}
+.tc-f{font-size:10px;color:var(--mu);display:flex;gap:5px}
+.tc-f::before{content:'›';color:var(--a1);flex-shrink:0}
+.tc-foot{padding:7px 16px;background:rgba(0,0,0,.2);border-top:1px solid var(--b1);
+  display:flex;gap:4px;flex-wrap:wrap}
+.tg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+/* ── TAGS ─────────────────────────────────── */
+.tag{font-size:8.5px;font-family:var(--mono);padding:2px 7px;border-radius:4px;
+  border:1px solid var(--b2);color:var(--mu)}
+.tag.g{border-color:rgba(6,214,160,.22);color:var(--a1);background:rgba(6,214,160,.06)}
+.tag.p{border-color:rgba(124,109,250,.22);color:var(--a2);background:rgba(124,109,250,.06)}
+.tag.r{border-color:rgba(255,107,107,.22);color:var(--a3);background:rgba(255,107,107,.06)}
+.tag.y{border-color:rgba(255,209,102,.22);color:var(--a4);background:rgba(255,209,102,.06)}
+
+/* ── WORKFLOW ─────────────────────────────── */
+.wf{display:flex;flex-direction:column;gap:0;position:relative}
+.wf::before{content:'';position:absolute;left:23px;top:46px;
+  height:calc(100% - 90px);width:1.5px;
+  background:linear-gradient(to bottom,var(--a1),var(--a2),rgba(124,109,250,.1))}
+
+.wf-row{display:grid;grid-template-columns:48px 1fr;gap:0;padding:16px 0}
+.wf-row:not(:last-child){border-bottom:1px solid var(--b1)}
+.wf-left{display:flex;flex-direction:column;align-items:center;padding-top:2px}
+.wf-num{width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;font-weight:500;
+  border:1.5px solid;position:relative;z-index:1;flex-shrink:0}
+.wf-num.n1{color:var(--a1);border-color:rgba(6,214,160,.4);background:rgba(6,214,160,.06)}
+.wf-num.n2{color:#48b6fa;border-color:rgba(72,182,250,.4);background:rgba(72,182,250,.06)}
+.wf-num.n3{color:var(--a2);border-color:rgba(124,109,250,.4);background:rgba(124,109,250,.06)}
+.wf-num.n4{color:#c084fc;border-color:rgba(192,132,252,.4);background:rgba(192,132,252,.06)}
+.wf-num.n5{color:var(--a4);border-color:rgba(255,209,102,.4);background:rgba(255,209,102,.06)}
+
+.wf-content{padding-left:20px;padding-top:6px}
+.wf-title{font-family:var(--dp);font-size:15px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.wf-desc{font-size:11.5px;color:var(--mu);line-height:1.6;margin-bottom:6px;max-width:620px}
+.wf-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:100px;font-family:var(--mono);font-size:9px;letter-spacing:.5px;
+  border:1px solid var(--b2);color:var(--mu)}
+
+/* ── PLATFORM ─────────────────────────────── */
+.pf-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pf{background:var(--s2);border:1px solid var(--b1);border-radius:11px;padding:18px 20px;
+  display:flex;gap:14px;align-items:flex-start}
+.pf-icon{font-size:22px;flex-shrink:0}
+.pf-title{font-family:var(--dp);font-size:12.5px;font-weight:700;margin-bottom:4px}
+.pf-desc{font-size:10.5px;color:var(--mu);line-height:1.55}
+
+/* ── FOOTER STRIP ─────────────────────────── */
+.ft{padding:28px 56px;background:var(--s1);border-top:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between}
+.ft-logo{font-family:var(--dp);font-size:18px;font-weight:800;
+  background:var(--gr);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ft-copy{font-family:var(--mono);font-size:9px;color:var(--mu);letter-spacing:1px}
+.ft-dots{display:flex;gap:6px}
+.ft-dot{width:6px;height:6px;border-radius:50%}
+
+/* LANG TOGGLE (outside sheet) */
+.controls{width:900px;display:flex;justify-content:flex-end;margin-bottom:16px;gap:10px;align-items:center}
+.ctrl-label{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:1px}
+.lang-toggle{display:flex;border:1px solid var(--b2);border-radius:100px;overflow:hidden}
+.lb{padding:5px 16px;font-family:var(--mono);font-size:10px;letter-spacing:1px;
+  cursor:pointer;border:none;background:transparent;color:var(--mu);transition:.2s}
+.lb.on{background:var(--a2);color:#fff}
+.print-btn{padding:7px 18px;background:rgba(6,214,160,.1);border:1px solid rgba(6,214,160,.25);
+  border-radius:100px;font-family:var(--mono);font-size:10px;color:var(--a1);
+  cursor:pointer;letter-spacing:.5px;transition:.2s}
+.print-btn:hover{background:rgba(6,214,160,.18)}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <span class="ctrl-label">DİL / LANG</span>
+  <div class="lang-toggle">
+    <button class="lb on" id="bTR" onclick="setLang('tr')">TR</button>
+    <button class="lb" id="bEN" onclick="setLang('en')">EN</button>
+  </div>
+  <button class="print-btn" onclick="window.print()">⬇ Yazdır / Kaydet</button>
+</div>
+
+<div class="sheet">
+
+  <!-- ══ HEADER ══════════════════════════════════════════ -->
+  <div class="hd">
+    <div class="hd-grid"></div>
+    <div class="hd-orb1"></div>
+    <div class="hd-orb2"></div>
+    <div class="hd-inner">
+      <div class="hd-left">
+        <div class="hd-badge" data-tr="Dahili Araç Paketi" data-en="Internal Toolset">Dahili Araç Paketi</div>
+        <div class="hd-title">
+          <span class="hd-t1" data-tr="Kalite Ekibinin" data-en="The QA Team's">Kalite Ekibinin</span>
+          <span class="hd-t2">QA Portal</span>
+        </div>
+        <div class="hd-sub" data-tr="Veri temizlemeden rapora, örneklemeden analize — QA süreçlerinin tamamı tek çatı altında." data-en="From data cleaning to reporting, from sampling to analysis — all QA processes under one roof.">
+          Veri temizlemeden rapora, örneklemeden analize — QA süreçlerinin tamamı tek çatı altında.
+        </div>
+      </div>
+      <div class="hd-stats">
+        <div class="hd-stat">
+          <div class="hd-sn">8+</div>
+          <div class="hd-sl" data-tr="Araç Modülü" data-en="Tool Modules">Araç Modülü</div>
+        </div>
+        <div class="hd-stat">
+          <div class="hd-sn">TR/EN</div>
+          <div class="hd-sl" data-tr="Dil Desteği" data-en="Language Support">Dil Desteği</div>
+        </div>
+        <div class="hd-stat">
+          <div class="hd-sn">100%</div>
+          <div class="hd-sl" data-tr="Tarayıcı Tabanlı" data-en="Browser Based">Tarayıcı Tabanlı</div>
+        </div>
+        <div class="hd-stat">
+          <div class="hd-sn">AI</div>
+          <div class="hd-sl" data-tr="Destekli Analiz" data-en="Powered Analysis">Destekli Analiz</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WHY ══════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-label" data-tr="Portal Hakkında" data-en="About">Portal Hakkında</div>
+    <div class="why-row">
+      <div class="wc">
+        <div class="wc-top"><span class="wc-icon">⚡</span><div class="wc-title" data-tr="Hızlı Erişim" data-en="Quick Access">Hızlı Erişim</div></div>
+        <div class="wc-desc" data-tr="Tüm araçlar tek sayfadan açılır. Favoriler ve son kullanılan araçlar otomatik listelenir." data-en="All tools open from one page. Favourites and recently used tools listed automatically.">Tüm araçlar tek sayfadan açılır. Favoriler ve son kullanılan araçlar otomatik listelenir.</div>
+      </div>
+      <div class="wc">
+        <div class="wc-top"><span class="wc-icon">🔒</span><div class="wc-title" data-tr="Veri Gizliliği" data-en="Data Privacy">Veri Gizliliği</div></div>
+        <div class="wc-desc" data-tr="Hiçbir dosya sunucuya gönderilmez. Tüm işlemler tarayıcınızda gerçekleşir." data-en="No file is sent to any server. All processing happens in your browser.">Hiçbir dosya sunucuya gönderilmez. Tüm işlemler tarayıcınızda gerçekleşir.</div>
+      </div>
+      <div class="wc">
+        <div class="wc-top"><span class="wc-icon">📱</span><div class="wc-title" data-tr="Kurulum Gerektirmez" data-en="No Installation">Kurulum Gerektirmez</div></div>
+        <div class="wc-desc" data-tr="Tarayıcınızı açın, adrese gidin, kullanmaya başlayın. Hiçbir program yüklemenize gerek yok." data-en="Open browser, go to the address, start using. No programme installation needed.">Tarayıcınızı açın, adrese gidin, kullanmaya başlayın. Hiçbir program yüklemenize gerek yok.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- ══ TOOLS ════════════════════════════════════════════ -->
+  <div class="sec sec-alt">
+    <div class="sec-label" data-tr="Araç Kataloğu" data-en="Tool Catalogue">Araç Kataloğu</div>
+    <div class="sec-title" data-tr="8 <em>Güçlü Modül</em>" data-en="8 <em>Powerful Modules</em>">8 <em>Güçlü Modül</em></div>
+    <div class="tg">
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#06d6a0,#3bf7d4)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">📊</span>
+          <div class="tc-name" data-tr="CSV Dönüştürücü" data-en="CSV Converter">CSV Dönüştürücü</div>
+          <div class="tc-desc" data-tr="Ham dosyaları Türkçe formatlı Excel'e çevirir." data-en="Converts raw files to Turkish-formatted Excel.">Ham dosyaları Türkçe formatlı Excel'e çevirir.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Çoklu dosya desteği" data-en="Multi-file support">Çoklu dosya desteği</div>
+            <div class="tc-f" data-tr="Otomatik tarih formatı" data-en="Auto date format">Otomatik tarih formatı</div>
+            <div class="tc-f" data-tr="Kolon düzenleme modu" data-en="Column edit mode">Kolon düzenleme modu</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag g">CSV</span><span class="tag g">Excel</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#7c6dfa,#a78bfa)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">🔗</span>
+          <div class="tc-name" data-tr="Korelasyon Analizi" data-en="Correlation Analysis">Korelasyon Analizi</div>
+          <div class="tc-desc" data-tr="KPI ilişkilerini ısı haritasıyla görselleştirir." data-en="Visualises KPI relationships via heatmap.">KPI ilişkilerini ısı haritasıyla görselleştirir.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="İnteraktif ısı haritası" data-en="Interactive heatmap">İnteraktif ısı haritası</div>
+            <div class="tc-f" data-tr="AI destekli içgörü" data-en="AI-powered insights">AI destekli içgörü</div>
+            <div class="tc-f" data-tr="PDF rapor indirme" data-en="PDF report download">PDF rapor indirme</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag p">AI</span><span class="tag p">PDF</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#f97316,#fb923c)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">🛒</span>
+          <div class="tc-name" data-tr="Trendyol CSV Aracı" data-en="Trendyol CSV Tool">Trendyol CSV Aracı</div>
+          <div class="tc-desc" data-tr="Özet ve Detay dosyalarını birleştirip temizler." data-en="Merges and cleans Summary + Detail files.">Özet ve Detay dosyalarını birleştirip temizler.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Özet + Detay birleştirme" data-en="Summary + Detail merge">Özet + Detay birleştirme</div>
+            <div class="tc-f" data-tr="Otomatik iptal filtresi" data-en="Auto cancel filter">Otomatik iptal filtresi</div>
+            <div class="tc-f" data-tr="Çoklu hafta desteği" data-en="Multi-week support">Çoklu hafta desteği</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag y">Trendyol</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#ff6b6b,#ff8e8e)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">📂</span>
+          <div class="tc-name" data-tr="BSH Örnekleme" data-en="BSH Sampling">BSH Örnekleme</div>
+          <div class="tc-desc" data-tr="Büyük setlerden kurallara göre kayıt seçer." data-en="Selects records from large datasets by rules.">Büyük setlerden kurallara göre kayıt seçer.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Çoklu dataset" data-en="Multiple datasets">Çoklu dataset</div>
+            <div class="tc-f" data-tr="Esnek aralık ayarı" data-en="Flexible range config">Esnek aralık ayarı</div>
+            <div class="tc-f" data-tr="Toplu indirme" data-en="Bulk download">Toplu indirme</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag r">BSH</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#ffd166,#f4a261)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">🎲</span>
+          <div class="tc-name">Randomizer</div>
+          <div class="tc-desc" data-tr="Listeden rastgele görüşme seçer." data-en="Randomly selects calls from a list.">Listeden rastgele görüşme seçer.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Excel'den rastgele seçim" data-en="Random Excel selection">Excel'den rastgele seçim</div>
+            <div class="tc-f" data-tr="Manuel sayı üreteci" data-en="Manual number gen">Manuel sayı üreteci</div>
+            <div class="tc-f" data-tr="Dinleme geçmişi" data-en="Listening history">Dinleme geçmişi</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag y" data-tr="Rastgele" data-en="Random">Rastgele</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#06d6a0,#7c6dfa)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">📈</span>
+          <div class="tc-name" data-tr="Kalite Raporu Hazırlama" data-en="Quality Report Builder">Kalite Raporu Hazırlama</div>
+          <div class="tc-desc" data-tr="Sıfırdan kalite raporu üretir." data-en="Builds quality report from scratch.">Sıfırdan kalite raporu üretir.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Çok proje desteği" data-en="Multi-project">Çok proje desteği</div>
+            <div class="tc-f" data-tr="Kriter & hedef skor" data-en="Criteria & target score">Kriter & hedef skor</div>
+            <div class="tc-f" data-tr="5 sayfalı Excel çıktı" data-en="5-sheet Excel output">5 sayfalı Excel çıktı</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag g" data-tr="Yeni Rapor" data-en="New Report">Yeni Rapor</span><span class="tag p" data-tr="LOB" data-en="LOB">LOB</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#7c6dfa,#06d6a0)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">🔄</span>
+          <div class="tc-name" data-tr="Rapor Güncelleme" data-en="Report Updater">Rapor Güncelleme</div>
+          <div class="tc-desc" data-tr="Mevcut rapora yeni veri ekler, duplikasyon kontrol eder." data-en="Appends new data to reports, checks duplicates.">Mevcut rapora yeni veri ekler, duplikasyon kontrol eder.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="Duplikasyon kontrolü" data-en="Duplicate check">Duplikasyon kontrolü</div>
+            <div class="tc-f" data-tr="Diff önizleme" data-en="Diff preview">Diff önizleme</div>
+            <div class="tc-f" data-tr="Günlük/Haftalık/Aylık" data-en="Daily/Weekly/Monthly">Günlük/Haftalık/Aylık</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag p" data-tr="Güncelleme" data-en="Update">Güncelleme</span></div>
+      </div>
+
+      <div class="tc">
+        <div class="tc-stripe" style="background:linear-gradient(90deg,#ff6b6b,#7c6dfa)"></div>
+        <div class="tc-body">
+          <span class="tc-emo">📨</span>
+          <div class="tc-name" data-tr="Feedback Dağılım" data-en="Feedback Distribution">Feedback Dağılım</div>
+          <div class="tc-desc" data-tr="Görüşmeleri doğrular, dağıtır ve raporlar." data-en="Validates, distributes and reports on calls.">Görüşmeleri doğrular, dağıtır ve raporlar.</div>
+          <div class="tc-feats">
+            <div class="tc-f" data-tr="ID doğrulama" data-en="ID validation">ID doğrulama</div>
+            <div class="tc-f" data-tr="Otomatik dağıtım" data-en="Auto distribution">Otomatik dağıtım</div>
+            <div class="tc-f" data-tr="Çok boyutlu rapor" data-en="Multi-dim report">Çok boyutlu rapor</div>
+          </div>
+        </div>
+        <div class="tc-foot"><span class="tag r" data-tr="Doğrulama" data-en="Validation">Doğrulama</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- ══ WORKFLOW ══════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-label" data-tr="Haftalık QA Döngüsü" data-en="Weekly QA Cycle">Haftalık QA Döngüsü</div>
+    <div class="sec-title" data-tr="Bir Haftanın <em>Akışı</em>" data-en="A Week's <em>Flow</em>">Bir Haftanın <em>Akışı</em></div>
+    <div class="wf">
+
+      <div class="wf-row">
+        <div class="wf-left"><div class="wf-num n1">01</div></div>
+        <div class="wf-content">
+          <div class="wf-title" data-tr="Ham Veriyi Temizle" data-en="Clean Raw Data">Ham Veriyi Temizle</div>
+          <div class="wf-desc" data-tr="Sistemden indirilen dosyaları yükleyin. Tarihler ve sayılar otomatik düzenlenir, temiz Excel hazır." data-en="Upload files downloaded from the system. Dates and numbers adjusted automatically — clean Excel ready.">Sistemden indirilen dosyaları yükleyin. Tarihler ve sayılar otomatik düzenlenir, temiz Excel hazır.</div>
+          <div class="wf-badge">📊 <span data-tr="CSV Dönüştürücü" data-en="CSV Converter">CSV Dönüştürücü</span></div>
+        </div>
+      </div>
+
+      <div class="wf-row">
+        <div class="wf-left"><div class="wf-num n2">02</div></div>
+        <div class="wf-content">
+          <div class="wf-title" data-tr="Görüşme Seç" data-en="Select Calls">Görüşme Seç</div>
+          <div class="wf-desc" data-tr="Kaç görüşme dinleyeceğinizi girin. Listeden tarafsız rastgele seçim yapılır, sonuç anında gelir." data-en="Enter how many calls to listen to. Unbiased random selection from list — result instant.">Kaç görüşme dinleyeceğinizi girin. Listeden tarafsız rastgele seçim yapılır, sonuç anında gelir.</div>
+          <div class="wf-badge">🎲 Randomizer</div>
+        </div>
+      </div>
+
+      <div class="wf-row">
+        <div class="wf-left"><div class="wf-num n3">03</div></div>
+        <div class="wf-content">
+          <div class="wf-title" data-tr="Kalite Raporu Üret" data-en="Generate Quality Report">Kalite Raporu Üret</div>
+          <div class="wf-desc" data-tr="Değerlendirme verisini yükleyin, kriterleri ayarlayın. Tüm sayfaları içeren Excel raporu tek tıkla indirilir." data-en="Load evaluation data, set criteria. Excel report with all sheets downloads in one click.">Değerlendirme verisini yükleyin, kriterleri ayarlayın. Tüm sayfaları içeren Excel raporu tek tıkla indirilir.</div>
+          <div class="wf-badge">📈 <span data-tr="Kalite Raporu Hazırlama" data-en="Quality Report Builder">Kalite Raporu Hazırlama</span></div>
+        </div>
+      </div>
+
+      <div class="wf-row">
+        <div class="wf-left"><div class="wf-num n4">04</div></div>
+        <div class="wf-content">
+          <div class="wf-title" data-tr="Kalite Raporunu Güncelle" data-en="Update Quality Report">Kalite Raporunu Güncelle</div>
+          <div class="wf-desc" data-tr="Yeni değerlendirmeler geldikçe mevcut rapora ekleyin. Tekrar eden kayıtlar otomatik çıkarılır." data-en="As new evaluations arrive, append to existing report. Duplicates removed automatically.">Yeni değerlendirmeler geldikçe mevcut rapora ekleyin. Tekrar eden kayıtlar otomatik çıkarılır.</div>
+          <div class="wf-badge">🔄 <span data-tr="Rapor Güncelleme" data-en="Report Updater">Rapor Güncelleme</span></div>
+        </div>
+      </div>
+
+      <div class="wf-row">
+        <div class="wf-left"><div class="wf-num n5">05</div></div>
+        <div class="wf-content">
+          <div class="wf-title" data-tr="KPI'ları Analiz Et" data-en="Analyse KPIs">KPI'ları Analiz Et</div>
+          <div class="wf-desc" data-tr="KPI'lar arasındaki ilişkileri keşfedin. Hangi metrik hangisini etkiliyor — AI yorum üretir, PDF hazırlanır." data-en="Explore KPI relationships. Which metric drives which — AI generates commentary, PDF ready.">KPI'lar arasındaki ilişkileri keşfedin. Hangi metrik hangisini etkiliyor — AI yorum üretir, PDF hazırlanır.</div>
+          <div class="wf-badge">🔗 <span data-tr="Korelasyon Analizi" data-en="Correlation Analysis">Korelasyon Analizi</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <!-- ══ PLATFORM ══════════════════════════════════════════ -->
+  <div class="sec sec-alt">
+    <div class="sec-label" data-tr="Platform Özellikleri" data-en="Platform Features">Platform Özellikleri</div>
+    <div class="pf-row">
+      <div class="pf">
+        <span class="pf-icon">🌙</span>
+        <div><div class="pf-title" data-tr="Koyu / Açık Tema" data-en="Dark / Light Theme">Koyu / Açık Tema</div>
+        <div class="pf-desc" data-tr="Tercih ettiğiniz renk teması kaydedilir ve her araçta tutarlı uygulanır." data-en="Your theme is saved and applied consistently across every tool.">Tercih ettiğiniz renk teması kaydedilir ve her araçta tutarlı uygulanır.</div></div>
+      </div>
+      <div class="pf">
+        <span class="pf-icon">⭐</span>
+        <div><div class="pf-title" data-tr="Favoriler & Son Kullanılan" data-en="Favourites & Recent">Favoriler & Son Kullanılan</div>
+        <div class="pf-desc" data-tr="Sık kullanılan araçlar favorilere eklenir, son 5 araç otomatik listelenir." data-en="Frequent tools pinned as favourites, last 5 tools listed automatically.">Sık kullanılan araçlar favorilere eklenir, son 5 araç otomatik listelenir.</div></div>
+      </div>
+      <div class="pf">
+        <span class="pf-icon">🌐</span>
+        <div><div class="pf-title" data-tr="Türkçe / İngilizce" data-en="Turkish / English">Türkçe / İngilizce</div>
+        <div class="pf-desc" data-tr="Arayüz dili tek tıkla değişir. Tüm araç isimleri her iki dilde görüntülenir." data-en="Interface language changes in one click. All tool names display in both languages.">Arayüz dili tek tıkla değişir. Tüm araç isimleri her iki dilde görüntülenir.</div></div>
+      </div>
+      <div class="pf">
+        <span class="pf-icon">📢</span>
+        <div><div class="pf-title" data-tr="Duyuru Sistemi" data-en="Announcements">Duyuru Sistemi</div>
+        <div class="pf-desc" data-tr="Önemli bilgilendirmeler portal bandında tüm kullanıcılara iletilir." data-en="Important notices delivered via the portal header to all users.">Önemli bilgilendirmeler portal bandında tüm kullanıcılara iletilir.</div></div>
+      </div>
+      <div class="pf">
+        <span class="pf-icon">🔒</span>
+        <div><div class="pf-title" data-tr="Veri Gizliliği" data-en="Data Privacy">Veri Gizliliği</div>
+        <div class="pf-desc" data-tr="Hiçbir dosya sunucuya gönderilmez. Veriler bilgisayarınızı terk etmez." data-en="No file is sent to any server. Data never leaves your computer.">Hiçbir dosya sunucuya gönderilmez. Veriler bilgisayarınızı terk etmez.</div></div>
+      </div>
+      <div class="pf">
+        <span class="pf-icon">🤖</span>
+        <div><div class="pf-title" data-tr="AI Destekli Yorumlama" data-en="AI Interpretation">AI Destekli Yorumlama</div>
+        <div class="pf-desc" data-tr="Korelasyon analizinde yapay zeka içgörü üretir. Sunmadan önce kontrol edilmesi önerilir." data-en="AI produces insights in correlation analysis. Review before presenting recommended.">Korelasyon analizinde yapay zeka içgörü üretir. Sunmadan önce kontrol edilmesi önerilir.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FOOTER ════════════════════════════════════════════ -->
+  <div class="ft">
+    <div class="ft-logo">QA Portal</div>
+    <div class="ft-dots">
+      <div class="ft-dot" style="background:var(--a1)"></div>
+      <div class="ft-dot" style="background:var(--a2)"></div>
+      <div class="ft-dot" style="background:var(--a3)"></div>
+      <div class="ft-dot" style="background:var(--a4)"></div>
+    </div>
+    <div class="ft-copy" data-tr="Kalite Ekibi Dahili Araç Paketi" data-en="Quality Team Internal Toolset">Kalite Ekibi Dahili Araç Paketi</div>
+  </div>
+
+</div><!-- /sheet -->
+
+<script>
+let LANG='tr';
+function setLang(lang){
+  LANG=lang;
+  document.getElementById('bTR').classList.toggle('on',lang==='tr');
+  document.getElementById('bEN').classList.toggle('on',lang==='en');
+  document.querySelectorAll('[data-tr]').forEach(el=>{
+    const v=lang==='en'?el.dataset.en:el.dataset.tr;
+    if(v!==undefined)el.innerHTML=v;
+  });
+}
+</script>
+</body>
+</html>
