@@ -2,17 +2,15 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alotech Düzenleme | Özet & Detay Data</title>
-  <!-- XLSX Kütüphanesi -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <!-- CSS dosyaları /css klasöründen -->
+  <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="stylesheet" href="/css/theme.css">
-  <!-- Özel düzenlemeler (ek stiller) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <style>
-    /* Ek stiller: dosya öğeleri ve önizleme */
+    /* Ek stiller - düzenleme için */
     .file-item { display: flex; align-items: center; gap: 12px; background: var(--surface); padding: 10px 16px; border-radius: 14px; margin-bottom: 8px; border: 1px solid var(--border); flex-wrap: wrap; }
     .file-name { font-weight: 500; flex: 1; font-family: var(--mono); font-size: 13px; }
     .file-rows { font-size: 11px; color: var(--muted); background: var(--card2); padding: 2px 8px; border-radius: 20px; }
@@ -27,6 +25,7 @@
     h2 { font-family: var(--display); font-weight: 700; letter-spacing: -0.3px; background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+    .container, .main { max-width: 1400px; margin: 0 auto; padding: 24px; }
   </style>
 </head>
 <body class="grey">
@@ -41,9 +40,8 @@
   </div>
   
   <div class="container">
-    <!-- İki ana bölüm: Özet Data ve Detay Data -->
     <div class="grid-2">
-      <!-- SOL: ÖZET DATA -->
+      <!-- Özet Data -->
       <div class="card" id="summaryZone">
         <div class="section-header">
           <h2>📑 Özet Data</h2>
@@ -59,7 +57,7 @@
         </div>
       </div>
 
-      <!-- SAĞ: DETAY DATA -->
+      <!-- Detay Data -->
       <div class="card" id="detailZone">
         <div class="section-header">
           <h2>🔍 Detay Data</h2>
@@ -76,7 +74,6 @@
       </div>
     </div>
 
-    <!-- Hesaplama ve Reset Butonları -->
     <div class="action-bar">
       <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
       <button class="btn btn-primary" id="calculateBtn">⚡ Hesaplamayı Başlat (Demo)</button>
@@ -84,10 +81,9 @@
     <div id="globalStatus" class="status-bar"></div>
   </div>
   <div class="footer">
-    <span>Veri yapısını ve içeriği olduğu gibi gösterir, dışa aktarır. Hesaplama motoru hazır — ihtiyacınıza göre entegre edin.</span>
+    <span>Veri yapısını ve içeriği olduğu gibi gösterir, dışa aktarır. Hesaplama motoru hazır.</span>
   </div>
 
-  <!-- JS dosyası /js klasöründen -->
   <script src="/js/alotechduzenleme.js"></script>
 </body>
 </html>
