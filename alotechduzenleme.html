@@ -51,13 +51,11 @@
         </div>
         <div class="drop-zone" id="summaryDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: UTF-8 otomatik algılanır, veriler olduğu gibi korunur</div>
+          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
           <input type="file" id="summaryFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="summaryFileList" style="margin-top: 16px;"></div>
-        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
-          <button class="btn btn-ghost btn-sm" id="summaryExportAllBtn">📎 Tümünü Dışa Aktar</button>
-        </div>
+        <!-- "Tümünü Dışa Aktar" butonu kaldırıldı -->
       </div>
 
       <!-- Detay Data -->
@@ -68,25 +66,23 @@
         </div>
         <div class="drop-zone" id="detailDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: UTF-8 otomatik algılanır, veriler olduğu gibi korunur</div>
+          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">CSV: noktalı virgül (;) veya virgül (,) otomatik algılanır</div>
           <input type="file" id="detailFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="detailFileList" style="margin-top: 16px;"></div>
-        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
-          <button class="btn btn-ghost btn-sm" id="detailExportAllBtn">📎 Tümünü Dışa Aktar</button>
-        </div>
+        <!-- "Tümünü Dışa Aktar" butonu kaldırıldı -->
       </div>
     </div>
 
     <div class="action-bar">
       <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
-      <button class="btn btn-primary" id="calculateBtn">⚡ Hesaplamayı Başlat (Demo)</button>
+      <button class="btn btn-primary" id="exportAllDataBtn">📥 Tümünü Dışarı Aktar</button>
     </div>
     <div id="globalStatus" class="status-bar"></div>
   </div>
 
   <footer class="footer">
-    <div class="copyright-text">Veri yapısı olduğu gibi korunur, hiçbir dönüşüm yapılmaz. UTF-8 CSV desteği.</div>
+    <div class="copyright-text">CSV dosyalarınızda noktalı virgül (;) veya virgül (,) otomatik algılanır. Veriler aynen korunur.</div>
   </footer>
 
   <script src="js/alotechduzenleme.js"></script>
