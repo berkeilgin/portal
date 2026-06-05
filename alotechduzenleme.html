@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Alotech Düzenleme | Özet & Detay Data</title>
+  <!-- XLSX Kütüphanesi -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <!-- Mevcut CSS dosyaları -->
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="theme.css">
+  <!-- Özel düzenlemeler (ek stiller) -->
+  <style>
+    /* Ek stiller: dosya öğeleri ve önizleme */
+    .file-item { display: flex; align-items: center; gap: 12px; background: var(--surface); padding: 10px 16px; border-radius: 14px; margin-bottom: 8px; border: 1px solid var(--border); flex-wrap: wrap; }
+    .file-name { font-weight: 500; flex: 1; font-family: var(--mono); font-size: 13px; }
+    .file-rows { font-size: 11px; color: var(--muted); background: var(--card2); padding: 2px 8px; border-radius: 20px; }
+    .file-del { background: none; border: none; color: var(--accent3); font-size: 16px; cursor: pointer; font-weight: bold; opacity: 0.6; transition: 0.2s; }
+    .file-del:hover { opacity: 1; transform: scale(1.1); }
+    .preview-btn, .export-btn { font-size: 11px; padding: 4px 12px; }
+    .preview-container { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; display: none; }
+    .preview-container.active { display: block; }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .stat-badge { font-size: 12px; background: var(--card2); padding: 6px 12px; border-radius: 40px; }
+    .action-bar { margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px; }
+    h2 { font-family: var(--display); font-weight: 700; letter-spacing: -0.3px; background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="grey">
+  <div class="header">
+    <div style="font-weight: 700; font-size: 1.4rem; font-family: var(--display);">📊 Alotech Düzenleme</div>
+    <div class="theme-switch" id="themeSwitch">
+      <button class="theme-btn" data-theme="grey">Gri</button>
+      <button class="theme-btn" data-theme="dark">Koyu</button>
+      <button class="theme-btn" data-theme="light">Açık</button>
+      <button class="theme-btn" data-theme="tp">TP Neon</button>
+    </div>
+  </div>
+  
+  <div class="container">
+    <!-- İki ana bölüm: Özet Data ve Detay Data -->
+    <div class="grid-2">
+      <!-- SOL: ÖZET DATA -->
+      <div class="card" id="summaryZone">
+        <div class="section-header">
+          <h2>📑 Özet Data</h2>
+          <div class="stat-badge" id="summaryStats">0 dosya, 0 satır</div>
+        </div>
+        <div class="drop-zone" id="summaryDropZone">
+          📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
+          <input type="file" id="summaryFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
+        </div>
+        <div id="summaryFileList" style="margin-top: 16px;"></div>
+        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-ghost btn-sm" id="summaryExportAllBtn">📎 Tümünü Dışa Aktar</button>
+        </div>
+      </div>
+
+      <!-- SAĞ: DETAY DATA -->
+      <div class="card" id="detailZone">
+        <div class="section-header">
+          <h2>🔍 Detay Data</h2>
+          <div class="stat-badge" id="detailStats">0 dosya, 0 satır</div>
+        </div>
+        <div class="drop-zone" id="detailDropZone">
+          📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
+          <input type="file" id="detailFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
+        </div>
+        <div id="detailFileList" style="margin-top: 16px;"></div>
+        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-ghost btn-sm" id="detailExportAllBtn">📎 Tümünü Dışa Aktar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hesaplama ve Reset Butonları -->
+    <div class="action-bar">
+      <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
+      <button class="btn btn-primary" id="calculateBtn">⚡ Hesaplamayı Başlat (Demo)</button>
+    </div>
+    <div id="globalStatus" class="status-bar"></div>
+  </div>
+  <div class="footer">
+    <span>Veri yapısını ve içeriği olduğu gibi gösterir, dışa aktarır. Hesaplama motoru hazır — ihtiyacınıza göre entegre edin.</span>
+  </div>
+
+  <script src="alotechduzenleme.js"></script>
+</body>
+</html>
