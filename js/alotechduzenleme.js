@@ -1,9 +1,8 @@
-// ==================== STATE YÖNETİMİ ====================
-let summaryFiles = [];   // { id, name, baseName, headers, data, rowCount }
+// ==================== STATE ====================
+let summaryFiles = [];
 let detailFiles = [];
 let nextId = 1;
 
-// Yardımcı: status mesajları
 function showGlobalMessage(msg, type = 'ok') {
   const statusDiv = document.getElementById('globalStatus');
   if (!statusDiv) return;
@@ -13,7 +12,6 @@ function showGlobalMessage(msg, type = 'ok') {
   setTimeout(() => { if(statusDiv.style.display === 'block') statusDiv.style.display = 'none'; }, 3000);
 }
 
-// Dosya ayrıştırma (CSV veya Excel)
 async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -25,30 +23,21 @@ async function parseFileToData(file) {
           const wb = XLSX.read(e.target.result, { type: 'array' });
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-          if (json.length === 0) throw new Error('Excel dosyası boş');
+          if (!json || json.length === 0) throw new Error('Excel dosyası boş');
           headers = json[0].map(cell => (cell === undefined || cell === null) ? `Sütun_${Math.random()}` : String(cell).trim());
           dataRows = json.slice(1).map(row => headers.map((_, idx) => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]) : ""));
         } else {
-          // CSV parsing (manuel, tırnak ve virgül duyarlı)
           const text = e.target.result;
           const rows = [];
-          let field = '';
-          let inQuote = false;
-          let row = [];
+          let field = '', inQuote = false, row = [];
           for (let i = 0; i < text.length; i++) {
             const ch = text[i];
-            if (ch === '"') {
-              inQuote = !inQuote;
-            } else if ((ch === ',' || ch === '\n') && !inQuote) {
+            if (ch === '"') inQuote = !inQuote;
+            else if ((ch === ',' || ch === '\n') && !inQuote) {
               row.push(field);
               field = '';
-              if (ch === '\n') {
-                rows.push(row);
-                row = [];
-              }
-            } else {
-              field += ch;
-            }
+              if (ch === '\n') { rows.push(row); row = []; }
+            } else field += ch;
           }
           if (field !== '') row.push(field);
           if (row.length) rows.push(row);
@@ -59,7 +48,6 @@ async function parseFileToData(file) {
             return r.slice(0, headers.length);
           });
         }
-        // Boş satırları temizleme
         const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
@@ -78,22 +66,16 @@ async function parseFileToData(file) {
   });
 }
 
-// Dosyaları kategoriye ekleme
 async function addFilesToCategory(category, fileList) {
   const targetArray = category === 'summary' ? summaryFiles : detailFiles;
-  for (let i = 0; i < fileList.length; i++) {
-    const file = fileList[i];
+  for (const file of fileList) {
     try {
       const parsed = await parseFileToData(file);
       const existingIndex = targetArray.findIndex(f => f.name === parsed.name);
       const newFileObj = { id: nextId++, ...parsed };
-      if (existingIndex !== -1) {
-        targetArray[existingIndex] = newFileObj;
-        showGlobalMessage(`🔄 ${parsed.name} güncellendi`, 'ok');
-      } else {
-        targetArray.push(newFileObj);
-        showGlobalMessage(`✅ ${parsed.name} yüklendi (${parsed.rowCount} satır, ${parsed.headers.length} sütun)`, 'ok');
-      }
+      if (existingIndex !== -1) targetArray[existingIndex] = newFileObj;
+      else targetArray.push(newFileObj);
+      showGlobalMessage(`✅ ${parsed.name} yüklendi (${parsed.rowCount} satır)`, 'ok');
     } catch(err) {
       showGlobalMessage(`❌ ${file.name}: ${err.message}`, 'err');
     }
@@ -101,13 +83,11 @@ async function addFilesToCategory(category, fileList) {
   renderCategoryUI(category);
 }
 
-// HTML escape yardımcısı
 function escapeHtml(str) { 
   if (!str) return ''; 
   return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); 
 }
 
-// Preview, export, delete handler'ları
 function previewHandler(e) {
   const btn = e.currentTarget;
   const fileId = parseInt(btn.dataset.id);
@@ -122,19 +102,17 @@ function previewHandler(e) {
     previewDiv.innerHTML = '';
     return;
   }
-  // Tüm previewları kapat
   document.querySelectorAll('.preview-container').forEach(div => { div.classList.remove('active'); div.innerHTML = ''; });
   previewDiv.classList.add('active');
-  // Tablo oluştur (ilk 20 satır + header)
   const maxPreviewRows = 15;
   const headers = file.headers;
   const sampleData = file.data.slice(0, maxPreviewRows);
-  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<div class="table-wrapper"><table><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
   sampleData.forEach(row => {
     html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`;
   });
   if (file.data.length > maxPreviewRows) html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${file.data.length - maxPreviewRows} satır daha</td></tr>`;
-  html += `</tbody>}</div><div style="margin-top:8px; font-size:11px; color:var(--muted);">📌 Sütun yapısı: ${headers.join(' | ')}</div>`;
+  html += `</tbody></table></div><div style="margin-top:8px; font-size:11px; color:var(--muted);">📌 Sütunlar: ${headers.join(' | ')}</div>`;
   previewDiv.innerHTML = html;
 }
 
@@ -150,23 +128,19 @@ function exportHandler(e) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
   XLSX.writeFile(wb, `${file.baseName}_${category}_export.xlsx`);
-  showGlobalMessage(`📎 ${file.name} dışa aktarıldı (${file.rowCount} satır)`, 'ok');
+  showGlobalMessage(`📎 ${file.name} dışa aktarıldı`, 'ok');
 }
 
 function deleteHandler(e) {
   const btn = e.currentTarget;
   const fileId = parseInt(btn.dataset.id);
   const category = btn.dataset.cat;
-  if (category === 'summary') {
-    summaryFiles = summaryFiles.filter(f => f.id !== fileId);
-  } else {
-    detailFiles = detailFiles.filter(f => f.id !== fileId);
-  }
+  if (category === 'summary') summaryFiles = summaryFiles.filter(f => f.id !== fileId);
+  else detailFiles = detailFiles.filter(f => f.id !== fileId);
   renderCategoryUI(category);
   showGlobalMessage(`🗑️ Dosya kaldırıldı`, 'warn');
 }
 
-// UI render: dosya listesi + preview container'ları güncelle
 function renderCategoryUI(category) {
   const filesArray = category === 'summary' ? summaryFiles : detailFiles;
   const container = document.getElementById(`${category}FileList`);
@@ -192,7 +166,6 @@ function renderCategoryUI(category) {
     <div id="preview-${category}-${file.id}" class="preview-container"></div>
   `).join('');
   
-  // Event binding for preview & export & delete
   document.querySelectorAll(`.preview-btn`).forEach(btn => {
     btn.removeEventListener('click', previewHandler);
     btn.addEventListener('click', previewHandler);
@@ -207,7 +180,6 @@ function renderCategoryUI(category) {
   });
 }
 
-// Tümünü dışa aktar (kategori bazlı)
 function exportAllCategory(category) {
   const filesArray = category === 'summary' ? summaryFiles : detailFiles;
   if (filesArray.length === 0) { showGlobalMessage(`${category === 'summary' ? 'Özet' : 'Detay'} verisi yok`, 'warn'); return; }
@@ -218,10 +190,9 @@ function exportAllCategory(category) {
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     XLSX.writeFile(wb, `${file.baseName}_${category}_all.xlsx`);
   });
-  showGlobalMessage(`📦 ${filesArray.length} dosya dışa aktarıldı (${category === 'summary' ? 'Özet' : 'Detay'})`, 'ok');
+  showGlobalMessage(`📦 ${filesArray.length} dosya dışa aktarıldı`, 'ok');
 }
 
-// Sıfırlama
 function resetEverything() {
   summaryFiles = [];
   detailFiles = [];
@@ -230,25 +201,21 @@ function resetEverything() {
   showGlobalMessage('🧹 Tüm veriler sıfırlandı', 'ok');
 }
 
-// HESAPLAMA (demo – veri yapısını ve içeriği konsola yazdırır, işlem için hazır)
 function performCalculation() {
   if (summaryFiles.length === 0 && detailFiles.length === 0) {
     showGlobalMessage('⚠️ Lütfen önce Özet ve/veya Detay dosyaları yükleyin', 'err');
     return;
   }
-  console.group('🧮 HESAPLAMA DEMO (Veri Yapıları)');
-  console.log('📌 Özet Dosyaları:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.log('📌 Detay Dosyaları:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.log('📊 Özet İlk Veri Örneği:', summaryFiles[0]?.data.slice(0,2));
-  console.log('📊 Detay İlk Veri Örneği:', detailFiles[0]?.data.slice(0,2));
+  console.group('🧮 HESAPLAMA DEMO');
+  console.log('Özet Dosyaları:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  console.log('Detay Dosyaları:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  console.log('Özet İlk Veri Örneği:', summaryFiles[0]?.data.slice(0,2));
+  console.log('Detay İlk Veri Örneği:', detailFiles[0]?.data.slice(0,2));
   console.groupEnd();
-  
-  let msg = `🧪 Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${summaryFiles.reduce((a,b)=>a+b.rowCount,0)} satır.\nDetay: ${detailFiles.length} dosya, ${detailFiles.reduce((a,b)=>a+b.rowCount,0)} satır.`;
-  alert(msg + '\nKonsolu açarak veri yapılarını inceleyebilirsiniz.');
+  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${summaryFiles.reduce((a,b)=>a+b.rowCount,0)} satır.\nDetay: ${detailFiles.length} dosya, ${detailFiles.reduce((a,b)=>a+b.rowCount,0)} satır.\nKonsolu inceleyin.`);
   showGlobalMessage('✅ Hesaplama hazır, veri yapısı konsola yazdırıldı', 'ok');
 }
 
-// Drag & drop ve tıklama kurulumu
 function setupDropZone(zoneId, inputId, category) {
   const zone = document.getElementById(zoneId);
   const input = document.getElementById(inputId);
@@ -267,22 +234,20 @@ function setupDropZone(zoneId, inputId, category) {
   });
 }
 
-// Tema değiştirici
 function initTheme() {
-  const saved = localStorage.getItem('dataforge_theme') || 'grey';
+  const saved = localStorage.getItem('alotech_theme') || 'grey';
   document.body.className = saved;
   document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === saved);
     btn.addEventListener('click', () => {
       const theme = btn.dataset.theme;
       document.body.className = theme;
-      localStorage.setItem('dataforge_theme', theme);
+      localStorage.setItem('alotech_theme', theme);
       document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
     });
   });
 }
 
-// Sayfa yüklendiğinde tüm eventleri bağla
 document.addEventListener('DOMContentLoaded', () => {
   setupDropZone('summaryDropZone', 'summaryFileInput', 'summary');
   setupDropZone('detailDropZone', 'detailFileInput', 'detail');
@@ -290,14 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCategoryUI('summary');
   renderCategoryUI('detail');
   
-  // Butonlar
-  const summaryExportBtn = document.getElementById('summaryExportAllBtn');
-  const detailExportBtn = document.getElementById('detailExportAllBtn');
-  const resetBtn = document.getElementById('resetAllBtn');
-  const calculateBtn = document.getElementById('calculateBtn');
-  
-  if (summaryExportBtn) summaryExportBtn.addEventListener('click', () => exportAllCategory('summary'));
-  if (detailExportBtn) detailExportBtn.addEventListener('click', () => exportAllCategory('detail'));
-  if (resetBtn) resetBtn.addEventListener('click', resetEverything);
-  if (calculateBtn) calculateBtn.addEventListener('click', performCalculation);
+  document.getElementById('summaryExportAllBtn')?.addEventListener('click', () => exportAllCategory('summary'));
+  document.getElementById('detailExportAllBtn')?.addEventListener('click', () => exportAllCategory('detail'));
+  document.getElementById('resetAllBtn')?.addEventListener('click', resetEverything);
+  document.getElementById('calculateBtn')?.addEventListener('click', performCalculation);
 });
