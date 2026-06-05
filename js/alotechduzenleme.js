@@ -2,10 +2,13 @@
 let summaryFiles = [];
 let detailFiles = [];
 let nextId = 1;
-let currentPreviewFile = null;   // Önizleme için dosya objesi
-let currentPreviewCategory = null;
 
-// Loading overlay kontrolü
+// Preview için geçici veri
+let currentPreviewFile = null;
+let currentPreviewCategory = '';
+let currentPreviewRows = 20;
+
+// Loading overlay
 function showLoading(show, text = 'Dosyalar yükleniyor, lütfen bekleyin...') {
   const overlay = document.getElementById('loadingOverlay');
   if (!overlay) return;
@@ -27,18 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('resetAllBtn')?.addEventListener('click', resetEverything);
   document.getElementById('exportAllDataBtn')?.addEventListener('click', exportAllData);
   
-  // Modal kapatma
-  const modal = document.getElementById('previewModal');
-  const closeBtn = document.getElementById('modalCloseBtn');
-  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
-  
-  // Satır limit değişince yeniden göster
-  const limitSelect = document.getElementById('previewLimitSelect');
-  if (limitSelect) limitSelect.addEventListener('change', () => {
-    if (currentPreviewFile) renderModalPreview(currentPreviewFile, currentPreviewCategory);
-  });
-  
   renderCategoryUI('summary');
   renderCategoryUI('detail');
 });
@@ -58,22 +49,20 @@ function decodeUTF8(buffer) {
   return decoder.decode(buffer);
 }
 
-// Otomatik delimiter algılama (noktalı virgül veya virgül)
+// Otomatik delimiter algılama
 function detectDelimiter(firstLine) {
   const semicolonCount = (firstLine.match(/;/g) || []).length;
   const commaCount = (firstLine.match(/,/g) || []).length;
   return semicolonCount >= commaCount ? ';' : ',';
 }
 
-// Gelişmiş CSV ayrıştırma (tırnak içi ayraçları yoksayar)
+// CSV ayrıştırma (tırnak duyarlı)
 function parseCSVAdvanced(text) {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
   const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
   if (lines.length === 0) return [];
-  
   const delimiter = detectDelimiter(lines[0]);
   const result = [];
-  
   for (const line of lines) {
     const row = [];
     let field = '';
@@ -95,42 +84,20 @@ function parseCSVAdvanced(text) {
   return result;
 }
 
-// Özet Data'da "Degerlendirme_Notu" sütununu bulup trim+clean yap
-function cleanTextCells(headers, dataRow, colName = 'Degerlendirme_Notu') {
-  const colIndex = headers.findIndex(h => h === colName);
-  if (colIndex !== -1 && dataRow[colIndex]) {
-    dataRow[colIndex] = dataRow[colIndex].trim().replace(/\s+/g, ' ');
-  }
-  return dataRow;
+// Trim & Clean fonksiyonu - satır kaymasına neden olan karakterleri temizler
+function trimAndClean(str) {
+  if (typeof str !== 'string') return str;
+  // Normalize line breaks (CRLF, CR -> LF), remove control characters but keep Turkish chars
+  let cleaned = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  // Replace multiple spaces/tabs with single space
+  cleaned = cleaned.replace(/[ \t]+/g, ' ').trim();
+  // Remove any non-printable characters except newlines (but newlines already handled)
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return cleaned;
 }
 
-// Puan sütununu sayısal yap (float)
-function normalizePuan(headers, dataRow) {
-  const puanIndex = headers.findIndex(h => h === 'Puan');
-  if (puanIndex !== -1) {
-    let val = dataRow[puanIndex];
-    if (val === undefined || val === null || val === '') val = '0';
-    let num = parseFloat(String(val).replace(',', '.')); // virgüllü sayılar için
-    if (isNaN(num)) num = 0;
-    dataRow[puanIndex] = num;
-  }
-  return dataRow;
-}
-
-// Detay Data'ya "Başarı_Oranı" ekle (Puan > 0 ise 1 else 0)
-function addBasariOrani(headers, dataRow) {
-  const puanIndex = headers.findIndex(h => h === 'Puan');
-  let puan = 0;
-  if (puanIndex !== -1) {
-    puan = typeof dataRow[puanIndex] === 'number' ? dataRow[puanIndex] : parseFloat(dataRow[puanIndex]) || 0;
-  }
-  const basariOrani = puan > 0 ? 1 : 0;
-  dataRow.push(basariOrani);
-  return dataRow;
-}
-
-// Dosya ayrıştırma (CSV veya Excel)
-async function parseFileToData(file, category) {
+// Dosya ayrıştırma - Degerlendirme_Notu için trim&clean
+async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -148,7 +115,12 @@ async function parseFileToData(file, category) {
             return (val !== undefined && val !== null) ? String(val) : "";
           }));
         } else {
-          let text = decodeUTF8(e.target.result);
+          let text;
+          if (e.target.result instanceof ArrayBuffer) {
+            text = decodeUTF8(e.target.result);
+          } else {
+            text = e.target.result;
+          }
           const rows = parseCSVAdvanced(text);
           if (rows.length === 0) throw new Error('CSV dosyası boş');
           headers = rows[0].map(h => (h === undefined || h === '') ? `Kolon_${Math.random()}` : h);
@@ -158,46 +130,24 @@ async function parseFileToData(file, category) {
           });
         }
         
-        // Satır işlemleri (temizlik, puan normalizasyonu, başarı oranı ekleme)
-        let processedRows = [];
-        for (let row of dataRows) {
-          // Boş satır kontrolü
-          if (row.every(cell => !cell || cell.trim() === '')) continue;
-          
-          // Özet Data: "Degerlendirme_Notu" temizle
-          if (category === 'summary') {
-            row = cleanTextCells(headers, row, 'Degerlendirme_Notu');
-          }
-          
-          // "Puan" kolonunu sayısal yap (her iki kategori için)
-          row = normalizePuan(headers, row);
-          
-          if (category === 'detail') {
-            // Detay Data: Başarı_Oranı ekle (yeni bir kolon olarak sona eklenir)
-            // Önce orijinal row'u kopyala, sonra ekle
-            let newRow = [...row];
-            newRow = addBasariOrani(headers, newRow);
-            processedRows.push(newRow);
-          } else {
-            processedRows.push(row);
+        // "Degerlendirme_Notu" sütununu bul ve trim&clean uygula
+        const degerlendirmeIndex = headers.findIndex(h => h === 'Degerlendirme_Notu' || h === 'Değerlendirme Notu');
+        if (degerlendirmeIndex !== -1) {
+          for (const row of dataRows) {
+            if (row[degerlendirmeIndex]) {
+              row[degerlendirmeIndex] = trimAndClean(row[degerlendirmeIndex]);
+            }
           }
         }
         
-        // Eğer kategori detail ise, headers'a "Başarı_Oranı" ekle
-        let finalHeaders = [...headers];
-        if (category === 'detail') {
-          finalHeaders.push('Başarı_Oranı');
-        }
-        
-        // Sayısal hücreleri koru (Excel'e yazarken number formatı)
-        // Ama şimdilik olduğu gibi bırak, dışa aktarımda XLSX otomatik algılar.
-        
+        // Boş satırları temizle
+        const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
           baseName: file.name.replace(/\.[^/.]+$/, ''),
-          headers: finalHeaders,
-          data: processedRows,
-          rowCount: processedRows.length
+          headers: headers,
+          data: nonEmptyRows,
+          rowCount: nonEmptyRows.length
         });
       } catch (err) {
         reject(err);
@@ -212,14 +162,30 @@ async function parseFileToData(file, category) {
   });
 }
 
-// Dosya yükleme (loading animasyonlu)
+// Puan'ı sayıya çevir (digit 0 formatında)
+function parsePuanValue(val) {
+  if (val === undefined || val === null || val === '') return 0;
+  let str = String(val).trim().replace(',', '.');
+  let num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
+// Iptal kontrolü (Evet ise true döner)
+function isIptal(row, headers) {
+  const iptalIndex = headers.findIndex(h => h === 'Iptal' || h === 'İptal');
+  if (iptalIndex === -1) return false;
+  const val = row[iptalIndex];
+  return val && String(val).trim().toLowerCase() === 'evet';
+}
+
+// Dosya ekleme
 async function addFilesToCategory(category, fileList) {
   const targetArray = category === 'summary' ? summaryFiles : detailFiles;
   showLoading(true, `${category === 'summary' ? 'Özet' : 'Detay'} dosyaları yükleniyor...`);
   let addedCount = 0;
   for (const file of fileList) {
     try {
-      const parsed = await parseFileToData(file, category);
+      const parsed = await parseFileToData(file);
       const existingIndex = targetArray.findIndex(f => f.name === parsed.name);
       const newFile = { id: nextId++, ...parsed };
       if (existingIndex !== -1) targetArray[existingIndex] = newFile;
@@ -235,49 +201,43 @@ async function addFilesToCategory(category, fileList) {
 }
 
 function escapeHtml(str) {
-  if (str === undefined || str === null) return '';
+  if (!str) return '';
   return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Önizleme modal göster
-function showPreview(file, category) {
+// Preview Modal
+function openPreviewModal(file, category) {
   currentPreviewFile = file;
   currentPreviewCategory = category;
-  const modal = document.getElementById('previewModal');
-  document.getElementById('modalTitle').innerHTML = `${category === 'summary' ? 'Özet' : 'Detay'} - ${escapeHtml(file.name)}`;
-  renderModalPreview(file, category);
-  modal.classList.add('active');
+  currentPreviewRows = 20;
+  document.getElementById('previewTitle').textContent = `${category === 'summary' ? 'Özet' : 'Detay'} - ${file.name}`;
+  updatePreviewTable();
+  document.getElementById('previewModal').classList.add('active');
 }
 
-function renderModalPreview(file, category) {
-  const limitSelect = document.getElementById('previewLimitSelect');
-  let limit = parseInt(limitSelect.value);
-  const wrapper = document.getElementById('modalTableWrapper');
-  if (!wrapper) return;
+function closePreviewModal() {
+  document.getElementById('previewModal').classList.remove('active');
+  currentPreviewFile = null;
+}
+
+function updatePreviewTable() {
+  if (!currentPreviewFile) return;
+  const rowsToShow = currentPreviewRows === 'max' ? currentPreviewFile.data.length : Math.min(currentPreviewRows, currentPreviewFile.data.length);
+  const displayData = currentPreviewFile.data.slice(0, rowsToShow);
+  const headers = currentPreviewFile.headers;
   
-  const headers = file.headers;
-  let dataToShow = file.data;
-  if (limit !== 999999 && dataToShow.length > limit) {
-    dataToShow = dataToShow.slice(0, limit);
+  let html = `<div class="table-wrapper"><table style="min-width:500px;"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>`;
+  for (const row of displayData) {
+    html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 100))}</td>`).join('')}</tr>`;
   }
-  
-  let html = '<div class="table-wrapper"><table><thead><tr>';
-  headers.forEach(h => { html += `<th>${escapeHtml(h)}</th>`; });
-  html += '</tr></thead><tbody>';
-  dataToShow.forEach(row => {
-    html += '<tr>';
-    row.forEach(cell => {
-      let display = (cell !== undefined && cell !== null) ? String(cell) : '';
-      if (display.length > 100) display = display.substring(0, 100) + '...';
-      html += `<td>${escapeHtml(display)}</td>`;
-    });
-    html += '</tr>';
-  });
-  if (dataToShow.length === 0) html += '<tr><td colspan="'+headers.length+'">Veri yok</td></tr>';
-  html += '</tbody></table></div>';
-  wrapper.innerHTML = html;
+  if (currentPreviewFile.data.length > rowsToShow) {
+    html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${currentPreviewFile.data.length - rowsToShow} satır daha</td></tr>`;
+  }
+  html += `</tbody></table></div>`;
+  document.getElementById('previewTableContainer').innerHTML = html;
 }
 
+// Delete handler
 function deleteHandler(e) {
   const btn = e.currentTarget;
   const fileId = parseInt(btn.dataset.id);
@@ -292,6 +252,17 @@ function deleteHandler(e) {
   showGlobalMessage('🗑️ Dosya kaldırıldı', 'warn');
 }
 
+// Preview handler
+function previewClickHandler(e) {
+  const btn = e.currentTarget;
+  const fileId = parseInt(btn.dataset.id);
+  const category = btn.dataset.cat;
+  const filesArray = category === 'summary' ? summaryFiles : detailFiles;
+  const file = filesArray.find(f => f.id === fileId);
+  if (file) openPreviewModal(file, category);
+}
+
+// UI Render (Önizleme butonu eklendi)
 function renderCategoryUI(category) {
   const filesArray = category === 'summary' ? summaryFiles : detailFiles;
   const container = document.getElementById(`${category}FileList`);
@@ -313,34 +284,26 @@ function renderCategoryUI(category) {
     </div>
   `).join('');
   
-  // Preview eventleri
+  // Preview event
   document.querySelectorAll(`.preview-btn[data-cat="${category}"]`).forEach(btn => {
     btn.removeEventListener('click', previewClickHandler);
     btn.addEventListener('click', previewClickHandler);
   });
-  // Delete eventleri
+  // Delete event
   document.querySelectorAll(`.file-del[data-cat="${category}"]`).forEach(btn => {
     btn.removeEventListener('click', deleteHandler);
     btn.addEventListener('click', deleteHandler);
   });
 }
 
-function previewClickHandler(e) {
-  const btn = e.currentTarget;
-  const fileId = parseInt(btn.dataset.id);
-  const category = btn.dataset.cat;
-  const filesArray = category === 'summary' ? summaryFiles : detailFiles;
-  const file = filesArray.find(f => f.id === fileId);
-  if (file) showPreview(file, category);
-}
-
-// Tüm verileri dışa aktar
+// Tüm verileri dışa aktar (İptal edilenler ayrı sheet)
 async function exportAllData() {
   if (summaryFiles.length === 0 && detailFiles.length === 0) {
     showGlobalMessage('⚠️ Hiç dosya yüklenmemiş', 'warn');
     return;
   }
-  showLoading(true, 'Dosyalar dışa aktarılıyor...');
+  
+  showLoading(true, 'Dosyalar hazırlanıyor, dışa aktarılıyor...');
   
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
@@ -349,48 +312,129 @@ async function exportAllData() {
   const dateStr = `${day}-${month}-${year}`;
   
   try {
-    // Özet Data
+    // Özet Data işleme
     if (summaryFiles.length > 0) {
-      const summarySheetData = [];
-      const summaryHeaders = summaryFiles[0].headers;
-      summarySheetData.push(summaryHeaders);
-      for (const file of summaryFiles) {
-        for (const row of file.data) {
-          const paddedRow = [...row];
-          while (paddedRow.length < summaryHeaders.length) paddedRow.push('');
-          summarySheetData.push(paddedRow);
-        }
-      }
-      const wsSummary = XLSX.utils.aoa_to_sheet(summarySheetData);
-      const wbSummary = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wbSummary, wsSummary, 'OzetData');
-      XLSX.writeFile(wbSummary, `Alotech_OzetData_${dateStr}.xlsx`);
+      await processCategoryExport(summaryFiles, 'OzetData', dateStr);
     }
-    
-    // Detay Data
+    // Detay Data işleme (Başarı_Oranı eklenmiş)
     if (detailFiles.length > 0) {
-      const detailSheetData = [];
-      const detailHeaders = detailFiles[0].headers;
-      detailSheetData.push(detailHeaders);
-      for (const file of detailFiles) {
-        for (const row of file.data) {
-          const paddedRow = [...row];
-          while (paddedRow.length < detailHeaders.length) paddedRow.push('');
-          detailSheetData.push(paddedRow);
-        }
-      }
-      const wsDetail = XLSX.utils.aoa_to_sheet(detailSheetData);
-      const wbDetail = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wbDetail, wsDetail, 'DetayData');
-      XLSX.writeFile(wbDetail, `Alotech_DetayData_${dateStr}.xlsx`);
+      await processDetailExport(detailFiles, 'DetayData', dateStr);
     }
-    
-    showGlobalMessage(`✅ Dışa aktarma tamamlandı: Özet (${summaryFiles.length} dosya), Detay (${detailFiles.length} dosya)`, 'ok');
+    showGlobalMessage(`✅ Dışa aktarma tamamlandı`, 'ok');
   } catch (err) {
     showGlobalMessage(`❌ Dışa aktarma hatası: ${err.message}`, 'err');
   } finally {
     showLoading(false);
   }
+}
+
+// Özet ve Detay ortak işleme (İptal ayrıştırmalı)
+async function processCategoryExport(filesArray, sheetNamePrefix, dateStr) {
+  // Tüm dosyaları birleştir, Iptal kontrolü yap
+  const allRows = [];
+  const iptalRows = [];
+  let commonHeaders = filesArray[0].headers;
+  
+  // Puan index'ini bul (sayısal dönüşüm için)
+  const puanIndex = commonHeaders.findIndex(h => h === 'Puan');
+  
+  for (const file of filesArray) {
+    // Başlık uyumu kontrolü (basit)
+    for (const row of file.data) {
+      const paddedRow = [...row];
+      while (paddedRow.length < commonHeaders.length) paddedRow.push('');
+      
+      // Puan'ı sayısal hale getir
+      if (puanIndex !== -1 && paddedRow[puanIndex]) {
+        paddedRow[puanIndex] = parsePuanValue(paddedRow[puanIndex]);
+      }
+      
+      // Iptal kontrolü
+      if (isIptal(paddedRow, commonHeaders)) {
+        iptalRows.push([...paddedRow]);
+      } else {
+        allRows.push([...paddedRow]);
+      }
+    }
+  }
+  
+  // Workbook oluştur
+  const wb = XLSX.utils.book_new();
+  
+  // Ana sheet (İptal edilmeyenler)
+  if (allRows.length > 0) {
+    const mainSheetData = [commonHeaders, ...allRows];
+    const wsMain = XLSX.utils.aoa_to_sheet(mainSheetData);
+    XLSX.utils.book_append_sheet(wb, wsMain, sheetNamePrefix);
+  } else {
+    // Boş sheet ekleme
+    const wsEmpty = XLSX.utils.aoa_to_sheet([commonHeaders]);
+    XLSX.utils.book_append_sheet(wb, wsEmpty, sheetNamePrefix);
+  }
+  
+  // İptal Edilenler sheet (varsa)
+  if (iptalRows.length > 0) {
+    const iptalSheetData = [commonHeaders, ...iptalRows];
+    const wsIptal = XLSX.utils.aoa_to_sheet(iptalSheetData);
+    XLSX.utils.book_append_sheet(wb, wsIptal, 'Iptal Edilenler');
+  }
+  
+  XLSX.writeFile(wb, `Alotech_${sheetNamePrefix}_${dateStr}.xlsx`);
+}
+
+// Detay Data özel işleme (Başarı_Oranı ekle)
+async function processDetailExport(filesArray, sheetNamePrefix, dateStr) {
+  const allRows = [];
+  const iptalRows = [];
+  let commonHeaders = [...filesArray[0].headers];
+  
+  // Başarı_Oranı sütununu ekle
+  commonHeaders.push('Başarı_Oranı');
+  const puanIndex = filesArray[0].headers.findIndex(h => h === 'Puan');
+  
+  for (const file of filesArray) {
+    for (const row of file.data) {
+      const paddedRow = [...row];
+      while (paddedRow.length < filesArray[0].headers.length) paddedRow.push('');
+      
+      // Puan değerini al ve Başarı_Oranı hesapla
+      let puanVal = 0;
+      if (puanIndex !== -1 && paddedRow[puanIndex]) {
+        puanVal = parsePuanValue(paddedRow[puanIndex]);
+        paddedRow[puanIndex] = puanVal;
+      }
+      const basariOrani = puanVal > 0 ? 1 : 0;
+      paddedRow.push(basariOrani);
+      
+      // Iptal kontrolü
+      if (isIptal(paddedRow, filesArray[0].headers)) {
+        iptalRows.push([...paddedRow]);
+      } else {
+        allRows.push([...paddedRow]);
+      }
+    }
+  }
+  
+  const wb = XLSX.utils.book_new();
+  
+  // Ana sheet
+  if (allRows.length > 0) {
+    const mainSheetData = [commonHeaders, ...allRows];
+    const wsMain = XLSX.utils.aoa_to_sheet(mainSheetData);
+    XLSX.utils.book_append_sheet(wb, wsMain, sheetNamePrefix);
+  } else {
+    const wsEmpty = XLSX.utils.aoa_to_sheet([commonHeaders]);
+    XLSX.utils.book_append_sheet(wb, wsEmpty, sheetNamePrefix);
+  }
+  
+  // İptal Edilenler sheet
+  if (iptalRows.length > 0) {
+    const iptalSheetData = [commonHeaders, ...iptalRows];
+    const wsIptal = XLSX.utils.aoa_to_sheet(iptalSheetData);
+    XLSX.utils.book_append_sheet(wb, wsIptal, 'Iptal Edilenler');
+  }
+  
+  XLSX.writeFile(wb, `Alotech_${sheetNamePrefix}_${dateStr}.xlsx`);
 }
 
 function resetEverything() {
@@ -401,6 +445,24 @@ function resetEverything() {
   showGlobalMessage('🧹 Tüm veriler sıfırlandı', 'ok');
 }
 
+// Preview row seçim butonları için event binding (modal açıkken)
+function bindPreviewRowButtons() {
+  document.querySelectorAll('.preview-row-btn').forEach(btn => {
+    btn.removeEventListener('click', previewRowHandler);
+    btn.addEventListener('click', previewRowHandler);
+  });
+}
+
+function previewRowHandler(e) {
+  const rows = e.currentTarget.dataset.rows;
+  currentPreviewRows = rows === 'max' ? 'max' : parseInt(rows);
+  updatePreviewTable();
+}
+
+// Modal kapatma için global
+window.closePreviewModal = closePreviewModal;
+
+// Drag & drop
 function setupDropZone(zoneId, inputId, category) {
   const zone = document.getElementById(zoneId);
   const input = document.getElementById(inputId);
@@ -419,6 +481,7 @@ function setupDropZone(zoneId, inputId, category) {
   });
 }
 
+// Tema
 function initTheme() {
   const saved = localStorage.getItem('alotech_theme') || 'grey';
   document.body.className = saved;
@@ -441,3 +504,10 @@ function initTheme() {
     });
   }
 }
+
+// Modal açıkken row butonlarını bağla (DOM'a dinamik eklendiği için)
+setInterval(() => {
+  if (document.getElementById('previewModal').classList.contains('active')) {
+    bindPreviewRowButtons();
+  }
+}, 500);
