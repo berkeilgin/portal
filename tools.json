@@ -492,6 +492,19 @@
       "isTest": false,
       "isBest": false,
       "order": 32
+    },
+    {
+      "id": "alotech",
+      "name": "Alotech Data Düzenleme",
+      "nameEn": "Alotech Data Management",
+      "url": "alotechduzenleme.html",
+      "cat": "qa",
+      "icon": "logo.png",
+      "isEnabled": true,
+      "isNew": true,
+      "isTest": false,
+      "isBest": false,
+      "order": 33
     }
   ],
   "users": [
