@@ -27,39 +27,77 @@ function showGlobalMessage(msg, type = 'ok') {
   setTimeout(() => { if (statusDiv.style.display === 'block') statusDiv.style.display = 'none'; }, 3500);
 }
 
-// UTF-8 decode (ArrayBuffer -> string)
+// UTF-8 decode
 function decodeUTF8(buffer) {
   const decoder = new TextDecoder('utf-8');
   return decoder.decode(buffer);
 }
 
-// CSV ayrıştırma (tırnak ve virgül duyarlı, verileri asla değiştirme)
-function parseCSV(text) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if ((ch === ',' || ch === '\n') && !inQuotes) {
-      row.push(field);
-      field = '';
-      if (ch === '\n') {
-        rows.push(row);
-        row = [];
-      }
-    } else {
-      field += ch;
+// Otomatik ayırıcı algılama ve CSV ayrıştırma (tırnaklara saygılı, veriyi değiştirmez)
+function parseCSVWithDelimiter(text) {
+  // Olası ayırıcılar
+  const delimiters = [',', ';', '\t', '|'];
+  let bestDelimiter = ',';
+  let maxCols = 0;
+  
+  // İlk satırı al (başlık satırı)
+  const firstLine = text.split(/\r?\n/)[0];
+  for (const delim of delimiters) {
+    // Basit bir say: tırnak dikkate alınmadan böl (hızlı tahmin)
+    const parts = firstLine.split(delim);
+    if (parts.length > maxCols) {
+      maxCols = parts.length;
+      bestDelimiter = delim;
     }
   }
-  if (field !== '') row.push(field);
-  if (row.length) rows.push(row);
-  return rows;
+  console.log(`Algılanan ayırıcı: "${bestDelimiter}" (${maxCols} sütun)`);
+  
+  // Şimdi gerçek parser: tırnak içindeki ayırıcıları yoksay
+  const rows = [];
+  let currentRow = [];
+  let currentField = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const nextCh = text[i+1];
+    
+    if (ch === '"') {
+      // Tırnak karakteri
+      if (insideQuotes && nextCh === '"') {
+        // Çift tırnak escape -> tek tırnak ekle
+        currentField += '"';
+        i++; // atla
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (!insideQuotes && (ch === bestDelimiter || ch === '\n')) {
+      // Alan bitti
+      currentRow.push(currentField);
+      currentField = '';
+      if (ch === '\n') {
+        // Satır bitti
+        if (currentRow.length > 0 || rows.length === 0) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+      }
+    } else {
+      currentField += ch;
+    }
+  }
+  // Son alanı ekle
+  if (currentField !== '' || currentRow.length > 0) {
+    currentRow.push(currentField);
+    if (currentRow.length > 0) rows.push(currentRow);
+  }
+  
+  // Boş satırları temizle (sadece boş stringlerden oluşan satırları sil)
+  const nonEmptyRows = rows.filter(row => row.some(cell => cell && cell.trim() !== ''));
+  return nonEmptyRows;
 }
 
-// Dosya ayrıştırma (CSV: ArrayBuffer ile UTF-8, Excel: XLSX)
+// Dosya ayrıştırma
 async function parseFileToData(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -68,7 +106,6 @@ async function parseFileToData(file) {
         let dataRows = [];
         let headers = [];
         if (file.name.match(/\.xlsx?$/i)) {
-          // Excel dosyası
           const wb = XLSX.read(e.target.result, { type: 'array' });
           const sheet = wb.Sheets[wb.SheetNames[0]];
           const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
@@ -79,25 +116,28 @@ async function parseFileToData(file) {
             return (val !== undefined && val !== null) ? String(val) : "";
           }));
         } else {
-          // CSV dosyası - UTF-8 decoding
+          // CSV
+          let buffer = e.target.result;
           let text;
-          if (e.target.result instanceof ArrayBuffer) {
-            text = decodeUTF8(e.target.result);
+          if (buffer instanceof ArrayBuffer) {
+            text = decodeUTF8(buffer);
           } else {
-            text = e.target.result;
+            text = buffer;
           }
-          // BOM silme
+          // BOM sil
           if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-          const rows = parseCSV(text);
+          
+          const rows = parseCSVWithDelimiter(text);
           if (rows.length === 0) throw new Error('CSV dosyası boş');
           headers = rows[0].map(h => (h === undefined || h === '') ? `Kolon_${Math.random()}` : h);
-          dataRows = rows.slice(1).map(r => {
-            while (r.length < headers.length) r.push('');
-            return r.slice(0, headers.length).map(cell => cell || "");
+          dataRows = rows.slice(1).map(row => {
+            // Sütun sayısını eşitle
+            while (row.length < headers.length) row.push('');
+            return row.slice(0, headers.length).map(cell => cell || "");
           });
         }
-        // Boş satırları temizle (opsiyonel)
-        const nonEmptyRows = dataRows.filter(r => r.some(cell => cell && cell.trim() !== ''));
+        // Tamamen boş satırları filtrele
+        const nonEmptyRows = dataRows.filter(row => row.some(cell => cell && cell.trim() !== ''));
         resolve({
           name: file.name,
           baseName: file.name.replace(/\.[^/.]+$/, ''),
@@ -113,7 +153,6 @@ async function parseFileToData(file) {
     if (file.name.match(/\.xlsx?$/i)) {
       reader.readAsArrayBuffer(file);
     } else {
-      // CSV: ArrayBuffer ile oku (UTF-8 desteği için)
       reader.readAsArrayBuffer(file);
     }
   });
@@ -128,7 +167,7 @@ async function addFilesToCategory(category, fileList) {
       const newFile = { id: nextId++, ...parsed };
       if (existingIndex !== -1) targetArray[existingIndex] = newFile;
       else targetArray.push(newFile);
-      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır, UTF-8)`, 'ok');
+      showGlobalMessage(`✅ ${parsed.name} (${parsed.rowCount} satır, ${parsed.headers.length} sütun)`, 'ok');
     } catch (err) {
       showGlobalMessage(`❌ ${file.name}: ${err.message}`, 'err');
     }
@@ -160,12 +199,12 @@ function previewHandler(e) {
   const maxRows = 15;
   const headers = file.headers;
   const sample = file.data.slice(0, maxRows);
-  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead></tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</thead><tbody>`;
+  let html = `<div class="table-wrapper"><table style="min-width:300px;"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</thead><tbody>`;
   sample.forEach(row => {
     html += `<tr>${row.map(cell => `<td>${escapeHtml(String(cell).substring(0, 50))}</td>`).join('')}</tr>`;
   });
   if (file.data.length > maxRows) html += `<tr><td colspan="${headers.length}" style="color:var(--muted);">... ve ${file.data.length - maxRows} satır daha</td></tr>`;
-  html += `</tbody></table></div><div style="margin-top:8px; font-size:10px; color:var(--muted);">Sütunlar: ${headers.join(' | ')}</div>`;
+  html += `</tbody>}</div><div style="margin-top:8px; font-size:10px; color:var(--muted);">Sütunlar: ${headers.join(' | ')}</div>`;
   previewDiv.innerHTML = html;
 }
 
@@ -181,7 +220,7 @@ function exportHandler(e) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
   XLSX.writeFile(wb, `${file.baseName}_${category}_export.xlsx`);
-  showGlobalMessage(`📎 ${file.name} dışa aktarıldı (veriler aynen korundu)`, 'ok');
+  showGlobalMessage(`📎 ${file.name} dışa aktarıldı`, 'ok');
 }
 
 function deleteHandler(e) {
@@ -245,7 +284,7 @@ function exportAllCategory(category) {
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     XLSX.writeFile(wb, `${file.baseName}_${category}_all.xlsx`);
   });
-  showGlobalMessage(`📦 ${filesArray.length} dosya dışa aktarıldı (${category === 'summary' ? 'Özet' : 'Detay'})`, 'ok');
+  showGlobalMessage(`📦 ${filesArray.length} dosya dışa aktarıldı`, 'ok');
 }
 
 function resetEverything() {
@@ -261,16 +300,14 @@ function performCalculation() {
     showGlobalMessage('⚠️ Lütfen önce Özet ve/veya Detay dosyaları yükleyin', 'err');
     return;
   }
-  console.group('🧮 Hesaplama Demo (Veri aynen korundu)');
-  console.log('Özet Dosyaları:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  console.log('Detay Dosyaları:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
-  if (summaryFiles[0]) console.log('Özet İlk Veri Örneği (ham):', summaryFiles[0].data.slice(0, 2));
-  if (detailFiles[0]) console.log('Detay İlk Veri Örneği (ham):', detailFiles[0].data.slice(0, 2));
+  console.group('🧮 Hesaplama Demo');
+  console.log('Özet:', summaryFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
+  console.log('Detay:', detailFiles.map(f => ({ name: f.name, satir: f.rowCount, sutunlar: f.headers })));
   console.groupEnd();
   const sumRows = summaryFiles.reduce((a,b) => a + b.rowCount, 0);
   const detRows = detailFiles.reduce((a,b) => a + b.rowCount, 0);
-  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.\nVeriler hiç değiştirilmeden işlendi.`);
-  showGlobalMessage('✅ Hesaplama tamam, konsola bakın', 'ok');
+  alert(`Demo hesaplama tamamlandı.\nÖzet: ${summaryFiles.length} dosya, ${sumRows} satır.\nDetay: ${detailFiles.length} dosya, ${detRows} satır.`);
+  showGlobalMessage('✅ Hesaplama tamam', 'ok');
 }
 
 function setupDropZone(zoneId, inputId, category) {
