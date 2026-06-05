@@ -5,159 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>Alotech Düzenleme | Özet & Detay Data</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <!-- XLSX Kütüphanesi -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <!-- Mevcut CSS dosyaları -->
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/components.css">
   <style>
-    /* Ek özel stiller - Özet/Detay ikili yapısı için */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-    }
-    @media (max-width: 800px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-    .file-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--card2);
-      padding: 10px 14px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-      border: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .file-name {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--accent);
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .file-rows {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--muted);
-      background: var(--surface);
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-    .file-del {
-      background: none;
-      border: none;
-      color: var(--accent3);
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      opacity: 0.7;
-      transition: 0.2s;
-    }
-    .file-del:hover {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-    .preview-btn, .export-btn {
-      font-size: 10px;
-      padding: 4px 10px;
-    }
-    .preview-container {
-      margin-top: 10px;
-      border-top: 1px dashed var(--border);
-      padding-top: 12px;
-      display: none;
-      overflow-x: auto;
-    }
-    .preview-container.active {
-      display: block;
-    }
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .stat-badge {
-      font-size: 11px;
-      background: var(--surface);
-      padding: 4px 10px;
-      border-radius: 30px;
-      font-family: var(--mono);
-      color: var(--muted);
-    }
-    .action-bar {
-      margin-top: 30px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-    h2 {
-      font-family: var(--display);
-      font-weight: 700;
-      font-size: 1.3rem;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      margin: 0;
-    }
-    .drop-zone {
-      margin-bottom: 8px;
-    }
-    .btn-sm {
-      padding: 4px 12px;
-      font-size: 11px;
-    }
-    .theme-switch {
-      display: flex;
-      gap: 6px;
-      background: var(--surface);
-      padding: 4px 10px;
-      border-radius: 40px;
-      border: 1px solid var(--border);
-    }
-    .theme-btn {
-      background: transparent;
-      border: none;
-      padding: 4px 12px;
-      border-radius: 30px;
-      font-size: 11px;
-      cursor: pointer;
-      color: var(--muted);
-      transition: .2s;
-      font-family: var(--font);
-    }
-    .theme-btn.active {
-      background: var(--accent2);
-      color: #fff;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 24px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-    .logo {
-      font-weight: 700;
-      font-size: 1.2rem;
-      font-family: var(--display);
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+    .file-item { display: flex; align-items: center; gap: 12px; background: var(--card2); padding: 10px 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border); flex-wrap: wrap; }
+    .file-name { font-family: var(--mono); font-size: 12px; color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-rows { font-family: var(--mono); font-size: 10px; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 20px; }
+    .file-del { background: none; border: none; color: var(--accent3); cursor: pointer; font-size: 16px; font-weight: bold; opacity: 0.7; }
+    .file-del:hover { opacity: 1; }
+    .preview-btn, .export-btn { font-size: 10px; padding: 4px 10px; }
+    .preview-container { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 12px; display: none; overflow-x: auto; }
+    .preview-container.active { display: block; }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    .stat-badge { font-size: 11px; background: var(--surface); padding: 4px 10px; border-radius: 30px; font-family: var(--mono); }
+    .action-bar { margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; }
+    h2 { font-family: var(--display); font-weight: 700; font-size: 1.3rem; background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0; }
+    .drop-zone { margin-bottom: 8px; }
+    .btn-sm { padding: 4px 12px; font-size: 11px; }
+    .theme-switch { display: flex; gap: 6px; background: var(--surface); padding: 4px 10px; border-radius: 40px; border: 1px solid var(--border); }
+    .theme-btn { background: transparent; border: none; padding: 4px 12px; border-radius: 30px; font-size: 11px; cursor: pointer; color: var(--muted); transition: .2s; font-family: var(--font); }
+    .theme-btn.active { background: var(--accent2); color: #fff; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+    .logo { font-weight: 700; font-size: 1.2rem; font-family: var(--display); }
   </style>
 </head>
 <body class="grey">
@@ -168,17 +42,16 @@
   </div>
 
   <div class="main" style="max-width: 1400px;">
-    <!-- İki ana bölüm: Özet Data ve Detay Data -->
     <div class="grid-2">
-      <!-- SOL: ÖZET DATA -->
-      <div class="panel" id="summaryZone">
+      <!-- Özet Data -->
+      <div class="panel">
         <div class="section-header">
           <h2>📑 Özet Data</h2>
           <div class="stat-badge" id="summaryStats">0 dosya, 0 satır</div>
         </div>
         <div class="drop-zone" id="summaryDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">Birden fazla dosya seçilebilir</div>
+          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">Çoklu seçim desteklenir</div>
           <input type="file" id="summaryFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="summaryFileList" style="margin-top: 16px;"></div>
@@ -187,15 +60,15 @@
         </div>
       </div>
 
-      <!-- SAĞ: DETAY DATA -->
-      <div class="panel" id="detailZone">
+      <!-- Detay Data -->
+      <div class="panel">
         <div class="section-header">
           <h2>🔍 Detay Data</h2>
           <div class="stat-badge" id="detailStats">0 dosya, 0 satır</div>
         </div>
         <div class="drop-zone" id="detailDropZone">
           📂 Dosyaları sürükle bırak veya tıkla seç (CSV / Excel)
-          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">Birden fazla dosya seçilebilir</div>
+          <div style="font-size: 10px; margin-top: 6px; color: var(--muted);">Çoklu seçim desteklenir</div>
           <input type="file" id="detailFileInput" multiple accept=".csv,.xlsx,.xls" style="display:none">
         </div>
         <div id="detailFileList" style="margin-top: 16px;"></div>
@@ -205,7 +78,6 @@
       </div>
     </div>
 
-    <!-- Hesaplama ve Reset Butonları -->
     <div class="action-bar">
       <button class="btn btn-danger" id="resetAllBtn">🗑️ Tüm Verileri Sıfırla</button>
       <button class="btn btn-primary" id="calculateBtn">⚡ Hesaplamayı Başlat (Demo)</button>
@@ -217,8 +89,6 @@
     <div class="copyright-text">Veri yapısını ve içeriği olduğu gibi gösterir, dışa aktarır. Hesaplama motoru hazır.</div>
   </footer>
 
-  <script src="js/theme.js"></script>
-  <script src="js/common.js"></script>
-  <script src="alotechduzenleme.js"></script>
+  <script src="js/alotechduzenleme.js"></script>
 </body>
 </html>
