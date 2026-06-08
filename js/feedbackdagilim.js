@@ -7,11 +7,10 @@ function showLoader(step, show) {
   const el = document.getElementById(`loader${step}`);
   if (el) el.classList.toggle('visible', show);
 }
-// YENİ LİNK FONKSİYONU: emp_monitor_ident ve employee_ident kullanılır
-function buildMonitorLink(emp_monitor_ident, employee_ident) {
-  if (!emp_monitor_ident) return '#';
+function buildMonitorLink(empMonitorIdent, employeeIdent) {
+  if (!empMonitorIdent) return '#';
   const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/employee/monitor.pl';
-  return `${baseUrl}?emp_monitor_ident=${encodeURIComponent(emp_monitor_ident)}&frmTarget=MONITOR&employee_ident=${encodeURIComponent(employee_ident || '')}&frmOption=MAIN`;
+  return `${baseUrl}?emp_monitor_ident=${encodeURIComponent(empMonitorIdent)}&frmTarget=MONITOR&employee_ident=${encodeURIComponent(employeeIdent || '')}&frmOption=MAIN`;
 }
 function formatDateForFilename() {
   const d = new Date();
@@ -169,8 +168,8 @@ function renderErrorTable() {
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
-    const normalLink = buildMonitorLink(err.identRaw, err.identRaw); // STEP1 için identRaw kullan
-    const deleteLink = buildMonitorLink(err.identRaw, err.identRaw);
+    const normalLink = buildMonitorLink(err.identRaw, err.identRaw); // employee_ident olarak identRaw kullanıldı
+    const deleteLink = buildMonitorLink(err.identRaw, err.identRaw); // aynı
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
       rowClass = 'clicked-row';
@@ -262,6 +261,7 @@ const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
 let currentWeekStep2 = 1;
 let currentPreview = { DM: [], ML: [], DONUSUM: [] };
 
+// HP kuralları sadece referans için kullanılacak (export'ta gruplama yok)
 const HP_RULES = {
   HP_Dutch:   { checker: rec => rec.FeedbackCreatorName === 'Suleyman Aslan' },
   HP_German:  { checker: rec => rec.FeedbackCreatorName === 'Halil Emre Ozdemir' },
@@ -380,14 +380,11 @@ function getCumulativeCountsForGroup(gk, week) {
 }
 function getHPCumulativeForML(week) {
   const cnt = { HP_Dutch: 0, HP_German: 0, HP_Turkish: 0 };
-  // HP projesini referans listesinden bul
-  const hpRef = refDataStep2.find(r => String(r.Proje).toLowerCase().includes('hewlett packard'));
-  if (!hpRef) return cnt; // HP projesi yoksa sıfır döndür
-  const hpProjectName = hpRef.Proje;
+  const hpLower = 'hewlett packard inc';
   (distributionHistory['ML'] || []).forEach(e => {
     if (e.week < week && e.assignments) {
       e.assignments.forEach(a => {
-        if (String(a.client_name || '').trim() !== hpProjectName) return;
+        if (String(a.client_name || '').toLowerCase().trim() !== hpLower) return;
         const name = String(a.FeedbackCreatorName || '').trim();
         if (name === 'Suleyman Aslan') cnt.HP_Dutch++;
         else if (name === 'Halil Emre Ozdemir') cnt.HP_German++;
@@ -397,31 +394,13 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-
-// ML için özel filtre: reviewerPosition veya position_code_type_full_name içinde "Quality Assurance Analyst" geçenleri hariç tut
-function isQualityAssuranceAnalyst(rec) {
-  const pos = String(rec.reviewerPosition || '').toLowerCase();
-  const code = String(rec.position_code_type_full_name || '').toLowerCase();
-  return pos.includes('quality assurance analyst') || code.includes('quality assurance analyst');
-}
-
-// getAvailableRecordsForGroup - tüm kurallar ve duplicate ident temizliği
+// getAvailableRecordsForGroup - Final
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
-  // Önce emp_monitor_ident duplicate'ları temizle: aynı ident'ten sadece ilkini al
-  const uniqueMap = new Map();
-  mainDataStep2.forEach(rec => {
-    const ident = String(rec.emp_monitor_ident || '').trim();
-    if (ident && !uniqueMap.has(ident)) {
-      uniqueMap.set(ident, rec);
-    }
-  });
-  const uniqueRecords = Array.from(uniqueMap.values());
-  
-  return uniqueRecords.filter(rec => {
-    // CheckListCreated: null, boş, sayısal olmayanları ele
+  return mainDataStep2.filter(rec => {
+    // CheckListCreated sayısal olmalı (0 veya pozitif)
     const checkVal = Number(rec.CheckListCreated);
-    if (isNaN(checkVal)) return false; // blank veya null veya sayısal değilse atla
+    if (isNaN(checkVal)) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
@@ -437,12 +416,7 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     
     if (extraFilter && !extraFilter(rec)) return false;
     
-    // ML için ekstra filtre: Quality Assurance Analyst olanları dağıtma
-    if (gk === 'ML') {
-      if (isQualityAssuranceAnalyst(rec)) return false;
-    }
-    
-    // Target kuralı: sadece target > 0 ise uygula
+    // Target kuralı
     if (gk === 'DM' || gk === 'ML' || gk === 'DONUSUM') {
       const targetRaw = ref.Target;
       if (targetRaw !== undefined && targetRaw !== '' && !isNaN(Number(targetRaw))) {
@@ -471,16 +445,22 @@ function shuffle(arr) {
   return a;
 }
 function calculateDistributionForGroup(gk, week, groupDef) {
-  const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, groupDef.extraFilter || null);
+  // ML için ekstra filtre: reviewerPosition === 'Quality Assurance Analyst I' && position_code_type_full_name === 'Operations Supervisor'
+  let extraFilterML = null;
+  if (gk === 'ML') {
+    extraFilterML = (rec) => {
+      const pos = String(rec.reviewerPosition || '').trim().toLowerCase();
+      const code = String(rec.position_code_type_full_name || '').trim().toLowerCase();
+      return pos === 'quality assurance analyst i' && code === 'operations supervisor';
+    };
+  }
+  const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, extraFilterML);
   if (!available.length) return [];
 
   if (gk === 'ML') {
-    // HP projesini referans listesinden bul
-    const hpRef = refDataStep2.find(r => String(r.Proje).toLowerCase().includes('hewlett packard'));
-    const hpProjectName = hpRef ? hpRef.Proje : null;
-    
-    const hpRecords = hpProjectName ? available.filter(r => String(r.client_name || '').trim() === hpProjectName) : [];
-    const nonHp    = available.filter(r => !hpRecords.includes(r));
+    const HP_NAME = 'hewlett packard inc';
+    const hpRecords = available.filter(r => String(r.client_name || '').toLowerCase().trim() === HP_NAME);
+    const nonHp    = available.filter(r => String(r.client_name || '').toLowerCase().trim() !== HP_NAME);
     const selected = [];
 
     const hpCumulative = getHPCumulativeForML(week);
@@ -523,15 +503,14 @@ function calculateDistributionForGroup(gk, week, groupDef) {
   return selected;
 }
 async function saveGroupDistribution(gk, week, selected) {
-  const hpRef = refDataStep2.find(r => String(r.Proje).toLowerCase().includes('hewlett packard'));
-  const hpProjectName = hpRef ? hpRef.Proje : null;
+  const HP_NAME = 'hewlett packard inc';
   const groupFilter = groups[gk]?.filter;
   const assignments = selected.map(rec => {
     const ref = groupFilter
       ? getRefInfoForGroup(String(rec.client_name).trim(), groupFilter)
       : getRefInfo(rec.client_name);
     let hpGroup = '';
-    if (gk === 'ML' && hpProjectName && String(rec.client_name || '').trim() === hpProjectName) {
+    if (gk === 'ML' && String(rec.client_name || '').toLowerCase().trim() === HP_NAME) {
       const name = String(rec.FeedbackCreatorName || '').trim();
       if (name === 'Suleyman Aslan') hpGroup = 'HP_Dutch';
       else if (name === 'Halil Emre Ozdemir') hpGroup = 'HP_German';
@@ -558,24 +537,15 @@ async function exportGroupExcel(gk, selected) {
   if (!selected.length) return;
   const workbook = XLSX.utils.book_new();
   const groupFilter = group.filter;
-  const hpRef = refDataStep2.find(r => String(r.Proje).toLowerCase().includes('hewlett packard'));
-  const hpProjectName = hpRef ? hpRef.Proje : null;
-  
   const addSheet = (sheetName, rows) => {
     let safeName = sheetName.substring(0, 31);
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows.map(r => ({ ...r, Durum: '' }))), safeName);
   };
-  
   if (group.sheetPerProject) {
     const grouped = new Map();
     selected.forEach(rec => {
       let key = rec.client_name;
-      if (gk === 'ML' && hpProjectName && String(rec.client_name || '').trim() === hpProjectName) {
-        const name = String(rec.FeedbackCreatorName || '').trim();
-        if (name === 'Suleyman Aslan') key = 'HP_Dutch';
-        else if (name === 'Halil Emre Ozdemir') key = 'HP_German';
-        else key = 'HP_Turkish';
-      }
+      // ML için HP projesini ayrı sheet yapmıyoruz, direkt client_name kullan
       if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key).push({
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
@@ -660,12 +630,6 @@ function exportPreviewToExcel() {
   const workbook = XLSX.utils.book_new();
   const rows = allSelected.map(rec => {
     let grupLabel = rec.grup || '';
-    if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().includes('hewlett packard')) {
-      const name = String(rec.FeedbackCreatorName || '').trim();
-      if (name === 'Suleyman Aslan') grupLabel = 'HP_Dutch';
-      else if (name === 'Halil Emre Ozdemir') grupLabel = 'HP_German';
-      else grupLabel = 'HP_Turkish';
-    }
     return {
       'Grup': grupLabel,
       'Değerlendirici (FeedbackCreatorName)': rec.FeedbackCreatorName,
@@ -674,9 +638,7 @@ function exportPreviewToExcel() {
       'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || ''),
       'MonitorScore': rec.MonitorScore !== undefined ? rec.MonitorScore : '',
       'CriticalCount': rec.CriticalCount !== undefined ? rec.CriticalCount : '',
-      'CheckListCreated': rec.CheckListCreated,
-      'reviewerPosition': rec.reviewerPosition || '',
-      'position_code_type_full_name': rec.position_code_type_full_name || ''
+      'CheckListCreated': rec.CheckListCreated
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -745,12 +707,6 @@ async function previewAllGroups() {
   }
   previewBody.innerHTML = allSelected.map(rec => {
     let grupLabel = escapeHtml(rec.grup || '');
-    if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().includes('hewlett packard')) {
-      const name = String(rec.FeedbackCreatorName || '').trim();
-      if (name === 'Suleyman Aslan') grupLabel = 'HP_Dutch';
-      else if (name === 'Halil Emre Ozdemir') grupLabel = 'HP_German';
-      else grupLabel = 'HP_Turkish';
-    }
     return `
     <tr>
       <td>${grupLabel}</td>
@@ -785,7 +741,7 @@ async function confirmAndExportAll() {
     showLoader('Step2', false);
   }
 }
-// loadMainFileStep2 - gerekli tüm sütunları oku, duplicate ident temizliği sonra yapılacak
+// loadMainFileStep2 - duplicate emp_monitor_ident kontrolü ve CheckListCreated filtrelemesi
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   const statusEl = document.getElementById('mainStatusStep2');
@@ -798,13 +754,29 @@ async function loadMainFileStep2(file) {
     if (missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
     
     const hasManager = 'Manager_name' in rows[0];
-    // employee_ident, reviewerPosition, position_code_type_full_name opsiyonel
-    mainDataStep2 = rows.map(r => {
+    // Duplicate emp_monitor_ident kontrolü: ilkini al, diğerlerini at
+    const seen = new Set();
+    const uniqueRows = [];
+    for (const row of rows) {
+      const ident = String(row.emp_monitor_ident || '').trim();
+      if (ident && !seen.has(ident)) {
+        seen.add(ident);
+        uniqueRows.push(row);
+      }
+    }
+    
+    // CheckListCreated sayısal olmayanları eleriz (0 ve pozitifler kalır)
+    mainDataStep2 = uniqueRows.filter(r => {
+      const val = Number(r.CheckListCreated);
+      return !isNaN(val);
+    }).map(r => {
       let feedbackName = String(r.FeedbackCreatorName || '').trim();
       if (feedbackName === '' || feedbackName.toLowerCase() === 'null') {
         if (hasManager) {
           feedbackName = String(r.Manager_name || '').trim();
           if (feedbackName.toLowerCase() === 'null') feedbackName = '';
+        } else {
+          feedbackName = '';
         }
       }
       let monitorScore = r.MonitorScore !== undefined && r.MonitorScore !== '' ? Number(r.MonitorScore) : null;
@@ -812,19 +784,18 @@ async function loadMainFileStep2(file) {
       if (isNaN(monitorScore)) monitorScore = null;
       if (isNaN(criticalCount)) criticalCount = null;
       
-      return {
-        ...r,
+      return { 
+        ...r, 
         FeedbackCreatorName: feedbackName,
         MonitorScore: monitorScore,
         CriticalCount: criticalCount,
-        employee_ident: r.employee_ident ? String(r.employee_ident).trim() : '',
-        reviewerPosition: r.reviewerPosition ? String(r.reviewerPosition).trim() : '',
-        position_code_type_full_name: r.position_code_type_full_name ? String(r.position_code_type_full_name).trim() : ''
+        employee_ident: r.employee_ident ? String(r.employee_ident).trim() : ''
       };
     });
     
-    statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt yüklendi. Duplicate ident'ler temizlenecek.`;
+    statusEl.innerHTML = `✅ ${mainDataStep2.length} benzersiz kayıt (CheckListCreated geçerli) yüklendi. (${rows.length - uniqueRows.length} duplicate atlandı)`;
     statusEl.style.color = 'var(--accent)';
+    
     if (refDataStep2.length) checkMissingProjects();
   } catch (err) {
     statusEl.innerHTML = `❌ ${err.message}`;
@@ -867,6 +838,7 @@ async function loadRefFileStep2(file) {
     refDataStep2 = rows;
     statusEl.innerHTML = `✅ ${refDataStep2.length} referans yüklendi.`;
     statusEl.style.color = 'var(--accent)';
+    
     if (mainDataStep2.length) checkMissingProjects();
   } catch (err) {
     statusEl.innerHTML = `❌ ${err.message}`;
@@ -1102,7 +1074,7 @@ function generateReportS3() {
   else tabKisi.classList.replace('btn-ghost', 'btn-primary');
 }
 function renderReportTableS3(headers, rows) {
-  reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</table>`;
+  reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
   reportBodyS3.innerHTML = rows.length
     ? rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
     : `<tr><td colspan="${headers.length}">Veri yok</td></tr>`;
