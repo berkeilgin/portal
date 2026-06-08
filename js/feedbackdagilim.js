@@ -162,10 +162,10 @@ async function processFileStep1(file) {
 function renderErrorTable() {
   const thead = document.querySelector('#errorsSectionStep1 .error-table thead');
   if (thead) {
-    thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></td>`;
+    thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
   }
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `</table><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
@@ -185,8 +185,8 @@ function renderErrorTable() {
         <td>
           <a href="${normalLink}" target="_blank" class="link-btn" data-row-index="${err.rowIndex}">🔗 Link</a>
           <a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}">🗑️ Sil</a>
-        </td>
-      </tr>
+         </td>
+       </tr>
     `;
   }).join('');
   document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
@@ -223,20 +223,17 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   errorCountSpanStep1.textContent = '0';
   validCountSpanStep1.textContent = '0';
 });
-// CSS stilleri (tüm temalarda okunabilirlik için)
 if (!document.querySelector('#step1-styles')) {
   const style = document.createElement('style');
   style.id = 'step1-styles';
   style.textContent = `
     .delete-row { background-color: #fff3cd !important; }
     .clicked-row { background-color: #d4edda !important; }
-    /* Sarı ve yeşil satırlarda yazı rengini koyu yap (tüm temalar için) */
     .delete-row, .clicked-row,
     .delete-row td, .clicked-row td,
     .delete-row code, .clicked-row code {
       color: #1a1a1a !important;
     }
-    /* Butonların beyaz kalmasını sağla */
     .delete-row .link-btn, .clicked-row .link-btn,
     .delete-row .delete-link-btn, .clicked-row .delete-link-btn {
       color: white !important;
@@ -258,7 +255,7 @@ if (!document.querySelector('#step1-styles')) {
   document.head.appendChild(style);
 }
 
-// ==================== STEP 2 (kısaltılmış, çalışır) ====================
+// ==================== STEP 2 ====================
 let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
 let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
@@ -274,14 +271,14 @@ const HP_RULES = {
 const groups = {
   DM: {
     key: 'DM', name: 'DM',
-    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',  // Dağıtım Türü kontrolü yok
+    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
     sheetPerProject: true,
     fileName: () => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   ML: {
     key: 'ML', name: 'ML',
-    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML',  // Dağıtım Türü kontrolü yok
-    extraFilter: rec => String(rec.position_code_type_full_name || '').toLowerCase().includes('quality assurance analyst'),
+    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML',
+    // extraFilter kaldırıldı - artık tüm uygun ML kayıtları dağıtılacak
     sheetPerProject: true,
     fileName: () => `ML_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
@@ -293,7 +290,6 @@ const groups = {
   }
 };
 
-// Proje adı VE grup filtresine uyan referans satırını döndürür (örn. HP'nin DM vs ML satırı)
 function getRefInfo(proje) { return refDataStep2.find(r => String(r.Proje).trim() === String(proje).trim()); }
 function getRefInfoForGroup(proje, groupFilter) {
   return refDataStep2.find(r => String(r.Proje).trim() === String(proje).trim() && groupFilter(r));
@@ -383,7 +379,6 @@ function getCumulativeCountsForGroup(gk, week) {
   });
   return cnt;
 }
-// ML - HP özel kümülatif: dil grubuna göre (HP_Dutch/HP_German/HP_Turkish)
 function getHPCumulativeForML(week) {
   const cnt = { HP_Dutch: 0, HP_German: 0, HP_Turkish: 0 };
   const hpLower = 'hewlett packard inc';
@@ -403,31 +398,17 @@ function getHPCumulativeForML(week) {
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
-    // 1. CheckListCreated = 0 olmalı
     if (!(rec.CheckListCreated === 0 || rec.CheckListCreated === '0')) return false;
-    
-    // 2. emp_monitor_ident boş veya null olmamalı
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
-    
-    // 3. Silinenlerde veya daha önce dağıtılmış olmamalı
     if (deletedIdentsStep2.has(ident) || distributed.has(ident)) return false;
-    
-    // 4. client_name boş veya null olmamalı
     const client = String(rec.client_name || '').trim();
     if (client === '') return false;
-    
-    // 5. FeedbackCreatorName boş veya null olmamalı
     const creator = String(rec.FeedbackCreatorName || '').trim();
     if (creator === '') return false;
-    
-    // 6. Referans listesinde bu gruba ait satır olmalı (DM/ML ayrımı: HP gibi çift satırlı projeler doğru ayrılır)
     const ref = getRefInfoForGroup(client, groupFilter);
     if (!ref) return false;
-    
-    // 7. Varsa ek filtre (örneğin ML için pozisyon kontrolü)
     if (extraFilter && !extraFilter(rec)) return false;
-    
     return true;
   });
 }
@@ -449,7 +430,6 @@ function calculateDistributionForGroup(gk, week, groupDef) {
     const nonHp    = available.filter(r => String(r.client_name || '').toLowerCase().trim() !== HP_NAME);
     const selected = [];
 
-    // ── HP özel dağıtım: dil grubuna göre (HP_Dutch / HP_German / HP_Turkish) ──
     const hpCumulative = getHPCumulativeForML(week);
     for (const [hpKey, rule] of Object.entries(HP_RULES)) {
       const subset = hpRecords.filter(rule.checker);
@@ -459,7 +439,6 @@ function calculateDistributionForGroup(gk, week, groupDef) {
       if (need > 0) selected.push(...shuffle(subset).slice(0, need));
     }
 
-    // ── HP dışı ML projeleri: DM gibi kişi-proje bazlı (FeedbackCreatorName|client_name) ──
     const cumulativeNonHp = getCumulativeCountsForGroup(gk, week);
     const categoryMap = new Map();
     nonHp.forEach(rec => {
@@ -475,7 +454,6 @@ function calculateDistributionForGroup(gk, week, groupDef) {
     return selected;
   }
 
-  // ── DM ve DONUSUM: kişi-proje bazlı dağıtım ──
   const categoryMap = new Map();
   available.forEach(rec => {
     const key = `${rec.FeedbackCreatorName}|${rec.client_name}`;
@@ -495,7 +473,6 @@ async function saveGroupDistribution(gk, week, selected) {
   const HP_NAME = 'hewlett packard inc';
   const groupFilter = groups[gk]?.filter;
   const assignments = selected.map(rec => {
-    // Gruba özgü referans satırını bul (HP'nin DM vs ML satırı farklı dil/dağıtım türü taşır)
     const ref = groupFilter
       ? getRefInfoForGroup(String(rec.client_name).trim(), groupFilter)
       : getRefInfo(rec.client_name);
@@ -542,7 +519,6 @@ async function exportGroupExcel(gk, selected) {
     });
     for (const [proj, rows] of grouped) addSheet(proj, rows);
   } else {
-    // DONUSUM: sheet adı için gruba özgü referans satırını kullan
     const ref = selected.length
       ? getRefInfoForGroup(String(selected[0].client_name).trim(), groupFilter) || getRefInfo(selected[0].client_name)
       : null;
@@ -556,9 +532,63 @@ async function exportGroupExcel(gk, selected) {
   }
   XLSX.writeFile(workbook, group.fileName());
 }
+
+// ========= EKSİK PROJE UYARI SİSTEMİ (YENİ) =========
+function checkMissingProjects() {
+  if (!mainDataStep2.length || !refDataStep2.length) return;
+  
+  const refProjects = new Set(refDataStep2.map(r => String(r.Proje).trim().toLowerCase()));
+  const mainProjects = new Set();
+  mainDataStep2.forEach(rec => {
+    const name = String(rec.client_name || '').trim();
+    if (name) mainProjects.add(name.toLowerCase());
+  });
+  
+  const missing = [];
+  for (let proj of mainProjects) {
+    if (!refProjects.has(proj)) {
+      const original = mainDataStep2.find(r => String(r.client_name).trim().toLowerCase() === proj)?.client_name;
+      if (original) missing.push(original);
+    }
+  }
+  
+  let warningDiv = document.getElementById('missingProjectsWarning');
+  if (!warningDiv) {
+    warningDiv = document.createElement('div');
+    warningDiv.id = 'missingProjectsWarning';
+    warningDiv.style.cssText = 'margin-top: 1rem; padding: 0.75rem; border-radius: 0.5rem; background-color: #fff3cd; color: #856404; border-left: 4px solid #ffc107;';
+    const refStatus = document.getElementById('refStatusStep2');
+    if (refStatus && refStatus.parentNode) {
+      refStatus.parentNode.insertBefore(warningDiv, refStatus.nextSibling);
+    } else {
+      document.getElementById('step2')?.appendChild(warningDiv);
+    }
+  }
+  
+  if (missing.length) {
+    warningDiv.innerHTML = `
+      <strong>⚠️ Referans Listesinde Bulunmayan Projeler:</strong><br>
+      ${missing.map(p => `• ${escapeHtml(p)}`).join('<br>')}<br>
+      <small>Bu projeler için dağıtım yapılamaz. Lütfen referans Excel'inize bu satırları ekleyin ve tekrar yükleyin.</small>
+    `;
+    warningDiv.style.display = 'block';
+  } else {
+    warningDiv.style.display = 'none';
+  }
+}
+
 async function previewAllGroups() {
   if (!mainDataStep2.length) { alert('Görüşme listesi yükleyin.'); return; }
   if (!refDataStep2.length) { alert('Referans listesi yükleyin.'); return; }
+  
+  // Eksik proje uyarısını kontrol et
+  checkMissingProjects();
+  if (document.getElementById('missingProjectsWarning')?.style.display !== 'none') {
+    if (!confirm('Referans listesinde olmayan projeler var. Dağıtım yapılmadan önce referans listesini güncellemeniz önerilir. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+  }
+  
   const week = parseInt(document.getElementById('weekSelectStep2').value);
   currentWeekStep2 = week;
   const allSelected = [];
@@ -577,13 +607,11 @@ async function previewAllGroups() {
   }
   previewBody.innerHTML = allSelected.map(rec => {
     let grupLabel = escapeHtml(rec.grup || '');
-    // ML HP kayıtları için dil grubunu etiketle
     if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().trim() === 'hewlett packard inc') {
       const name = String(rec.FeedbackCreatorName || '').trim();
-      let lang = 'HP-Turkish';
-      if (name === 'Suleyman Aslan') lang = 'HP-Dutch';
-      else if (name === 'Halil Emre Ozdemir') lang = 'HP-German';
-      grupLabel = `ML / <em>${lang}</em>`;
+      if (name === 'Suleyman Aslan') grupLabel = 'HP_Dutch';
+      else if (name === 'Halil Emre Ozdemir') grupLabel = 'HP_German';
+      else grupLabel = 'HP_Turkish';
     }
     return `
     <tr>
@@ -630,12 +658,10 @@ async function loadMainFileStep2(file) {
     const missing = required.filter(c => !(c in rows[0]));
     if (missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
     
-    // Manager_name sütunu var mı kontrol et
     const hasManager = 'Manager_name' in rows[0];
     
     mainDataStep2 = rows.filter(r => r.CheckListCreated === 0 || r.CheckListCreated === '0').map(r => {
       let feedbackName = String(r.FeedbackCreatorName || '').trim();
-      // FeedbackCreatorName 'null' (string) veya boş ise Manager_name'i dene
       if (feedbackName === '' || feedbackName.toLowerCase() === 'null') {
         if (hasManager) {
           feedbackName = String(r.Manager_name || '').trim();
@@ -644,15 +670,13 @@ async function loadMainFileStep2(file) {
           feedbackName = '';
         }
       }
-      // Diğer alanları olduğu gibi kopyala, sadece FeedbackCreatorName'i güncelle
       return { ...r, FeedbackCreatorName: feedbackName };
     });
     
-    // İsteğe bağlı: boş FeedbackCreatorName olanları filtrelemek isterseniz aşağıdaki satırı aktif edin
-    // mainDataStep2 = mainDataStep2.filter(r => r.FeedbackCreatorName !== '');
-    
     statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt (CheckListCreated=0) yüklendi.`;
     statusEl.style.color = 'var(--accent)';
+    
+    if (refDataStep2.length) checkMissingProjects();
   } catch (err) {
     statusEl.innerHTML = `❌ ${err.message}`;
     statusEl.style.color = 'var(--accent3)';
@@ -694,6 +718,8 @@ async function loadRefFileStep2(file) {
     refDataStep2 = rows;
     statusEl.innerHTML = `✅ ${refDataStep2.length} referans yüklendi.`;
     statusEl.style.color = 'var(--accent)';
+    
+    if (mainDataStep2.length) checkMissingProjects();
   } catch (err) {
     statusEl.innerHTML = `❌ ${err.message}`;
     statusEl.style.color = 'var(--accent3)';
@@ -706,7 +732,7 @@ function setupDrop(dropId, inputId, func) {
   const drop = document.getElementById(dropId);
   const inp = document.getElementById(inputId);
   if (!drop || !inp) { console.error(`setupDrop: ${dropId} veya ${inputId} bulunamadı`); return; }
-  drop.addEventListener('click', () => inp.click());
+  drop.addEventListener('click', e => { if (e.target !== inp) inp.click(); });
   inp.addEventListener('change', e => { if (e.target.files[0]) func(e.target.files[0]); });
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
@@ -910,19 +936,15 @@ function exportReportS3() {
   const wb = XLSX.utils.book_new();
   const distMap = buildDistributedMap();
   const enriched = reportMainData.map(rec => ({ ...rec, isDistributed: distMap.has(rec.monitoringId), ...(distMap.get(rec.monitoringId) || { client_name: '', feedbackCreatorName: '' }) }));
-  // Proje Bazlı
   const projMap = new Map();
   enriched.forEach(rec => { if (!rec.client_name) return; if (!projMap.has(rec.client_name)) projMap.set(rec.client_name, { total: 0, dist: 0 }); const s = projMap.get(rec.client_name); s.total++; if (rec.isDistributed) s.dist++; });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(projMap.entries()).map(([p, s]) => ({ 'Proje': p, 'Dağıtılan': s.dist, 'Bekleyen': s.total - s.dist, 'Toplam': s.total }))), 'Proje_Bazlı');
-  // Proje+Kişi
   const pkMap = new Map();
   enriched.forEach(rec => { if (!rec.client_name || !rec.feedbackCreatorName) return; const key = `${rec.client_name}|${rec.feedbackCreatorName}`; if (!pkMap.has(key)) pkMap.set(key, { proje: rec.client_name, kisi: rec.feedbackCreatorName, total: 0, dist: 0 }); const s = pkMap.get(key); s.total++; if (rec.isDistributed) s.dist++; });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(pkMap.values()).map(v => ({ 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan': v.dist, 'Bekleyen': v.total - v.dist, 'Toplam': v.total }))), 'Proje_Değerlendirici');
-  // Kişi Bazlı
   const kisiMap = new Map();
   enriched.forEach(rec => { if (!rec.feedbackCreatorName) return; if (!kisiMap.has(rec.feedbackCreatorName)) kisiMap.set(rec.feedbackCreatorName, { total: 0, dist: 0 }); const s = kisiMap.get(rec.feedbackCreatorName); s.total++; if (rec.isDistributed) s.dist++; });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(kisiMap.entries()).map(([k, s]) => ({ 'Değerlendirici': k, 'Dağıtılan': s.dist, 'Bekleyen': s.total - s.dist, 'Toplam': s.total }))), 'Değerlendirici_Bazlı');
-  // RAW Dağıtım Detay
   const rawDist = [];
   for (const [g, entries] of Object.entries(reportHistory3)) {
     const groupName = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
@@ -943,7 +965,6 @@ function exportReportS3() {
     }
   }
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawDist), 'RAW_Dağıtım_Detay');
-  // RAW Görüşme Listesi
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportMainData.map(r => ({
     'Monitoring ID': r.monitoringId,
     'Ident': r.ident,
@@ -965,8 +986,8 @@ function initStep3() {
   const dropMain = document.getElementById('dropMainStep3');
   const dropHistory = document.getElementById('dropHistoryStep3');
   if (!dropMain || !dropHistory) return;
-  dropMain.addEventListener('click', () => mainFileInputS3.click());
-  dropHistory.addEventListener('click', () => historyFileInputS3.click());
+  dropMain.addEventListener('click', e => { if (e.target !== mainFileInputS3) mainFileInputS3.click(); });
+  dropHistory.addEventListener('click', e => { if (e.target !== historyFileInputS3) historyFileInputS3.click(); });
   mainFileInputS3.addEventListener('change', e => { if (e.target.files[0]) loadMainExcelS3(e.target.files[0]); });
   historyFileInputS3.addEventListener('change', e => { if (e.target.files[0]) loadHistoryJSONS3(e.target.files[0]); });
   [dropMain, dropHistory].forEach(d => {
