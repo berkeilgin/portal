@@ -293,7 +293,11 @@ const groups = {
   }
 };
 
+// Proje adı VE grup filtresine uyan referans satırını döndürür (örn. HP'nin DM vs ML satırı)
 function getRefInfo(proje) { return refDataStep2.find(r => String(r.Proje).trim() === String(proje).trim()); }
+function getRefInfoForGroup(proje, groupFilter) {
+  return refDataStep2.find(r => String(r.Proje).trim() === String(proje).trim() && groupFilter(r));
+}
 function saveHistoryForGroup(gk) { localStorage.setItem(`fb_distribution_history_${gk}`, JSON.stringify(distributionHistory[gk])); }
 function loadHistoryForGroup(gk) { const s = localStorage.getItem(`fb_distribution_history_${gk}`); distributionHistory[gk] = s ? JSON.parse(s) : []; }
 function loadAllHistories() { Object.keys(groups).forEach(g => loadHistoryForGroup(g)); }
@@ -338,7 +342,11 @@ function viewHistoryModal() {
         row.insertCell(2).textContent = entry.assignments ? entry.assignments.length : 0;
         const btn = document.createElement('button'); btn.textContent = 'Göster'; btn.className = 'btn-ghost'; btn.style.cssText = 'padding:0.2rem 0.5rem;';
         btn.onclick = () => {
-          const list = entry.assignments ? entry.assignments.map(a => `${a.FeedbackCreatorName} - ${a.client_name} (${a.emp_monitor_ident})`).join('\n') : 'Detay yok';
+          const list = entry.assignments ? entry.assignments.map(a => {
+            let extra = '';
+            if (g === 'ML' && a.hpGroup) extra = ` [${a.hpGroup}]`;
+            return `${a.FeedbackCreatorName}${extra} - ${a.client_name} (${a.emp_monitor_ident})`;
+          }).join('\n') : 'Detay yok';
           alert(list);
         };
         row.insertCell(3).appendChild(btn);
@@ -375,6 +383,23 @@ function getCumulativeCountsForGroup(gk, week) {
   });
   return cnt;
 }
+// ML - HP özel kümülatif: dil grubuna göre (HP_Dutch/HP_German/HP_Turkish)
+function getHPCumulativeForML(week) {
+  const cnt = { HP_Dutch: 0, HP_German: 0, HP_Turkish: 0 };
+  const hpLower = 'hewlett packard inc';
+  (distributionHistory['ML'] || []).forEach(e => {
+    if (e.week < week && e.assignments) {
+      e.assignments.forEach(a => {
+        if (String(a.client_name || '').toLowerCase().trim() !== hpLower) return;
+        const name = String(a.FeedbackCreatorName || '').trim();
+        if (name === 'Suleyman Aslan') cnt.HP_Dutch++;
+        else if (name === 'Halil Emre Ozdemir') cnt.HP_German++;
+        else cnt.HP_Turkish++;
+      });
+    }
+  });
+  return cnt;
+}
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
@@ -396,9 +421,9 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     const creator = String(rec.FeedbackCreatorName || '').trim();
     if (creator === '') return false;
     
-    // 6. Referans listesinde proje olmalı ve filtreye uymalı
-    const ref = getRefInfo(client);
-    if (!ref || !groupFilter(ref)) return false;
+    // 6. Referans listesinde bu gruba ait satır olmalı (DM/ML ayrımı: HP gibi çift satırlı projeler doğru ayrılır)
+    const ref = getRefInfoForGroup(client, groupFilter);
+    if (!ref) return false;
     
     // 7. Varsa ek filtre (örneğin ML için pozisyon kontrolü)
     if (extraFilter && !extraFilter(rec)) return false;
@@ -417,27 +442,40 @@ function shuffle(arr) {
 function calculateDistributionForGroup(gk, week, groupDef) {
   const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, groupDef.extraFilter || null);
   if (!available.length) return [];
+
   if (gk === 'ML') {
-    const hpRecords = available.filter(r => r.client_name.toLowerCase() === 'hewlett packard inc');
-    const nonHp = available.filter(r => r.client_name.toLowerCase() !== 'hewlett packard inc');
+    const HP_NAME = 'hewlett packard inc';
+    const hpRecords = available.filter(r => String(r.client_name || '').toLowerCase().trim() === HP_NAME);
+    const nonHp    = available.filter(r => String(r.client_name || '').toLowerCase().trim() !== HP_NAME);
     const selected = [];
-    const cumulative = getCumulativeCountsForGroup(gk, week);
+
+    // ── HP özel dağıtım: dil grubuna göre (HP_Dutch / HP_German / HP_Turkish) ──
+    const hpCumulative = getHPCumulativeForML(week);
     for (const [hpKey, rule] of Object.entries(HP_RULES)) {
       const subset = hpRecords.filter(rule.checker);
       if (!subset.length) continue;
-      const done = cumulative.get(hpKey) || 0;
+      const done = hpCumulative[hpKey] || 0;
       const need = Math.min(Math.min(WEEK_TARGET[week], 10 - done), subset.length);
       if (need > 0) selected.push(...shuffle(subset).slice(0, need));
     }
+
+    // ── HP dışı ML projeleri: DM gibi kişi-proje bazlı (FeedbackCreatorName|client_name) ──
+    const cumulativeNonHp = getCumulativeCountsForGroup(gk, week);
     const categoryMap = new Map();
-    nonHp.forEach(rec => { if (!categoryMap.has(rec.client_name)) categoryMap.set(rec.client_name, []); categoryMap.get(rec.client_name).push(rec); });
-    for (const [proj, records] of categoryMap) {
-      const done = cumulative.get(proj) || 0;
+    nonHp.forEach(rec => {
+      const key = `${rec.FeedbackCreatorName}|${rec.client_name}`;
+      if (!categoryMap.has(key)) categoryMap.set(key, []);
+      categoryMap.get(key).push(rec);
+    });
+    for (const [key, records] of categoryMap) {
+      const done = cumulativeNonHp.get(key) || 0;
       const need = Math.min(Math.min(WEEK_TARGET[week], 10 - done), records.length);
       if (need > 0) selected.push(...shuffle(records).slice(0, need));
     }
     return selected;
   }
+
+  // ── DM ve DONUSUM: kişi-proje bazlı dağıtım ──
   const categoryMap = new Map();
   available.forEach(rec => {
     const key = `${rec.FeedbackCreatorName}|${rec.client_name}`;
@@ -454,13 +492,29 @@ function calculateDistributionForGroup(gk, week, groupDef) {
   return selected;
 }
 async function saveGroupDistribution(gk, week, selected) {
-  const assignments = selected.map(rec => ({
-    FeedbackCreatorName: rec.FeedbackCreatorName,
-    client_name: rec.client_name,
-    emp_monitor_ident: rec.emp_monitor_ident,
-    dil: getRefInfo(rec.client_name)?.Dil || '',
-    dagitimTuru: getRefInfo(rec.client_name)?.['Dağıtım Türü'] || ''
-  }));
+  const HP_NAME = 'hewlett packard inc';
+  const groupFilter = groups[gk]?.filter;
+  const assignments = selected.map(rec => {
+    // Gruba özgü referans satırını bul (HP'nin DM vs ML satırı farklı dil/dağıtım türü taşır)
+    const ref = groupFilter
+      ? getRefInfoForGroup(String(rec.client_name).trim(), groupFilter)
+      : getRefInfo(rec.client_name);
+    let hpGroup = '';
+    if (gk === 'ML' && String(rec.client_name || '').toLowerCase().trim() === HP_NAME) {
+      const name = String(rec.FeedbackCreatorName || '').trim();
+      if (name === 'Suleyman Aslan') hpGroup = 'HP_Dutch';
+      else if (name === 'Halil Emre Ozdemir') hpGroup = 'HP_German';
+      else hpGroup = 'HP_Turkish';
+    }
+    return {
+      FeedbackCreatorName: rec.FeedbackCreatorName,
+      client_name: rec.client_name,
+      emp_monitor_ident: rec.emp_monitor_ident,
+      dil: ref?.Dil || '',
+      dagitimTuru: ref?.['Dağıtım Türü'] || '',
+      hpGroup: hpGroup || undefined
+    };
+  });
   const newEntry = { week, date: new Date().toISOString(), distributedIdents: selected.map(r => String(r.emp_monitor_ident)), assignments };
   const idx = distributionHistory[gk].findIndex(h => h.week === week);
   if (idx >= 0) distributionHistory[gk][idx] = newEntry;
@@ -471,6 +525,7 @@ async function exportGroupExcel(gk, selected) {
   const group = groups[gk];
   if (!selected.length) return;
   const workbook = XLSX.utils.book_new();
+  const groupFilter = group.filter;
   const addSheet = (sheetName, rows) => {
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows.map(r => ({ ...r, Durum: '' }))), sheetName.substring(0, 31));
   };
@@ -487,7 +542,10 @@ async function exportGroupExcel(gk, selected) {
     });
     for (const [proj, rows] of grouped) addSheet(proj, rows);
   } else {
-    const ref = selected.length ? getRefInfo(selected[0].client_name) : null;
+    // DONUSUM: sheet adı için gruba özgü referans satırını kullan
+    const ref = selected.length
+      ? getRefInfoForGroup(String(selected[0].client_name).trim(), groupFilter) || getRefInfo(selected[0].client_name)
+      : null;
     const sheetName = ref?.['Dağıtım Türü'] ? String(ref['Dağıtım Türü']).trim() : '1. Değerlendirici';
     addSheet(sheetName, selected.map(rec => ({
       'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
@@ -507,7 +565,7 @@ async function previewAllGroups() {
   for (const [gk, grp] of Object.entries(groups)) {
     const selected = calculateDistributionForGroup(gk, week, grp);
     currentPreview[gk] = selected;
-    allSelected.push(...selected.map(s => ({ ...s, grup: grp.name })));
+    allSelected.push(...selected.map(s => ({ ...s, grup: grp.name, _group: gk })));
   }
   const previewDiv = document.getElementById('previewAreaStep2');
   const previewBody = document.getElementById('previewBodyStep2');
@@ -517,14 +575,25 @@ async function previewAllGroups() {
     document.getElementById('confirmBtnStep2').disabled = true;
     return;
   }
-  previewBody.innerHTML = allSelected.map(rec => `
+  previewBody.innerHTML = allSelected.map(rec => {
+    let grupLabel = escapeHtml(rec.grup || '');
+    // ML HP kayıtları için dil grubunu etiketle
+    if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().trim() === 'hewlett packard inc') {
+      const name = String(rec.FeedbackCreatorName || '').trim();
+      let lang = 'HP-Turkish';
+      if (name === 'Suleyman Aslan') lang = 'HP-Dutch';
+      else if (name === 'Halil Emre Ozdemir') lang = 'HP-German';
+      grupLabel = `ML / <em>${lang}</em>`;
+    }
+    return `
     <tr>
-      <td>${escapeHtml(rec.grup)}</td>
+      <td>${grupLabel}</td>
       <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
       <td>${escapeHtml(rec.client_name || '')}</td>
       <td>${escapeHtml(String(rec.emp_monitor_ident || ''))}</td>
       <td><a href="${buildMonitorLink(rec.emp_monitor_ident, 'CHECKLIST')}" target="_blank" class="link-btn">🔗 Link</a></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   document.getElementById('confirmBtnStep2').disabled = false;
 }
 async function confirmAndExportAll() {
@@ -864,6 +933,7 @@ function exportReportS3() {
           'Hafta': entry.week,
           'Dağıtım Tarihi': entry.date ? new Date(entry.date).toLocaleString('tr-TR') : '',
           'Değerlendirici (FeedbackCreatorName)': ass.FeedbackCreatorName,
+          'HP Dil Grubu': ass.hpGroup || '',
           'Proje (client_name)': ass.client_name,
           'Monitoring ID (emp_monitor_ident)': ass.emp_monitor_ident,
           'Dil': ass.dil,
