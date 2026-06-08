@@ -165,7 +165,7 @@ function renderErrorTable() {
     thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
   }
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td><tr>`;
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
@@ -186,7 +186,7 @@ function renderErrorTable() {
           <a href="${normalLink}" target="_blank" class="link-btn" data-row-index="${err.rowIndex}">🔗 Link</a>
           <a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}">🗑️ Sil</a>
          </td>
-      </tr>
+       </tr>
     `;
   }).join('');
   document.querySelectorAll('.link-btn, .delete-link-btn').forEach(btn => {
@@ -218,7 +218,7 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   fileInputStep1.value = '';
   statsContainerStep1.style.display = 'none';
   errorsSectionStep1.style.display  = 'none';
-  errorTableBodyStep1.innerHTML = `<td><td colspan="5" class="empty-state">Henüz veri yok</td></tr>`;
+  errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>`;
   totalCountSpanStep1.textContent = '0';
   errorCountSpanStep1.textContent = '0';
   validCountSpanStep1.textContent = '0';
@@ -325,7 +325,7 @@ function viewHistoryModal() {
     title.textContent = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
     content.appendChild(title);
     const table = document.createElement('table'); table.style.cssText = 'width:100%;border-collapse:collapse;';
-    table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
+    table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></thead><tbody></tbody>';
     const tbody = table.querySelector('tbody');
     const hist = distributionHistory[g] || [];
     if (!hist.length) { tbody.innerHTML = '<tr><td colspan="4">Geçmiş yok</td></tr>'; }
@@ -394,13 +394,13 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// FINAL: getAvailableRecordsForGroup - düzeltilmiş versiyon
+// FINAL: getAvailableRecordsForGroup - CheckListCreated tüm sayısal değerler kabul edilir (0,1,2,...)
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
-    // CheckListCreated > 0 olmalı (1,2,3,...)
+    // CheckListCreated: sadece sayısal olmayanları eler (0,1,2,... hepsi geçerli)
     const checkVal = Number(rec.CheckListCreated);
-    if (isNaN(checkVal) || checkVal <= 0) return false;
+    if (isNaN(checkVal)) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
@@ -705,7 +705,7 @@ async function previewAllGroups() {
       else grupLabel = 'HP_Turkish';
     }
     return `
-    <tr>
+    </tr>
       <td>${grupLabel}</td>
       <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
       <td>${escapeHtml(rec.client_name || '')}</td>
@@ -778,7 +778,7 @@ async function loadMainFileStep2(file) {
       };
     });
     
-    statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt (tüm CheckListCreated değerleri) yüklendi.`;
+    statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt yüklendi (CheckListCreated: 0,1,2,...).`;
     statusEl.style.color = 'var(--accent)';
     
     if (refDataStep2.length) checkMissingProjects();
