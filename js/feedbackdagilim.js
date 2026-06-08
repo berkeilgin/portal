@@ -7,14 +7,14 @@ function showLoader(step, show) {
   const el = document.getElementById(`loader${step}`);
   if (el) el.classList.toggle('visible', show);
 }
-// Step1 için özel link fonksiyonu (checklist.pl)
+// Step1 için link (checklist.pl)
 function buildMonitorLinkStep1(ident, action = 'OPTION') {
   if (!ident) return '#';
   const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
   const frmOption = action === 'DELETE' ? 'DELETE' : 'OPTION';
   return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=${frmOption}`;
 }
-// Step2 için employee/monitor.pl linki (emp_monitor_ident ve employee_ident ile)
+// Step2 için link (employee/monitor.pl)
 function buildMonitorLinkStep2(empMonitorIdent, employeeIdent) {
   if (!empMonitorIdent) return '#';
   const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/employee/monitor.pl';
@@ -172,7 +172,7 @@ function renderErrorTable() {
     thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
   }
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `</table><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
@@ -369,7 +369,6 @@ function clearAllHistory() {
   }
 }
 function getDistributedIdentsForGroup(gk, week) {
-  // Sadece geçmişte dağıtılmış identleri döndür (checked dosyasına bakmaz, ayrıca kontrol edilecek)
   const set = new Set();
   distributionHistory[gk].forEach(e => { if (e.week < week && e.distributedIdents) e.distributedIdents.forEach(id => set.add(id)); });
   return set;
@@ -402,21 +401,16 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// getAvailableRecordsForGroup - 4. dosya (checkedMonitoringIds) kontrolü eklendi
+// getAvailableRecordsForGroup - 4. dosya kontrolü eklendi
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
-  const distributed = getDistributedIdentsForGroup(gk, week); // geçmişte dağıtılanlar
+  const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
-    // CheckListCreated sayısal olmalı (0 ve pozitif)
     const checkVal = Number(rec.CheckListCreated);
     if (isNaN(checkVal)) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
-    
-    // Silinenler kontrolü
     if (deletedIdentsStep2.has(ident)) return false;
-    
-    // Geçmişte dağıtılmış mı? Eğer dağıtılmışsa ve ayrıca checked dosyasında varsa atla, yoksa (checked yoksa) dağıtılabilir.
     if (distributed.has(ident) && checkedMonitoringIds.has(ident)) return false;
     
     const client = String(rec.client_name || '').trim();
@@ -911,7 +905,6 @@ function addFourthFileUploader() {
   if (!step2Div) return;
   const uploadGrid = step2Div.querySelector('.upload-grid');
   if (!uploadGrid) return;
-  // Eğer zaten eklenmişse tekrar ekleme
   if (document.getElementById('dropCheckedStep2')) return;
   
   const newCard = document.createElement('div');
@@ -1007,6 +1000,7 @@ function findColumnNameStep3(columns, possibleNames) {
   }
   return null;
 }
+// Düzeltilmiş loadMainExcelS3 - sadece Monitoring ID ve Ident okur
 function loadMainExcelS3(file) {
   if (!file) return;
   showLoaderStep3(true);
@@ -1023,7 +1017,7 @@ function loadMainExcelS3(file) {
       if (!monCol) throw new Error(`Monitoring ID sütunu yok. Mevcut: ${cols.join(', ')}`);
       if (!identCol) throw new Error(`Ident sütunu yok`);
       
-      // Sadece Monitoring ID ve Ident okunur, client_name/fb alınmaz
+      // Sadece Monitoring ID ve Ident okunur
       reportMainData = rows.map(r => ({
         monitoringId: String(r[monCol]).trim(),
         ident: String(r[identCol]).trim()
@@ -1038,13 +1032,6 @@ function loadMainExcelS3(file) {
     } finally {
       showLoaderStep3(false);
     }
-  };
-  reader.onerror = () => {
-    mainStatusS3.innerHTML = '❌ Dosya okunamadı';
-    showLoaderStep3(false);
-  };
-  reader.readAsArrayBuffer(file);
-}
   };
   reader.onerror = () => {
     mainStatusS3.innerHTML = '❌ Dosya okunamadı';
@@ -1085,23 +1072,36 @@ function buildDistributedMap() {
     for (const entry of entries || []) {
       for (const ass of entry.assignments || []) {
         const ident = String(ass.emp_monitor_ident || '').trim();
-        if (ident) map.set(ident, { client_name: ass.client_name || '', feedbackCreatorName: ass.FeedbackCreatorName || '', group: g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g });
+        if (ident) {
+          map.set(ident, {
+            client_name: ass.client_name || '',
+            feedbackCreatorName: ass.FeedbackCreatorName || '',
+            group: g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g
+          });
+        }
       }
     }
   }
   return map;
 }
+// generateReportS3 aynen kalır (sadece enriched oluşturma kısmı map'ten alır)
 function generateReportS3() {
   if (!reportMainData.length) {
     alert('Önce görüşme listesini yükleyin.');
     return;
   }
   const distMap = buildDistributedMap();
-  const enriched = reportMainData.map(rec => ({
-    ...rec,
-    isDistributed: distMap.has(rec.monitoringId),
-    ...(distMap.get(rec.monitoringId) || { client_name: '', feedbackCreatorName: '' })
-  }));
+  const enriched = reportMainData.map(rec => {
+    const distInfo = distMap.get(rec.monitoringId) || { client_name: '', feedbackCreatorName: '' };
+    return {
+      monitoringId: rec.monitoringId,
+      ident: rec.ident,
+      client_name: distInfo.client_name,
+      feedbackCreatorName: distInfo.feedbackCreatorName,
+      isDistributed: !!distInfo.client_name
+    };
+  });
+  
   if (currentReportView === 'proje') {
     const projMap = new Map();
     enriched.forEach(rec => {
@@ -1150,7 +1150,7 @@ function renderReportTableS3(headers, rows) {
   reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
   reportBodyS3.innerHTML = rows.length
     ? rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')
-    : `<tr><td colspan="${headers.length}">Veri yok</td></tr>`;
+    : `<tr><td colspan="${headers.length}">Veri yok</td></table>`;
 }
 function exportReportS3() {
   if (!reportMainData.length) {
@@ -1159,7 +1159,16 @@ function exportReportS3() {
   }
   const wb = XLSX.utils.book_new();
   const distMap = buildDistributedMap();
-  const enriched = reportMainData.map(rec => ({ ...rec, isDistributed: distMap.has(rec.monitoringId), ...(distMap.get(rec.monitoringId) || { client_name: '', feedbackCreatorName: '' }) }));
+  const enriched = reportMainData.map(rec => {
+    const distInfo = distMap.get(rec.monitoringId) || { client_name: '', feedbackCreatorName: '' };
+    return {
+      monitoringId: rec.monitoringId,
+      ident: rec.ident,
+      client_name: distInfo.client_name,
+      feedbackCreatorName: distInfo.feedbackCreatorName,
+      isDistributed: !!distInfo.client_name
+    };
+  });
   const projMap = new Map();
   enriched.forEach(rec => { if (!rec.client_name) return; if (!projMap.has(rec.client_name)) projMap.set(rec.client_name, { total: 0, dist: 0 }); const s = projMap.get(rec.client_name); s.total++; if (rec.isDistributed) s.dist++; });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(projMap.entries()).map(([p, s]) => ({ 'Proje': p, 'Dağıtılan': s.dist, 'Bekleyen': s.total - s.dist, 'Toplam': s.total }))), 'Proje_Bazlı');
@@ -1191,9 +1200,7 @@ function exportReportS3() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawDist), 'RAW_Dağıtım_Detay');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportMainData.map(r => ({
     'Monitoring ID': r.monitoringId,
-    'Ident': r.ident,
-    'Proje': r.client_name,
-    'Değerlendirici': r.feedbackCreatorName
+    'Ident': r.ident
   }))), 'RAW_Görüşme_Listesi');
   XLSX.writeFile(wb, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
 }
