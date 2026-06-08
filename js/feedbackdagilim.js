@@ -185,7 +185,7 @@ function renderErrorTable() {
         <td>
           <a href="${normalLink}" target="_blank" class="link-btn" data-row-index="${err.rowIndex}">🔗 Link</a>
           <a href="${deleteLink}" target="_blank" class="delete-link-btn" data-row-index="${err.rowIndex}">🗑️ Sil</a>
-        </td>
+         </td>
       </tr>
     `;
   }).join('');
@@ -218,7 +218,7 @@ document.getElementById('resetStep1Btn').addEventListener('click', () => {
   fileInputStep1.value = '';
   statsContainerStep1.style.display = 'none';
   errorsSectionStep1.style.display  = 'none';
-  errorTableBodyStep1.innerHTML = `<tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr>`;
+  errorTableBodyStep1.innerHTML = `<td><td colspan="5" class="empty-state">Henüz veri yok</td></tr>`;
   totalCountSpanStep1.textContent = '0';
   errorCountSpanStep1.textContent = '0';
   validCountSpanStep1.textContent = '0';
@@ -325,7 +325,7 @@ function viewHistoryModal() {
     title.textContent = g === 'DONUSUM' ? 'Dönüşüm Projeleri' : g;
     content.appendChild(title);
     const table = document.createElement('table'); table.style.cssText = 'width:100%;border-collapse:collapse;';
-    table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></thead><tbody></tbody>';
+    table.innerHTML = '<thead><tr><th>Hafta</th><th>Tarih</th><th>Sayı</th><th>Detay</th></tr></thead><tbody></tbody>';
     const tbody = table.querySelector('tbody');
     const hist = distributionHistory[g] || [];
     if (!hist.length) { tbody.innerHTML = '<tr><td colspan="4">Geçmiş yok</td></tr>'; }
@@ -394,13 +394,13 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// DEĞİŞTİRİLEN FONKSİYON: CheckListCreated 1,2,3 ve Target kuralı eklendi
+// FINAL: getAvailableRecordsForGroup - düzeltilmiş versiyon
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
-    // 1. CheckListCreated kontrolü: sadece 1,2,3 (sayısal veya string) kabul edilsin
+    // CheckListCreated > 0 olmalı (1,2,3,...)
     const checkVal = Number(rec.CheckListCreated);
-    if (isNaN(checkVal) || checkVal < 1 || checkVal > 3) return false;
+    if (isNaN(checkVal) || checkVal <= 0) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
@@ -416,15 +416,18 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     
     if (extraFilter && !extraFilter(rec)) return false;
     
-    // 2. YENİ KURAL: DM, ML, DONUSUM için MonitorScore >= Target ve CriticalCount == 0 ise atla
+    // Target kuralı: sadece target > 0 ise uygula
     if (gk === 'DM' || gk === 'ML' || gk === 'DONUSUM') {
-      if (ref.Target !== undefined && ref.Target !== '') {
-        const target = Number(ref.Target);
-        const monitorScore = rec.MonitorScore;
-        const criticalCount = rec.CriticalCount;
-        if (!isNaN(target) && monitorScore !== null && criticalCount !== null) {
-          if (monitorScore >= target && criticalCount === 0) {
-            return false;
+      const targetRaw = ref.Target;
+      if (targetRaw !== undefined && targetRaw !== '' && !isNaN(Number(targetRaw))) {
+        const target = Number(targetRaw);
+        if (target > 0) {
+          const monitorScore = rec.MonitorScore;
+          const criticalCount = rec.CriticalCount;
+          if (monitorScore !== null && criticalCount !== null && !isNaN(monitorScore) && !isNaN(criticalCount)) {
+            if (monitorScore >= target && criticalCount === 0) {
+              return false;
+            }
           }
         }
       }
@@ -598,7 +601,7 @@ function checkMissingProjects() {
   }
 }
 
-// YENİ: Önizleme verilerini Excel'e aktar
+// Önizleme verilerini Excel'e aktar
 function exportPreviewToExcel() {
   const allSelected = [];
   for (const [gk, grp] of Object.entries(groups)) {
@@ -634,39 +637,32 @@ function exportPreviewToExcel() {
   XLSX.writeFile(workbook, `Feedback_Preview_${formatDateForFilename()}.xlsx`);
 }
 
-// YENİ: Tüm Step2 verilerini temizle (yüklenen dosyalar, state, önizleme)
+// Tüm Step2 verilerini temizle
 function clearAllStep2Data() {
   if (confirm('Tüm yüklenen dosyalar ve hesaplanan dağıtım verileri silinecek. Devam etmek istiyor musunuz?')) {
-    // Veri yapılarını sıfırla
     mainDataStep2 = [];
     deletedIdentsStep2.clear();
     refDataStep2 = [];
     currentPreview = { DM: [], ML: [], DONUSUM: [] };
     currentWeekStep2 = 1;
-    // Dosya inputlarını temizle
     const mainInput = document.getElementById('mainFileInputStep2');
     const deletedInput = document.getElementById('deletedFileInputStep2');
     const refInput = document.getElementById('refFileInputStep2');
     if (mainInput) mainInput.value = '';
     if (deletedInput) deletedInput.value = '';
     if (refInput) refInput.value = '';
-    // Status mesajlarını sıfırla
     const mainStatus = document.getElementById('mainStatusStep2');
     const deletedStatus = document.getElementById('deletedStatusStep2');
     const refStatus = document.getElementById('refStatusStep2');
     if (mainStatus) { mainStatus.innerHTML = 'Henüz yüklenmedi'; mainStatus.style.color = ''; }
     if (deletedStatus) { deletedStatus.innerHTML = 'Henüz yüklenmedi'; deletedStatus.style.color = ''; }
     if (refStatus) { refStatus.innerHTML = 'Henüz yüklenmedi'; refStatus.style.color = ''; }
-    // Önizleme alanını gizle
     const previewDiv = document.getElementById('previewAreaStep2');
     if (previewDiv) previewDiv.style.display = 'none';
-    // Confirm butonunu devre dışı bırak
     const confirmBtn = document.getElementById('confirmBtnStep2');
     if (confirmBtn) confirmBtn.disabled = true;
-    // Uyarı div'ini gizle
     const warningDiv = document.getElementById('missingProjectsWarning');
     if (warningDiv) warningDiv.style.display = 'none';
-    // Hafta seçiciyi varsayılana getir (isteğe bağlı)
     const weekSelect = document.getElementById('weekSelectStep2');
     if (weekSelect) weekSelect.value = '1';
     alert('Tüm veriler temizlendi.');
@@ -742,7 +738,7 @@ async function confirmAndExportAll() {
     showLoader('Step2', false);
   }
 }
-// DEĞİŞTİRİLEN: MonitorScore ve CriticalCount okuması eklendi
+// MonitorScore ve CriticalCount okuma
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   const statusEl = document.getElementById('mainStatusStep2');
@@ -855,11 +851,10 @@ setupDrop('dropMainStep2', 'mainFileInputStep2', loadMainFileStep2);
 setupDrop('dropDeletedStep2', 'deletedFileInputStep2', loadDeletedFileStep2);
 setupDrop('dropRefStep2', 'refFileInputStep2', loadRefFileStep2);
 
-// YENİ BUTONLARI EKLE
+// Yeni butonları ekle
 function addExtraButtonsStep2() {
   const buttonContainer = document.getElementById('calculateBtnStep2')?.parentNode;
   if (!buttonContainer) return;
-  // "Önizlemeyi Dışa Aktar" butonu
   if (!document.getElementById('exportPreviewBtnStep2')) {
     const exportPreviewBtn = document.createElement('button');
     exportPreviewBtn.id = 'exportPreviewBtnStep2';
@@ -869,7 +864,6 @@ function addExtraButtonsStep2() {
     exportPreviewBtn.addEventListener('click', exportPreviewToExcel);
     buttonContainer.insertBefore(exportPreviewBtn, document.getElementById('confirmBtnStep2'));
   }
-  // "Tüm Verileri Temizle" butonu
   if (!document.getElementById('clearAllStep2Btn')) {
     const clearAllBtn = document.createElement('button');
     clearAllBtn.id = 'clearAllStep2Btn';
@@ -881,7 +875,6 @@ function addExtraButtonsStep2() {
   }
 }
 
-// Step2 butonlarını eklemek için DOMContentLoaded'de veya hemen çalıştır
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', addExtraButtonsStep2);
 } else {
