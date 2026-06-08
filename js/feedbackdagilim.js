@@ -1020,22 +1020,16 @@ function loadMainExcelS3(file) {
       const cols = Object.keys(rows[0]);
       const monCol = findColumnNameStep3(cols, ['Monitoring ID', 'monitoring id', 'MonitoringId']);
       const identCol = findColumnNameStep3(cols, ['Ident', 'ident', 'ID']);
-      const clientCol = findColumnNameStep3(cols, ['client_name', 'client name']);
-      const fbCol = findColumnNameStep3(cols, ['FeedbackCreatorName', 'feedbackcreatorname']);
-      const checkCol = cols.find(c => c.toLowerCase().includes('checklistcreated'));
       if (!monCol) throw new Error(`Monitoring ID sütunu yok. Mevcut: ${cols.join(', ')}`);
       if (!identCol) throw new Error(`Ident sütunu yok`);
-      if (!clientCol) throw new Error(`client_name sütunu yok`);
-      if (!fbCol) throw new Error(`FeedbackCreatorName sütunu yok`);
-      reportMainData = rows
-        .filter(r => { if (!checkCol) return true; const v = r[checkCol]; return v === 0 || v === '0'; })
-        .map(r => ({
-          monitoringId: String(r[monCol]).trim(),
-          ident: String(r[identCol]).trim(),
-          client_name: String(r[clientCol]).trim(),
-          feedbackCreatorName: String(r[fbCol]).trim()
-        }));
-      mainStatusS3.innerHTML = `✅ ${reportMainData.length} kayıt (CheckListCreated=0) yüklendi.`;
+      
+      // Sadece Monitoring ID ve Ident okunur, client_name/fb alınmaz
+      reportMainData = rows.map(r => ({
+        monitoringId: String(r[monCol]).trim(),
+        ident: String(r[identCol]).trim()
+      }));
+      
+      mainStatusS3.innerHTML = `✅ ${reportMainData.length} kayıt (Monitoring ID+Ident) yüklendi.`;
       mainStatusS3.style.color = 'var(--accent)';
       if (reportHistory3.DM.length || reportHistory3.ML.length || reportHistory3.DONUSUM.length) generateReportS3();
     } catch (err) {
@@ -1044,6 +1038,13 @@ function loadMainExcelS3(file) {
     } finally {
       showLoaderStep3(false);
     }
+  };
+  reader.onerror = () => {
+    mainStatusS3.innerHTML = '❌ Dosya okunamadı';
+    showLoaderStep3(false);
+  };
+  reader.readAsArrayBuffer(file);
+}
   };
   reader.onerror = () => {
     mainStatusS3.innerHTML = '❌ Dosya okunamadı';
