@@ -8,17 +8,10 @@ function showLoader(step, show) {
   if (el) el.classList.toggle('visible', show);
 }
 // YENİ LİNK FONKSİYONU
-function buildDetailLink(empMonitorIdent) {
+function buildMonitorLink(empMonitorIdent, employeeIdent) {
   if (!empMonitorIdent) return '#';
-  const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/report/form.pl';
-  return `${baseUrl}?frmTarget=DETAIL&emp_form_ident=${encodeURIComponent(empMonitorIdent)}&form_type_ident=101&frmOption=DEL_FORM_COMMENTS`;
-}
-// Eski link fonksiyonu (silme/checklist için kullanılıyorsa duruyor, ama önizleme ve exportta yeni link kullanılacak)
-function buildMonitorLink(ident, action = 'CHECKLIST') {
-  if (!ident) return '#';
-  const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
-  const frmOption = action === 'DELETE' ? 'DELETE' : 'OPTION';
-  return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=${frmOption}`;
+  const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/employee/monitor.pl';
+  return `${baseUrl}?emp_monitor_ident=${encodeURIComponent(empMonitorIdent)}&frmTarget=MONITOR&employee_ident=${encodeURIComponent(employeeIdent || '')}&frmOption=MAIN`;
 }
 function formatDateForFilename() {
   const d = new Date();
@@ -37,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ==================== STEP 1 ====================
+// ==================== STEP 1 (Aynı) ====================
 let currentDataStep1 = [], errorRowsStep1 = [];
 let markedForDeletion = new Set();
 let clickedRows = new Set();
@@ -172,12 +165,15 @@ function renderErrorTable() {
     thead.innerHTML = `<tr><th># Satır</th><th>Monitoring ID</th><th>Hata Nedeni</th><th>İşlemler</th></tr>`;
   }
   if (!errorRowsStep1.length) {
-    errorTableBodyStep1.innerHTML = `<tr><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
+    errorTableBodyStep1.innerHTML = `<td><td colspan="4" class="empty-state">✅ Tüm ID'ler geçerli ve benzersiz!</td></tr>`;
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
-    const normalLink = buildMonitorLink(err.identRaw, 'CHECKLIST');
-    const deleteLink = buildMonitorLink(err.identRaw, 'DELETE');
+    const ident = err.identRaw;
+    const empMonitorIdent = err.monitoringIdRaw; // Monitoring ID aslında emp_monitor_ident mi? Step1'de Monitoring ID kullanılıyor, ancak link için employee_ident de gerekli. Şimdilik eski link fonksiyonu kullanılsın, Step1'de değişiklik yok.
+    // Step1'de link için eski fonksiyonu kullan (employee_ident yok)
+    const normalLink = buildMonitorLink(ident, ident); // Geçici: her ikisine de ident yazıyoruz
+    const deleteLink = buildMonitorLink(ident, ident);
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
       rowClass = 'clicked-row';
@@ -268,6 +264,14 @@ let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
 let currentWeekStep2 = 1;
 let currentPreview = { DM: [], ML: [], DONUSUM: [] };
+
+// HP projesini referans listesinden bulma
+function isHPProject(projeAdi) {
+  if (!projeAdi) return false;
+  const proje = String(projeAdi).trim().toLowerCase();
+  // Referans listesinde "Proje" sütununda "hewlett packard inc" içeren var mı?
+  return refDataStep2.some(ref => String(ref.Proje).trim().toLowerCase() === proje);
+}
 
 const HP_RULES = {
   HP_Dutch:   { checker: rec => rec.FeedbackCreatorName === 'Suleyman Aslan' },
@@ -387,11 +391,12 @@ function getCumulativeCountsForGroup(gk, week) {
 }
 function getHPCumulativeForML(week) {
   const cnt = { HP_Dutch: 0, HP_German: 0, HP_Turkish: 0 };
-  const hpLower = 'hewlett packard inc';
+  const hpProjectName = getHPProjectName(); // referans listesinden HP proje adını al
+  if (!hpProjectName) return cnt;
   (distributionHistory['ML'] || []).forEach(e => {
     if (e.week < week && e.assignments) {
       e.assignments.forEach(a => {
-        if (String(a.client_name || '').toLowerCase().trim() !== hpLower) return;
+        if (String(a.client_name || '').trim().toLowerCase() !== hpProjectName.toLowerCase()) return;
         const name = String(a.FeedbackCreatorName || '').trim();
         if (name === 'Suleyman Aslan') cnt.HP_Dutch++;
         else if (name === 'Halil Emre Ozdemir') cnt.HP_German++;
@@ -401,15 +406,28 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// DÜZELTİLMİŞ: CheckListCreated tüm sayısal değerleri kabul et (0,1,2,...)
+function getHPProjectName() {
+  const hpRef = refDataStep2.find(r => String(r.Proje).trim().toLowerCase().includes('hewlett packard'));
+  return hpRef ? String(hpRef.Proje).trim() : 'hewlett packard inc';
+}
+
+// YENİ getAvailableRecordsForGroup: duplicate emp_monitor_ident kontrolü, CheckListCreated boş/null elenir, Target kuralı
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
+  const seenIdents = new Set(); // duplicate kontrolü için
+  
   return mainDataStep2.filter(rec => {
-    // CheckListCreated sayısal olmalı (0,1,2,3,... hepsi geçerli)
+    // CheckListCreated: null, boş, sayısal değilse elenir (0 dahil edilir)
+    if (rec.CheckListCreated == null || rec.CheckListCreated === '') return false;
     if (isNaN(Number(rec.CheckListCreated))) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
+    
+    // Duplicate emp_monitor_ident: aynı ident daha önce geçtiyse bu kaydı atla
+    if (seenIdents.has(ident)) return false;
+    seenIdents.add(ident);
+    
     if (deletedIdentsStep2.has(ident) || distributed.has(ident)) return false;
     
     const client = String(rec.client_name || '').trim();
@@ -422,7 +440,7 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     
     if (extraFilter && !extraFilter(rec)) return false;
     
-    // Target kuralı: sadece target > 0 ise uygula
+    // Target kuralı (sadece target > 0 ise)
     if (gk === 'DM' || gk === 'ML' || gk === 'DONUSUM') {
       const targetRaw = ref.Target;
       if (targetRaw !== undefined && targetRaw !== '' && !isNaN(Number(targetRaw))) {
@@ -442,6 +460,7 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     return true;
   });
 }
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -455,9 +474,9 @@ function calculateDistributionForGroup(gk, week, groupDef) {
   if (!available.length) return [];
 
   if (gk === 'ML') {
-    const HP_NAME = 'hewlett packard inc';
-    const hpRecords = available.filter(r => String(r.client_name || '').toLowerCase().trim() === HP_NAME);
-    const nonHp    = available.filter(r => String(r.client_name || '').toLowerCase().trim() !== HP_NAME);
+    const hpProjectName = getHPProjectName();
+    const hpRecords = available.filter(r => String(r.client_name || '').trim().toLowerCase() === hpProjectName.toLowerCase());
+    const nonHp    = available.filter(r => String(r.client_name || '').trim().toLowerCase() !== hpProjectName.toLowerCase());
     const selected = [];
 
     const hpCumulative = getHPCumulativeForML(week);
@@ -500,14 +519,14 @@ function calculateDistributionForGroup(gk, week, groupDef) {
   return selected;
 }
 async function saveGroupDistribution(gk, week, selected) {
-  const HP_NAME = 'hewlett packard inc';
+  const hpProjectName = getHPProjectName();
   const groupFilter = groups[gk]?.filter;
   const assignments = selected.map(rec => {
     const ref = groupFilter
       ? getRefInfoForGroup(String(rec.client_name).trim(), groupFilter)
       : getRefInfo(rec.client_name);
     let hpGroup = '';
-    if (gk === 'ML' && String(rec.client_name || '').toLowerCase().trim() === HP_NAME) {
+    if (gk === 'ML' && String(rec.client_name || '').trim().toLowerCase() === hpProjectName.toLowerCase()) {
       const name = String(rec.FeedbackCreatorName || '').trim();
       if (name === 'Suleyman Aslan') hpGroup = 'HP_Dutch';
       else if (name === 'Halil Emre Ozdemir') hpGroup = 'HP_German';
@@ -517,6 +536,7 @@ async function saveGroupDistribution(gk, week, selected) {
       FeedbackCreatorName: rec.FeedbackCreatorName,
       client_name: rec.client_name,
       emp_monitor_ident: rec.emp_monitor_ident,
+      employee_ident: rec.employee_ident || '', // employee_ident varsa ekle
       dil: ref?.Dil || '',
       dagitimTuru: ref?.['Dağıtım Türü'] || '',
       hpGroup: hpGroup || undefined
@@ -528,7 +548,7 @@ async function saveGroupDistribution(gk, week, selected) {
   else distributionHistory[gk].push(newEntry);
   saveHistoryForGroup(gk);
 }
-// DÜZELTİLMİŞ EXPORT: HP grupları için sheet adları, linkler yeni formatta
+// YENİ exportGroupExcel: HP alt grupları için ayrı sheetler, link yeni format
 async function exportGroupExcel(gk, selected) {
   const group = groups[gk];
   if (!selected.length) return;
@@ -542,10 +562,12 @@ async function exportGroupExcel(gk, selected) {
   
   if (group.sheetPerProject) {
     const grouped = new Map();
+    const hpProjectName = getHPProjectName();
+    
     selected.forEach(rec => {
       let key = rec.client_name;
-      // ML grubu ve HP projesi için sheet adını HP_Dutch, HP_German, HP_Turkish yap
-      if (gk === 'ML' && String(rec.client_name || '').toLowerCase().trim() === 'hewlett packard inc') {
+      // ML grubu ve HP projesi ise alt gruba göre key belirle
+      if (gk === 'ML' && String(rec.client_name || '').trim().toLowerCase() === hpProjectName.toLowerCase()) {
         const name = String(rec.FeedbackCreatorName || '').trim();
         if (name === 'Suleyman Aslan') key = 'HP_Dutch';
         else if (name === 'Halil Emre Ozdemir') key = 'HP_German';
@@ -556,9 +578,10 @@ async function exportGroupExcel(gk, selected) {
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
         'Operasyon': rec.client_name,
         'Monitor Ident': rec.emp_monitor_ident,
-        'Monitor Link': buildDetailLink(rec.emp_monitor_ident)  // YENİ LİNK
+        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')
       });
     });
+    
     for (const [sheetName, rows] of grouped) {
       addSheet(sheetName, rows);
     }
@@ -571,7 +594,7 @@ async function exportGroupExcel(gk, selected) {
       'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
       'Operasyon': rec.client_name,
       'Monitor Ident': rec.emp_monitor_ident,
-      'Monitor Link': buildDetailLink(rec.emp_monitor_ident)   // YENİ LİNK
+      'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')
     })));
   }
   
@@ -622,7 +645,7 @@ function checkMissingProjects() {
   }
 }
 
-// Önizleme verilerini Excel'e aktar (linkler yeni formatta)
+// Önizleme verilerini Excel'e aktar
 function exportPreviewToExcel() {
   const allSelected = [];
   for (const [gk, grp] of Object.entries(groups)) {
@@ -636,18 +659,14 @@ function exportPreviewToExcel() {
   const workbook = XLSX.utils.book_new();
   const rows = allSelected.map(rec => {
     let grupLabel = rec.grup || '';
-    if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().trim() === 'hewlett packard inc') {
-      const name = String(rec.FeedbackCreatorName || '').trim();
-      if (name === 'Suleyman Aslan') grupLabel = 'HP_Dutch';
-      else if (name === 'Halil Emre Ozdemir') grupLabel = 'HP_German';
-      else grupLabel = 'HP_Turkish';
-    }
+    // Önizlemede HP alt gruplarını gösterme, sadece ML yaz
+    if (rec._group === 'ML') grupLabel = 'ML';
     return {
       'Grup': grupLabel,
       'Değerlendirici (FeedbackCreatorName)': rec.FeedbackCreatorName,
       'Proje (client_name)': rec.client_name,
       'Monitor Ident (emp_monitor_ident)': rec.emp_monitor_ident,
-      'Monitor Link': buildDetailLink(rec.emp_monitor_ident), // YENİ LİNK
+      'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || ''),
       'MonitorScore': rec.MonitorScore !== undefined ? rec.MonitorScore : '',
       'CriticalCount': rec.CriticalCount !== undefined ? rec.CriticalCount : '',
       'CheckListCreated': rec.CheckListCreated
@@ -694,17 +713,6 @@ async function previewAllGroups() {
   if (!mainDataStep2.length) { alert('Görüşme listesi yükleyin.'); return; }
   if (!refDataStep2.length) { alert('Referans listesi yükleyin.'); return; }
   
-  // Silinenler uyarısı: eğer tüm identler silinenlerdeyse uyar
-  const totalIdentCount = mainDataStep2.filter(r => String(r.emp_monitor_ident).trim()).length;
-  const notDeletedCount = mainDataStep2.filter(r => {
-    const id = String(r.emp_monitor_ident).trim();
-    return id && !deletedIdentsStep2.has(id);
-  }).length;
-  if (notDeletedCount === 0 && totalIdentCount > 0) {
-    alert('Uyarı: Görüşme listesindeki tüm identler "Silinenler" dosyasında bulunuyor. Dağıtım yapılamaz.');
-    return;
-  }
-  
   checkMissingProjects();
   if (document.getElementById('missingProjectsWarning')?.style.display !== 'none') {
     if (!confirm('Referans listesinde olmayan projeler var. Dağıtım yapılmadan önce referans listesini güncellemeniz önerilir. Devam etmek istiyor musunuz?')) {
@@ -724,25 +732,21 @@ async function previewAllGroups() {
   const previewBody = document.getElementById('previewBodyStep2');
   previewDiv.style.display = 'block';
   if (!allSelected.length) {
-    previewBody.innerHTML = `<td><td colspan="5">Bu hafta dağıtılacak kayıt yok</td></tr>`;
+    previewBody.innerHTML = '<tr><td colspan="5">Bu hafta dağıtılacak kayıt yok</td></tr>';
     document.getElementById('confirmBtnStep2').disabled = true;
     return;
   }
   previewBody.innerHTML = allSelected.map(rec => {
     let grupLabel = escapeHtml(rec.grup || '');
-    if (rec._group === 'ML' && String(rec.client_name || '').toLowerCase().trim() === 'hewlett packard inc') {
-      const name = String(rec.FeedbackCreatorName || '').trim();
-      if (name === 'Suleyman Aslan') grupLabel = 'HP_Dutch';
-      else if (name === 'Halil Emre Ozdemir') grupLabel = 'HP_German';
-      else grupLabel = 'HP_Turkish';
-    }
+    // Önizlemede HP alt gruplarını gösterme
+    if (rec._group === 'ML') grupLabel = 'ML';
     return `
     <tr>
       <td>${grupLabel}</td>
       <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
       <td>${escapeHtml(rec.client_name || '')}</td>
       <td>${escapeHtml(String(rec.emp_monitor_ident || ''))}</td>
-      <td><a href="${buildDetailLink(rec.emp_monitor_ident)}" target="_blank" class="link-btn">🔗 Link</a></td>
+      <td><a href="${buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')}" target="_blank" class="link-btn">🔗 Link</a></td>
     </tr>`;
   }).join('');
   document.getElementById('confirmBtnStep2').disabled = false;
@@ -770,7 +774,7 @@ async function confirmAndExportAll() {
     showLoader('Step2', false);
   }
 }
-// MonitorScore ve CriticalCount okuma (CheckListCreated artık filtrelenmiyor)
+// loadMainFileStep2: employee_ident sütununu da oku
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   const statusEl = document.getElementById('mainStatusStep2');
@@ -784,7 +788,6 @@ async function loadMainFileStep2(file) {
     
     const hasManager = 'Manager_name' in rows[0];
     
-    // CheckListCreated sayısal olan tüm satırları al (0,1,2,3,...)
     mainDataStep2 = rows.filter(r => {
       const val = Number(r.CheckListCreated);
       return !isNaN(val);
@@ -803,15 +806,19 @@ async function loadMainFileStep2(file) {
       if (isNaN(monitorScore)) monitorScore = null;
       if (isNaN(criticalCount)) criticalCount = null;
       
+      // employee_ident sütununu al (varsa)
+      let employeeIdent = r.employee_ident !== undefined ? String(r.employee_ident).trim() : '';
+      
       return { 
         ...r, 
         FeedbackCreatorName: feedbackName,
         MonitorScore: monitorScore,
-        CriticalCount: criticalCount
+        CriticalCount: criticalCount,
+        employee_ident: employeeIdent
       };
     });
     
-    statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt yüklendi.`;
+    statusEl.innerHTML = `✅ ${mainDataStep2.length} kayıt (tüm CheckListCreated değerleri) yüklendi.`;
     statusEl.style.color = 'var(--accent)';
     
     if (refDataStep2.length) checkMissingProjects();
@@ -923,7 +930,7 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (Değişmedi, sadece link fonksiyonu değişmiş olabilir ama step3'te eski link kullanılıyor, istenirse değiştirilir, şimdilik olduğu gibi) ====================
+// ==================== STEP 3 ====================
 let reportMainData = [];
 let reportHistory3 = { DM: [], ML: [], DONUSUM: [] };
 let currentReportView = 'proje';
