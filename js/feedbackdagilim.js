@@ -168,8 +168,8 @@ function renderErrorTable() {
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
-    const normalLink = buildMonitorLink(err.identRaw, err.identRaw); // employee_ident olarak identRaw kullanıldı
-    const deleteLink = buildMonitorLink(err.identRaw, err.identRaw); // aynı
+    const normalLink = buildMonitorLink(err.identRaw, err.identRaw);
+    const deleteLink = buildMonitorLink(err.identRaw, err.identRaw);
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
       rowClass = 'clicked-row';
@@ -261,7 +261,6 @@ const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
 let currentWeekStep2 = 1;
 let currentPreview = { DM: [], ML: [], DONUSUM: [] };
 
-// HP kuralları sadece referans için kullanılacak (export'ta gruplama yok)
 const HP_RULES = {
   HP_Dutch:   { checker: rec => rec.FeedbackCreatorName === 'Suleyman Aslan' },
   HP_German:  { checker: rec => rec.FeedbackCreatorName === 'Halil Emre Ozdemir' },
@@ -394,11 +393,10 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// getAvailableRecordsForGroup - Final
+// DÜZELTİLMİŞ getAvailableRecordsForGroup (CriticalCount boş ise kural atla)
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
   const distributed = getDistributedIdentsForGroup(gk, week);
   return mainDataStep2.filter(rec => {
-    // CheckListCreated sayısal olmalı (0 veya pozitif)
     const checkVal = Number(rec.CheckListCreated);
     if (isNaN(checkVal)) return false;
     
@@ -416,15 +414,18 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     
     if (extraFilter && !extraFilter(rec)) return false;
     
-    // Target kuralı
+    // Target kuralı: sadece target > 0 ise ve CriticalCount geçerli bir sayı ise uygula
     if (gk === 'DM' || gk === 'ML' || gk === 'DONUSUM') {
       const targetRaw = ref.Target;
       if (targetRaw !== undefined && targetRaw !== '' && !isNaN(Number(targetRaw))) {
         const target = Number(targetRaw);
         if (target > 0) {
           const monitorScore = rec.MonitorScore;
-          const criticalCount = rec.CriticalCount;
-          if (monitorScore !== null && criticalCount !== null && !isNaN(monitorScore) && !isNaN(criticalCount)) {
+          const criticalCountRaw = rec.CriticalCount;
+          // CriticalCount geçerli bir sayı değilse (boş, metin, vs.) kuralı atla
+          if (monitorScore !== null && !isNaN(monitorScore) && 
+              criticalCountRaw !== undefined && criticalCountRaw !== '' && !isNaN(Number(criticalCountRaw))) {
+            const criticalCount = Number(criticalCountRaw);
             if (monitorScore >= target && criticalCount === 0) {
               return false;
             }
@@ -445,7 +446,6 @@ function shuffle(arr) {
   return a;
 }
 function calculateDistributionForGroup(gk, week, groupDef) {
-  // ML için ekstra filtre: reviewerPosition === 'Quality Assurance Analyst I' && position_code_type_full_name === 'Operations Supervisor'
   let extraFilterML = null;
   if (gk === 'ML') {
     extraFilterML = (rec) => {
@@ -545,7 +545,6 @@ async function exportGroupExcel(gk, selected) {
     const grouped = new Map();
     selected.forEach(rec => {
       let key = rec.client_name;
-      // ML için HP projesini ayrı sheet yapmıyoruz, direkt client_name kullan
       if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key).push({
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
@@ -741,7 +740,7 @@ async function confirmAndExportAll() {
     showLoader('Step2', false);
   }
 }
-// loadMainFileStep2 - duplicate emp_monitor_ident kontrolü ve CheckListCreated filtrelemesi
+// DÜZELTİLMİŞ loadMainFileStep2 (CriticalCount boş ise null yap)
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   const statusEl = document.getElementById('mainStatusStep2');
@@ -754,7 +753,6 @@ async function loadMainFileStep2(file) {
     if (missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
     
     const hasManager = 'Manager_name' in rows[0];
-    // Duplicate emp_monitor_ident kontrolü: ilkini al, diğerlerini at
     const seen = new Set();
     const uniqueRows = [];
     for (const row of rows) {
@@ -765,7 +763,6 @@ async function loadMainFileStep2(file) {
       }
     }
     
-    // CheckListCreated sayısal olmayanları eleriz (0 ve pozitifler kalır)
     mainDataStep2 = uniqueRows.filter(r => {
       const val = Number(r.CheckListCreated);
       return !isNaN(val);
@@ -780,9 +777,12 @@ async function loadMainFileStep2(file) {
         }
       }
       let monitorScore = r.MonitorScore !== undefined && r.MonitorScore !== '' ? Number(r.MonitorScore) : null;
-      let criticalCount = r.CriticalCount !== undefined && r.CriticalCount !== '' ? Number(r.CriticalCount) : null;
       if (isNaN(monitorScore)) monitorScore = null;
-      if (isNaN(criticalCount)) criticalCount = null;
+      // CriticalCount: sadece geçerli sayı ise sayıya çevir, değilse null
+      let criticalCount = null;
+      if (r.CriticalCount !== undefined && r.CriticalCount !== '' && !isNaN(Number(r.CriticalCount))) {
+        criticalCount = Number(r.CriticalCount);
+      }
       
       return { 
         ...r, 
