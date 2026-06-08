@@ -7,7 +7,15 @@ function showLoader(step, show) {
   const el = document.getElementById(`loader${step}`);
   if (el) el.classList.toggle('visible', show);
 }
-function buildMonitorLink(empMonitorIdent, employeeIdent) {
+// Step1 için özel link fonksiyonu (checklist.pl)
+function buildMonitorLinkStep1(ident, action = 'OPTION') {
+  if (!ident) return '#';
+  const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/console/tops/checklist.pl';
+  const frmOption = action === 'DELETE' ? 'DELETE' : 'OPTION';
+  return `${baseUrl}?frmTarget=CHECKLIST&checklist_ident=${encodeURIComponent(ident)}&frmOption=${frmOption}`;
+}
+// Step2 için employee/monitor.pl linki (emp_monitor_ident ve employee_ident ile)
+function buildMonitorLinkStep2(empMonitorIdent, employeeIdent) {
   if (!empMonitorIdent) return '#';
   const baseUrl = 'https://sebra.ccms.teleperformance.com/ccms-bin/employee/monitor.pl';
   return `${baseUrl}?emp_monitor_ident=${encodeURIComponent(empMonitorIdent)}&frmTarget=MONITOR&employee_ident=${encodeURIComponent(employeeIdent || '')}&frmOption=MAIN`;
@@ -168,8 +176,8 @@ function renderErrorTable() {
     return;
   }
   errorTableBodyStep1.innerHTML = errorRowsStep1.map(err => {
-    const normalLink = buildMonitorLink(err.identRaw, err.identRaw);
-    const deleteLink = buildMonitorLink(err.identRaw, err.identRaw);
+    const normalLink = buildMonitorLinkStep1(err.identRaw, 'OPTION');
+    const deleteLink = buildMonitorLinkStep1(err.identRaw, 'DELETE');
     let rowClass = '';
     if (clickedRows.has(err.rowIndex)) {
       rowClass = 'clicked-row';
@@ -255,7 +263,7 @@ if (!document.querySelector('#step1-styles')) {
 }
 
 // ==================== STEP 2 ====================
-let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [];
+let mainDataStep2 = [], deletedIdentsStep2 = new Set(), refDataStep2 = [], checkedMonitoringIds = new Set();
 let distributionHistory = { DM: [], ML: [], DONUSUM: [] };
 const WEEK_TARGET = { 1: 3, 2: 2, 3: 3, 4: 2 };
 let currentWeekStep2 = 1;
@@ -361,6 +369,7 @@ function clearAllHistory() {
   }
 }
 function getDistributedIdentsForGroup(gk, week) {
+  // Sadece geçmişte dağıtılmış identleri döndür (checked dosyasına bakmaz, ayrıca kontrol edilecek)
   const set = new Set();
   distributionHistory[gk].forEach(e => { if (e.week < week && e.distributedIdents) e.distributedIdents.forEach(id => set.add(id)); });
   return set;
@@ -393,16 +402,22 @@ function getHPCumulativeForML(week) {
   });
   return cnt;
 }
-// DÜZELTİLMİŞ getAvailableRecordsForGroup (CriticalCount boş ise kural atla)
+// getAvailableRecordsForGroup - 4. dosya (checkedMonitoringIds) kontrolü eklendi
 function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) {
-  const distributed = getDistributedIdentsForGroup(gk, week);
+  const distributed = getDistributedIdentsForGroup(gk, week); // geçmişte dağıtılanlar
   return mainDataStep2.filter(rec => {
+    // CheckListCreated sayısal olmalı (0 ve pozitif)
     const checkVal = Number(rec.CheckListCreated);
     if (isNaN(checkVal)) return false;
     
     const ident = String(rec.emp_monitor_ident || '').trim();
     if (ident === '') return false;
-    if (deletedIdentsStep2.has(ident) || distributed.has(ident)) return false;
+    
+    // Silinenler kontrolü
+    if (deletedIdentsStep2.has(ident)) return false;
+    
+    // Geçmişte dağıtılmış mı? Eğer dağıtılmışsa ve ayrıca checked dosyasında varsa atla, yoksa (checked yoksa) dağıtılabilir.
+    if (distributed.has(ident) && checkedMonitoringIds.has(ident)) return false;
     
     const client = String(rec.client_name || '').trim();
     if (client === '') return false;
@@ -414,7 +429,7 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
     
     if (extraFilter && !extraFilter(rec)) return false;
     
-    // Target kuralı: sadece target > 0 ise ve CriticalCount geçerli bir sayı ise uygula
+    // Target kuralı
     if (gk === 'DM' || gk === 'ML' || gk === 'DONUSUM') {
       const targetRaw = ref.Target;
       if (targetRaw !== undefined && targetRaw !== '' && !isNaN(Number(targetRaw))) {
@@ -422,7 +437,6 @@ function getAvailableRecordsForGroup(gk, week, groupFilter, extraFilter = null) 
         if (target > 0) {
           const monitorScore = rec.MonitorScore;
           const criticalCountRaw = rec.CriticalCount;
-          // CriticalCount geçerli bir sayı değilse (boş, metin, vs.) kuralı atla
           if (monitorScore !== null && !isNaN(monitorScore) && 
               criticalCountRaw !== undefined && criticalCountRaw !== '' && !isNaN(Number(criticalCountRaw))) {
             const criticalCount = Number(criticalCountRaw);
@@ -550,7 +564,7 @@ async function exportGroupExcel(gk, selected) {
         'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
         'Operasyon': rec.client_name,
         'Monitor Ident': rec.emp_monitor_ident,
-        'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')
+        'Monitor Link': buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident || '')
       });
     });
     for (const [sheetName, rows] of grouped) {
@@ -565,7 +579,7 @@ async function exportGroupExcel(gk, selected) {
       'İlk Fb Girişi Yapan': rec.FeedbackCreatorName,
       'Operasyon': rec.client_name,
       'Monitor Ident': rec.emp_monitor_ident,
-      'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')
+      'Monitor Link': buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident || '')
     })));
   }
   XLSX.writeFile(workbook, group.fileName());
@@ -634,7 +648,7 @@ function exportPreviewToExcel() {
       'Değerlendirici (FeedbackCreatorName)': rec.FeedbackCreatorName,
       'Proje (client_name)': rec.client_name,
       'Monitor Ident (emp_monitor_ident)': rec.emp_monitor_ident,
-      'Monitor Link': buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || ''),
+      'Monitor Link': buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident || ''),
       'MonitorScore': rec.MonitorScore !== undefined ? rec.MonitorScore : '',
       'CriticalCount': rec.CriticalCount !== undefined ? rec.CriticalCount : '',
       'CheckListCreated': rec.CheckListCreated
@@ -651,20 +665,25 @@ function clearAllStep2Data() {
     mainDataStep2 = [];
     deletedIdentsStep2.clear();
     refDataStep2 = [];
+    checkedMonitoringIds.clear();
     currentPreview = { DM: [], ML: [], DONUSUM: [] };
     currentWeekStep2 = 1;
     const mainInput = document.getElementById('mainFileInputStep2');
     const deletedInput = document.getElementById('deletedFileInputStep2');
     const refInput = document.getElementById('refFileInputStep2');
+    const checkedInput = document.getElementById('checkedFileInputStep2');
     if (mainInput) mainInput.value = '';
     if (deletedInput) deletedInput.value = '';
     if (refInput) refInput.value = '';
+    if (checkedInput) checkedInput.value = '';
     const mainStatus = document.getElementById('mainStatusStep2');
     const deletedStatus = document.getElementById('deletedStatusStep2');
     const refStatus = document.getElementById('refStatusStep2');
+    const checkedStatus = document.getElementById('checkedStatusStep2');
     if (mainStatus) { mainStatus.innerHTML = 'Henüz yüklenmedi'; mainStatus.style.color = ''; }
     if (deletedStatus) { deletedStatus.innerHTML = 'Henüz yüklenmedi'; deletedStatus.style.color = ''; }
     if (refStatus) { refStatus.innerHTML = 'Henüz yüklenmedi'; refStatus.style.color = ''; }
+    if (checkedStatus) { checkedStatus.innerHTML = 'Henüz yüklenmedi'; checkedStatus.style.color = ''; }
     const previewDiv = document.getElementById('previewAreaStep2');
     if (previewDiv) previewDiv.style.display = 'none';
     const confirmBtn = document.getElementById('confirmBtnStep2');
@@ -712,7 +731,7 @@ async function previewAllGroups() {
       <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
       <td>${escapeHtml(rec.client_name || '')}</td>
       <td>${escapeHtml(String(rec.emp_monitor_ident || ''))}</td>
-      <td><a href="${buildMonitorLink(rec.emp_monitor_ident, rec.employee_ident || '')}" target="_blank" class="link-btn">🔗 Link</a></td>
+      <td><a href="${buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident || '')}" target="_blank" class="link-btn">🔗 Link</a></td>
     </tr>`;
   }).join('');
   document.getElementById('confirmBtnStep2').disabled = false;
@@ -740,7 +759,7 @@ async function confirmAndExportAll() {
     showLoader('Step2', false);
   }
 }
-// DÜZELTİLMİŞ loadMainFileStep2 (CriticalCount boş ise null yap)
+// loadMainFileStep2 - duplicate emp_monitor_ident kontrolü ve CheckListCreated filtrelemesi
 async function loadMainFileStep2(file) {
   showLoader('Step2', true);
   const statusEl = document.getElementById('mainStatusStep2');
@@ -777,12 +796,11 @@ async function loadMainFileStep2(file) {
         }
       }
       let monitorScore = r.MonitorScore !== undefined && r.MonitorScore !== '' ? Number(r.MonitorScore) : null;
-      if (isNaN(monitorScore)) monitorScore = null;
-      // CriticalCount: sadece geçerli sayı ise sayıya çevir, değilse null
       let criticalCount = null;
       if (r.CriticalCount !== undefined && r.CriticalCount !== '' && !isNaN(Number(r.CriticalCount))) {
         criticalCount = Number(r.CriticalCount);
       }
+      if (isNaN(monitorScore)) monitorScore = null;
       
       return { 
         ...r, 
@@ -848,6 +866,30 @@ async function loadRefFileStep2(file) {
     showLoader('Step2', false);
   }
 }
+// 4. dosya: Kontrol Edilenler (Monitoring ID)
+async function loadCheckedFileStep2(file) {
+  showLoader('Step2', true);
+  const statusEl = document.getElementById('checkedStatusStep2');
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    if (!rows.length) throw new Error('Dosya boş');
+    const cols = Object.keys(rows[0]);
+    const monCol = cols.find(c => c.toLowerCase() === 'monitoring id' || c.toLowerCase() === 'monitoringid');
+    if (!monCol) throw new Error('Monitoring ID sütunu yok');
+    checkedMonitoringIds.clear();
+    rows.forEach(r => { const v = r[monCol]; if (v) checkedMonitoringIds.add(String(v).trim()); });
+    statusEl.innerHTML = `✅ ${checkedMonitoringIds.size} kontrol edilmiş Monitoring ID yüklendi.`;
+    statusEl.style.color = 'var(--accent)';
+  } catch (err) {
+    statusEl.innerHTML = `❌ ${err.message}`;
+    statusEl.style.color = 'var(--accent3)';
+    checkedMonitoringIds.clear();
+  } finally {
+    showLoader('Step2', false);
+  }
+}
+
 function setupDrop(dropId, inputId, func) {
   const drop = document.getElementById(dropId);
   const inp = document.getElementById(inputId);
@@ -862,9 +904,31 @@ function setupDrop(dropId, inputId, func) {
     if (e.dataTransfer.files[0]) func(e.dataTransfer.files[0]);
   });
 }
-setupDrop('dropMainStep2', 'mainFileInputStep2', loadMainFileStep2);
-setupDrop('dropDeletedStep2', 'deletedFileInputStep2', loadDeletedFileStep2);
-setupDrop('dropRefStep2', 'refFileInputStep2', loadRefFileStep2);
+
+// Step2'ye 4. dosya için gerekli HTML elementlerini dinamik ekle
+function addFourthFileUploader() {
+  const step2Div = document.getElementById('step2');
+  if (!step2Div) return;
+  const uploadGrid = step2Div.querySelector('.upload-grid');
+  if (!uploadGrid) return;
+  // Eğer zaten eklenmişse tekrar ekleme
+  if (document.getElementById('dropCheckedStep2')) return;
+  
+  const newCard = document.createElement('div');
+  newCard.className = 'upload-card';
+  newCard.innerHTML = `
+    <h3>✅ 4. Kontrol Edilenler (Monitoring ID)</h3>
+    <div class="file-drop" id="dropCheckedStep2">
+      <input type="file" id="checkedFileInputStep2" accept=".csv,.xlsx,.xls">
+      <div>📂 Sürükle/tıkla</div>
+      <div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (daha önce dağıtılıp kontrol edilenler)</div>
+    </div>
+    <div class="upload-status" id="checkedStatusStep2">Henüz yüklenmedi</div>
+  `;
+  uploadGrid.appendChild(newCard);
+  
+  setupDrop('dropCheckedStep2', 'checkedFileInputStep2', loadCheckedFileStep2);
+}
 
 // Yeni butonları ekle
 function addExtraButtonsStep2() {
@@ -891,10 +955,18 @@ function addExtraButtonsStep2() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', addExtraButtonsStep2);
+  document.addEventListener('DOMContentLoaded', () => {
+    addFourthFileUploader();
+    addExtraButtonsStep2();
+  });
 } else {
+  addFourthFileUploader();
   addExtraButtonsStep2();
 }
+
+setupDrop('dropMainStep2', 'mainFileInputStep2', loadMainFileStep2);
+setupDrop('dropDeletedStep2', 'deletedFileInputStep2', loadDeletedFileStep2);
+setupDrop('dropRefStep2', 'refFileInputStep2', loadRefFileStep2);
 
 document.getElementById('calculateBtnStep2').addEventListener('click', previewAllGroups);
 document.getElementById('confirmBtnStep2').addEventListener('click', confirmAndExportAll);
