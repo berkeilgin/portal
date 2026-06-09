@@ -1188,138 +1188,216 @@ reportAreaS3.style.display = 'none';
 exportBtnS3.disabled = true;
 initStep3();
 
-// ==================== STEP 4 (Geçmiş Dağıtım Tablosu - Haftasız, Tarihli, Çoklu JSON) ====================
-let allHistoryDataStep4 = []; // Tüm yüklenen JSON'lardan gelen dağıtım kayıtları
+// ==================== STEP 4 (Gelişmiş Geçmiş Tablosu - Filtre & Sıralama) ====================
+let allHistoryData = []; // { date, week, group, reviewer, project, monitorId, link }
 
+// DOM elemanları
 const historyFileInputStep4 = document.getElementById('historyFileInputStep4');
 const dropHistoryStep4 = document.getElementById('dropHistoryStep4');
 const historyStatusStep4 = document.getElementById('historyStatusStep4');
-const exportDistributionBtnStep4 = document.getElementById('exportDistributionBtnStep4');
-const clearHistoryBtnStep4 = document.getElementById('clearHistoryStep4Btn');
-const distributionTableBodyStep4 = document.getElementById('distributionTableBodyStep4');
+const clearHistoryBtn = document.getElementById('clearHistoryDataBtnStep4');
 const distributionAreaStep4 = document.getElementById('distributionAreaStep4');
+const distributionTableBody = document.getElementById('distributionTableBodyStep4');
+const exportBtnStep4 = document.getElementById('exportDistributionBtnStep4');
+const filterInputs = {
+  date: document.getElementById('filterDate'),
+  week: document.getElementById('filterWeek'),
+  group: document.getElementById('filterGroup'),
+  reviewer: document.getElementById('filterReviewer'),
+  project: document.getElementById('filterProject'),
+  monitorId: document.getElementById('filterMonitorId')
+};
 
-// Bir JSON dosyasını işle ve kayıtları ekle
-function processHistoryJson(file, isMultiple = true) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const parsed = JSON.parse(e.target.result);
-        if (parsed && Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
-          const newRecords = [];
-          const groupMapping = [
-            { key: 'DM', name: 'DM' },
-            { key: 'ML', name: 'ML' },
-            { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
-          ];
-          for (const { key, name } of groupMapping) {
-            const entries = parsed[key] || [];
-            for (const entry of entries) {
-              const week = entry.week;
-              const dateStr = entry.date ? new Date(entry.date).toLocaleString('tr-TR') : 'Tarih yok';
-              if (entry.assignments) {
-                entry.assignments.forEach(ass => {
-                  newRecords.push({
-                    date: dateStr,
-                    week: week,
-                    group: name,
-                    FeedbackCreatorName: ass.FeedbackCreatorName,
-                    client_name: ass.client_name,
-                    emp_monitor_ident: ass.emp_monitor_ident,
-                    employee_ident: ass.employee_ident || '',
-                    hpGroup: ass.hpGroup || ''
-                  });
-                });
-              }
-            }
-          }
-          resolve(newRecords);
-        } else {
-          reject(new Error('Geçersiz JSON yapısı (DM, ML, DONUSUM arrayleri eksik)'));
+let currentDisplayData = [];      // filtrelenmiş/sıralanmış veri
+let sortColumn = null;
+let sortDirection = 'asc';         // 'asc' veya 'desc'
+
+// Yardımcı: JSON'dan veri çıkar
+function extractAssignmentsFromJson(jsonObj) {
+  const result = [];
+  const groupMap = {
+    'DM': 'DM',
+    'ML': 'ML',
+    'DONUSUM': 'Dönüşüm Projeleri'
+  };
+  for (const [groupKey, groupName] of Object.entries(groupMap)) {
+    const entries = jsonObj[groupKey] || [];
+    for (const entry of entries) {
+      const week = entry.week;
+      const dateRaw = entry.date; // ISO string
+      let formattedDate = '';
+      if (dateRaw) {
+        const d = new Date(dateRaw);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toLocaleDateString('tr-TR');
         }
-      } catch (err) {
-        reject(err);
       }
-    };
-    reader.onerror = () => reject(new Error('Dosya okunamadı'));
-    reader.readAsText(file);
-  });
+      const assignments = entry.assignments || [];
+      for (const ass of assignments) {
+        // Link oluştur
+        let link = '#';
+        if (typeof buildMonitorLinkStep2 === 'function') {
+          link = buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident || '');
+        } else if (typeof buildMonitorLink === 'function') {
+          link = buildMonitorLink(ass.emp_monitor_ident, 'CHECKLIST');
+        }
+        result.push({
+          date: formattedDate,
+          dateRaw: dateRaw,
+          week: week,
+          group: groupName,
+          reviewer: ass.FeedbackCreatorName || '',
+          project: ass.client_name || '',
+          monitorId: ass.emp_monitor_ident || '',
+          link: link
+        });
+      }
+    }
+  }
+  return result;
 }
 
-// Tüm yüklenen dosyaları işle
-async function loadHistoryFilesStep4(files) {
+// Tüm JSON dosyalarını yükle (birden fazla)
+async function loadMultipleHistoryFiles(files) {
   if (!files || files.length === 0) return;
   if (typeof showLoader === 'function') showLoader('Step4', true);
-  if (historyStatusStep4) historyStatusStep4.innerHTML = '⏳ Yükleniyor...';
-  
-  let totalNewRecords = 0;
-  let errors = [];
-  
-  for (let i = 0; i < files.length; i++) {
+  historyStatusStep4.innerHTML = `⏳ ${files.length} dosya yükleniyor...`;
+  let totalAdded = 0;
+  for (const file of files) {
     try {
-      const newRecords = await processHistoryJson(files[i]);
-      allHistoryDataStep4.push(...newRecords);
-      totalNewRecords += newRecords.length;
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (json && Array.isArray(json.DM) && Array.isArray(json.ML) && Array.isArray(json.DONUSUM)) {
+        const newRecords = extractAssignmentsFromJson(json);
+        allHistoryData.push(...newRecords);
+        totalAdded += newRecords.length;
+      } else {
+        console.warn(`${file.name} geçersiz yapı`);
+      }
     } catch (err) {
-      errors.push(`${files[i].name}: ${err.message}`);
+      console.error(`${file.name} okunamadı:`, err);
+      historyStatusStep4.innerHTML = `❌ ${file.name} hatalı: ${err.message}`;
+      setTimeout(() => {
+        if (historyStatusStep4.innerHTML.includes('hatalı')) historyStatusStep4.innerHTML = `⚠️ Bazı dosyalar yüklenemedi. Son durum: ${allHistoryData.length} kayıt.`;
+      }, 2000);
     }
   }
-  
-  // Tarihe göre sırala (en yeniden en eskiye)
-  allHistoryDataStep4.sort((a, b) => {
-    // date format: "DD.MM.YYYY HH:MM:SS" veya "Tarih yok"
-    const dateA = a.date !== 'Tarih yok' ? new Date(a.date.split(' ')[0].split('.').reverse().join('-')) : 0;
-    const dateB = b.date !== 'Tarih yok' ? new Date(b.date.split(' ')[0].split('.').reverse().join('-')) : 0;
-    return dateB - dateA;
-  });
-  
-  if (historyStatusStep4) {
-    if (errors.length) {
-      historyStatusStep4.innerHTML = `⚠️ ${totalNewRecords} kayıt eklendi. Hatalar: ${errors.join('; ')}`;
-      historyStatusStep4.style.color = 'var(--accent3)';
-    } else {
-      historyStatusStep4.innerHTML = `✅ Toplam ${totalNewRecords} dağıtım kaydı yüklendi (${files.length} dosya).`;
-      historyStatusStep4.style.color = 'var(--accent)';
-    }
-  }
-  
-  renderDistributionTable();
-  if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
-  if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = (allHistoryDataStep4.length === 0);
+  historyStatusStep4.innerHTML = `✅ Toplam ${allHistoryData.length} dağıtım kaydı yüklendi. (${files.length} dosya)`;
+  historyStatusStep4.style.color = 'var(--accent)';
   if (typeof showLoader === 'function') showLoader('Step4', false);
+  // Tabloyu göster ve filtreleri sıfırla
+  distributionAreaStep4.style.display = 'block';
+  exportBtnStep4.disabled = false;
+  applyFiltersAndRender();
 }
 
-// Tabloyu render et
-function renderDistributionTable() {
-  if (!distributionTableBodyStep4) return;
+// Filtreleme ve sıralama uygula
+function applyFiltersAndRender() {
+  // Filtrele
+  let filtered = [...allHistoryData];
+  if (filterInputs.date && filterInputs.date.value.trim()) {
+    const filterVal = filterInputs.date.value.trim().toLowerCase();
+    filtered = filtered.filter(row => row.date.toLowerCase().includes(filterVal));
+  }
+  if (filterInputs.week && filterInputs.week.value.trim()) {
+    const filterVal = filterInputs.week.value.trim();
+    filtered = filtered.filter(row => String(row.week).includes(filterVal));
+  }
+  if (filterInputs.group && filterInputs.group.value.trim()) {
+    const filterVal = filterInputs.group.value.trim().toLowerCase();
+    filtered = filtered.filter(row => row.group.toLowerCase().includes(filterVal));
+  }
+  if (filterInputs.reviewer && filterInputs.reviewer.value.trim()) {
+    const filterVal = filterInputs.reviewer.value.trim().toLowerCase();
+    filtered = filtered.filter(row => row.reviewer.toLowerCase().includes(filterVal));
+  }
+  if (filterInputs.project && filterInputs.project.value.trim()) {
+    const filterVal = filterInputs.project.value.trim().toLowerCase();
+    filtered = filtered.filter(row => row.project.toLowerCase().includes(filterVal));
+  }
+  if (filterInputs.monitorId && filterInputs.monitorId.value.trim()) {
+    const filterVal = filterInputs.monitorId.value.trim().toLowerCase();
+    filtered = filtered.filter(row => row.monitorId.toLowerCase().includes(filterVal));
+  }
   
-  if (allHistoryDataStep4.length === 0) {
-    distributionTableBodyStep4.innerHTML = `<tr><td colspan="7" class="empty-state">Henüz veri yok. JSON dosyası yükleyin.</td></tr>`;
+  // Sıralama
+  if (sortColumn) {
+    filtered.sort((a, b) => {
+      let valA = a[sortColumn];
+      let valB = b[sortColumn];
+      if (sortColumn === 'week') {
+        valA = Number(valA);
+        valB = Number(valB);
+      } else if (sortColumn === 'date') {
+        valA = a.dateRaw || '';
+        valB = b.dateRaw || '';
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+  
+  currentDisplayData = filtered;
+  renderTable(currentDisplayData);
+}
+
+// Tabloyu çiz
+function renderTable(data) {
+  if (!distributionTableBody) return;
+  const headers = [
+    { key: 'date', label: 'Dağıtım Tarihi' },
+    { key: 'week', label: 'Hafta' },
+    { key: 'group', label: 'Grup' },
+    { key: 'reviewer', label: 'Değerlendirici' },
+    { key: 'project', label: 'Proje' },
+    { key: 'monitorId', label: 'Monitoring ID' },
+    { key: 'link', label: 'Link' }
+  ];
+  
+  // Başlık satırını oluştur (sıralama için tıklanabilir)
+  const thead = document.getElementById('historyTableHeaderStep4');
+  if (thead) {
+    thead.innerHTML = `<tr>${headers.map(h => `<th data-sort="${h.key}" style="cursor:pointer; user-select:none;">${h.label} ${sortColumn === h.key ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`).join('')}</tr>`;
+    // Sıralama eventleri
+    document.querySelectorAll('#historyTableHeaderStep4 th').forEach(th => {
+      th.addEventListener('click', () => {
+        const sortKey = th.dataset.sort;
+        if (sortColumn === sortKey) {
+          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortColumn = sortKey;
+          sortDirection = 'asc';
+        }
+        applyFiltersAndRender();
+      });
+    });
+  }
+  
+  if (!data.length) {
+    distributionTableBody.innerHTML = `<tr><td colspan="${headers.length}" class="empty-state">Hiç kayıt yok</td></tr>`;
     return;
   }
   
-  distributionTableBodyStep4.innerHTML = allHistoryDataStep4.map(rec => {
-    const link = (typeof buildMonitorLinkStep2 === 'function') 
-      ? buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident)
-      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(rec.emp_monitor_ident, 'CHECKLIST') : '#');
-    return `
-      <tr>
-        <td>${escapeHtml(rec.date)}</td>
-        <td>${escapeHtml(rec.week)}</td>
-        <td>${escapeHtml(rec.group)}</td>
-        <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
-        <td>${escapeHtml(rec.client_name || '')}</td>
-        <td>${escapeHtml(String(rec.emp_monitor_ident || ''))}</td>
-        <td><a href="${link}" target="_blank" class="link-btn">🔗 Link</a></td>
-      </tr>
-    `;
-  }).join('');
+  distributionTableBody.innerHTML = data.map(row => `
+    <tr>
+      <td>${escapeHtml(row.date)}</td>
+      <td>${escapeHtml(String(row.week))}</td>
+      <td>${escapeHtml(row.group)}</td>
+      <td>${escapeHtml(row.reviewer)}</td>
+      <td>${escapeHtml(row.project)}</td>
+      <td>${escapeHtml(row.monitorId)}</td>
+      <td><a href="${row.link}" target="_blank" class="link-btn">🔗 Link</a></td>
+    </tr>
+  `).join('');
 }
 
-// Excel'e aktar
-function exportAllDistributionsToExcel() {
-  if (allHistoryDataStep4.length === 0) {
+// Excel aktar (görünen filtrelenmiş/sıralanmış veri)
+function exportFilteredToExcel() {
+  if (!currentDisplayData.length) {
     alert('Aktarılacak veri yok');
     return;
   }
@@ -1327,64 +1405,75 @@ function exportAllDistributionsToExcel() {
     alert('XLSX kütüphanesi yüklenemedi.');
     return;
   }
-  
-  const exportData = allHistoryDataStep4.map(rec => ({
-    'Dağıtım Tarihi': rec.date,
-    'Hafta': rec.week,
-    'Grup': rec.group,
-    'Değerlendirici (FeedbackCreatorName)': rec.FeedbackCreatorName,
-    'Proje (client_name)': rec.client_name,
-    'Monitoring ID (emp_monitor_ident)': rec.emp_monitor_ident,
-    'HP Alt Grubu': rec.hpGroup || '',
-    'Monitor Link': (typeof buildMonitorLinkStep2 === 'function') 
-      ? buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident)
-      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(rec.emp_monitor_ident, 'CHECKLIST') : '#')
+  const exportData = currentDisplayData.map(row => ({
+    'Dağıtım Tarihi': row.date,
+    'Hafta': row.week,
+    'Grup': row.group,
+    'Değerlendirici': row.reviewer,
+    'Proje': row.project,
+    'Monitoring ID': row.monitorId,
+    'Link': row.link
   }));
-  
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Tum_Dagitimlar');
-  XLSX.writeFile(wb, `gecmis_tum_dagitimlar_${formatDateForFilename()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, `Geçmis_Dagitim_${formatDateForFilename()}`);
+  XLSX.writeFile(wb, `gecmis_dagitim_filtreli_${formatDateForFilename()}.xlsx`);
 }
 
-// Tüm geçmişi temizle
-function clearAllHistoryStep4() {
-  if (confirm('Tüm yüklenmiş geçmiş verileri silinecek. Devam etmek istiyor musunuz?')) {
-    allHistoryDataStep4 = [];
-    renderDistributionTable();
-    if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
-    if (historyStatusStep4) {
-      historyStatusStep4.innerHTML = 'Henüz yüklenmedi';
-      historyStatusStep4.style.color = '';
+// Tüm veriyi temizle
+function clearAllHistoryData() {
+  if (confirm('Tüm yüklenen geçmiş verileri silinecek. Devam etmek istiyor musunuz?')) {
+    allHistoryData = [];
+    currentDisplayData = [];
+    sortColumn = null;
+    sortDirection = 'asc';
+    // Filtre inputlarını temizle
+    for (const key in filterInputs) {
+      if (filterInputs[key]) filterInputs[key].value = '';
     }
-    if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
-    // Dosya input'unu temizle
-    if (historyFileInputStep4) historyFileInputStep4.value = '';
+    renderTable([]);
+    historyStatusStep4.innerHTML = 'Veriler temizlendi. Yeni JSON yükleyebilirsiniz.';
+    historyStatusStep4.style.color = 'var(--muted)';
+    distributionAreaStep4.style.display = 'none';
+    exportBtnStep4.disabled = true;
   }
 }
 
-// Drag & Drop ve çoklu dosya yükleme için setup
+// Drag & Drop ve çoklu dosya yükleme
 function setupDropStep4() {
   if (!dropHistoryStep4 || !historyFileInputStep4) return;
-  
   dropHistoryStep4.addEventListener('click', e => { if (e.target !== historyFileInputStep4) historyFileInputStep4.click(); });
-  historyFileInputStep4.addEventListener('change', e => { if (e.target.files && e.target.files.length) loadHistoryFilesStep4(e.target.files); });
-  
+  historyFileInputStep4.addEventListener('change', e => {
+    if (e.target.files && e.target.files.length) loadMultipleHistoryFiles(Array.from(e.target.files));
+    e.target.value = ''; // aynı dosyayı tekrar seçebilmek için
+  });
   dropHistoryStep4.addEventListener('dragover', e => { e.preventDefault(); dropHistoryStep4.classList.add('drag'); });
   dropHistoryStep4.addEventListener('dragleave', () => dropHistoryStep4.classList.remove('drag'));
   dropHistoryStep4.addEventListener('drop', e => {
     e.preventDefault();
     dropHistoryStep4.classList.remove('drag');
-    if (e.dataTransfer.files && e.dataTransfer.files.length) loadHistoryFilesStep4(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
+      loadMultipleHistoryFiles(Array.from(e.dataTransfer.files));
+    }
   });
 }
 
+// Filtre inputlarına event listener ekle
+function bindFilterEvents() {
+  for (const key in filterInputs) {
+    const input = filterInputs[key];
+    if (input) {
+      input.addEventListener('input', () => applyFiltersAndRender());
+    }
+  }
+}
+
 // Buton olayları
-if (exportDistributionBtnStep4) exportDistributionBtnStep4.addEventListener('click', exportAllDistributionsToExcel);
-if (clearHistoryBtnStep4) clearHistoryBtnStep4.addEventListener('click', clearAllHistoryStep4);
+if (exportBtnStep4) exportBtnStep4.addEventListener('click', exportFilteredToExcel);
+if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearAllHistoryData);
 
-// Başlangıç durumları
-if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
-if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
-
+// Başlangıç
 setupDropStep4();
+bindFilterEvents();
+distributionAreaStep4.style.display = 'none';
+exportBtnStep4.disabled = true;
