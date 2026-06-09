@@ -1,12 +1,12 @@
 // ==================== LOB MASTER EŞLEME ARACI ====================
-let sourceData = [];            // ham kaynak data
-let refClientList = [];         // referans client listesi (string)
-let excludedFormIds = new Set(); // LOBDatalari'ndan gelen, zaten eşlenmiş Form ID'ler (dışlanacak)
-let filteredData = [];          // client filtresi + exlusion uygulanmış data
-let currentDisplayData = [];    // tabloda gösterilen satırlar (lobAdi, lobId, checked)
-let masterData = [];            // localStorage'daki tüm master kayıtlar (ClientIdent,Client,FormID,FormName,LOBAdi,LOBID)
+let sourceData = [];
+let refClientList = [];
+let excludedFormIds = new Set();
+let filteredData = [];
+let currentDisplayData = [];
+let masterData = [];
 
-// DOM elemanları
+// DOM Elemanları
 const sourceInput = document.getElementById('sourceFileInput');
 const dropSource = document.getElementById('dropSourceData');
 const sourceStatus = document.getElementById('sourceStatus');
@@ -16,16 +16,28 @@ const refStatus = document.getElementById('refStatus');
 const lobDataInput = document.getElementById('lobDataFileInput');
 const dropLobData = document.getElementById('dropLobData');
 const lobDataStatus = document.getElementById('lobDataStatus');
-const loader = document.getElementById('loaderLOB');
+const loaderArea = document.getElementById('loaderArea');
 const tableContainer = document.getElementById('tableContainer');
 const exportBtn = document.getElementById('exportBtn');
 const resetCheckboxesBtn = document.getElementById('resetCheckboxesBtn');
 const rowCountInfo = document.getElementById('rowCountInfo');
 
-function showLoader(show) { loader.classList.toggle('visible', show); }
-function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])); }
+function showLoader(show) {
+    loaderArea.style.display = show ? 'flex' : 'none';
+}
+function setStatus(el, text, type = '') {
+    el.innerHTML = text;
+    el.className = 'status-bar';
+    if (type === 'ok') el.classList.add('ok');
+    else if (type === 'err') el.classList.add('err');
+    else if (type === 'warn') el.classList.add('warn');
+    else el.style.display = 'block';
+}
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+}
 
-// Dosyadan JSON okuma (Excel)
 function readExcelFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -43,14 +55,11 @@ function readExcelFile(file) {
     });
 }
 
-// localStorage'dan master veriyi yükle
 function loadMasterFromLocalStorage() {
     const stored = localStorage.getItem('LOB_masterData');
     if (stored) {
         try {
             masterData = JSON.parse(stored);
-            console.log(`Master veri localStorage'dan yüklendi: ${masterData.length} kayıt`);
-            // excludedFormIds'i güncelle
             excludedFormIds.clear();
             masterData.forEach(item => {
                 if (item.FormID) excludedFormIds.add(String(item.FormID).trim());
@@ -61,27 +70,21 @@ function loadMasterFromLocalStorage() {
         excludedFormIds.clear();
     }
 }
-
-// Master veriyi localStorage'a kaydet
 function saveMasterToLocalStorage(data) {
     localStorage.setItem('LOB_masterData', JSON.stringify(data));
     masterData = data;
-    // excludedFormIds'i yenile
     excludedFormIds.clear();
     masterData.forEach(item => {
         if (item.FormID) excludedFormIds.add(String(item.FormID).trim());
     });
 }
 
-// LOBDatalari.xlsx yükleme (eski eşlemeler)
 async function loadLobDataFile(file) {
     showLoader(true);
-    lobDataStatus.innerHTML = '⏳ Yükleniyor...';
+    setStatus(lobDataStatus, '⏳ Yükleniyor...');
     try {
         const rows = await readExcelFile(file);
         if (!rows.length) throw new Error('Dosya boş');
-        // Sütun adları: ClientIdent, Client, FormID, FormName, LOBAdı, LOBID (olabilir)
-        // Form ID sütununu bul
         const firstRow = rows[0];
         let formIdCol = null;
         for (let key of Object.keys(firstRow)) {
@@ -90,14 +93,12 @@ async function loadLobDataFile(file) {
                 break;
             }
         }
-        if (!formIdCol) formIdCol = 'FormID'; // varsayılan
-        
+        if (!formIdCol) formIdCol = 'FormID';
         const newExcluded = new Set();
         const masterRecords = [];
         for (const row of rows) {
             const formId = String(row[formIdCol] || '').trim();
             if (formId) newExcluded.add(formId);
-            // master veriye ekle (LOB adı ve ID varsa)
             const lobAdi = row.LOBAdı || row['LOB Adı'] || '';
             const lobId = row.LOBID || row['LOB ID'] || '';
             const clientIdent = row.ClientIdent || '';
@@ -114,30 +115,20 @@ async function loadLobDataFile(file) {
                 });
             }
         }
-        // localStorage'daki master ile birleştir (üzerine yazmak yerine, gelenlerle güncelle)
-        // Amaç: LOBDatalari'nı yüklediğimizde, mevcut localStorage'daki kayıtların üzerine yazma,
-        // sadece excluded set'ini oluştur. Ancak export sırasında birleştirme yapılacak.
-        // Burada sadece exclusion set'ini güncelliyoruz.
         excludedFormIds = newExcluded;
-        lobDataStatus.innerHTML = `✅ ${excludedFormIds.size} benzersiz Form ID yüklendi (daha önce eşlenmiş).`;
-        lobDataStatus.style.color = 'var(--accent)';
-        // Mevcut source ve ref varsa tabloyu yenile
-        if (sourceData.length && refClientList.length) {
-            applyFilterAndRender();
-        }
+        setStatus(lobDataStatus, `✅ ${excludedFormIds.size} benzersiz Form ID yüklendi (daha önce eşlenmiş).`, 'ok');
+        if (sourceData.length && refClientList.length) applyFilterAndRender();
     } catch(err) {
-        lobDataStatus.innerHTML = `❌ ${err.message}`;
-        lobDataStatus.style.color = 'var(--accent3)';
+        setStatus(lobDataStatus, `❌ ${err.message}`, 'err');
         excludedFormIds.clear();
     } finally {
         showLoader(false);
     }
 }
 
-// Kaynak Data yükleme
 async function loadSourceData(file) {
     showLoader(true);
-    sourceStatus.innerHTML = '⏳ Yükleniyor...';
+    setStatus(sourceStatus, '⏳ Yükleniyor...');
     try {
         const rows = await readExcelFile(file);
         if (!rows.length) throw new Error('Dosya boş');
@@ -151,15 +142,12 @@ async function loadSourceData(file) {
             client: String(row.Client || '').trim(),
             formId: String(row['Form ID Text'] || '').trim(),
             formName: String(row['Form Name'] || '').trim(),
-            originalRow: row
         }));
-        sourceStatus.innerHTML = `✅ ${sourceData.length} kayıt yüklendi.`;
-        sourceStatus.style.color = 'var(--accent)';
+        setStatus(sourceStatus, `✅ ${sourceData.length} kayıt yüklendi.`, 'ok');
         if (refClientList.length) applyFilterAndRender();
         else tableContainer.style.display = 'none';
     } catch(err) {
-        sourceStatus.innerHTML = `❌ ${err.message}`;
-        sourceStatus.style.color = 'var(--accent3)';
+        setStatus(sourceStatus, `❌ ${err.message}`, 'err');
         sourceData = [];
         tableContainer.style.display = 'none';
     } finally {
@@ -167,23 +155,20 @@ async function loadSourceData(file) {
     }
 }
 
-// Proje Referans Listesi yükleme
 async function loadRefData(file) {
     showLoader(true);
-    refStatus.innerHTML = '⏳ Yükleniyor...';
+    setStatus(refStatus, '⏳ Yükleniyor...');
     try {
         const rows = await readExcelFile(file);
         if (!rows.length) throw new Error('Dosya boş');
         const firstRow = rows[0];
         if (!('Client' in firstRow)) throw new Error('Excel\'de "Client" sütunu bulunamadı');
         refClientList = rows.map(row => String(row.Client || '').trim()).filter(c => c !== '');
-        refStatus.innerHTML = `✅ ${refClientList.length} benzersiz client referansı yüklendi.`;
-        refStatus.style.color = 'var(--accent)';
+        setStatus(refStatus, `✅ ${refClientList.length} benzersiz client referansı yüklendi.`, 'ok');
         if (sourceData.length) applyFilterAndRender();
         else tableContainer.style.display = 'none';
     } catch(err) {
-        refStatus.innerHTML = `❌ ${err.message}`;
-        refStatus.style.color = 'var(--accent3)';
+        setStatus(refStatus, `❌ ${err.message}`, 'err');
         refClientList = [];
         tableContainer.style.display = 'none';
     } finally {
@@ -191,23 +176,34 @@ async function loadRefData(file) {
     }
 }
 
-// Filtreleme (Client bazlı + excludedFormIds)
+function getRowKey(item) { return `${item.clientIdent}_${item.formId}`; }
+let checkboxState = {};
+
+function loadCheckboxState() {
+    const stored = localStorage.getItem('LOB_checkboxState');
+    if (stored) {
+        try { checkboxState = JSON.parse(stored); } catch(e) { checkboxState = {}; }
+    } else { checkboxState = {}; }
+}
+function saveCheckboxState() {
+    const state = {};
+    currentDisplayData.forEach(row => {
+        const key = getRowKey({ clientIdent: row.clientIdent, formId: row.formId });
+        state[key] = row.checked;
+    });
+    localStorage.setItem('LOB_checkboxState', JSON.stringify(state));
+}
+
 function applyFilterAndRender() {
     if (!sourceData.length || !refClientList.length) return;
     const refSet = new Set(refClientList.map(c => c.toLowerCase()));
-    // 1. Client filtre
     let temp = sourceData.filter(item => refSet.has(item.client.toLowerCase()));
-    // 2. Daha önce eşlenmiş Form ID'leri çıkar
     temp = temp.filter(item => !excludedFormIds.has(item.formId));
     filteredData = temp;
     
-    // localStorage'daki checkbox state'leri yükle (genel)
     loadCheckboxState();
-    
     currentDisplayData = filteredData.map(item => {
         const key = getRowKey(item);
-        // Master data'da bu FormID zaten varsa (LOB Adı/ID dolu olabilir) ama biz bu satırları zaten çıkardık.
-        // Yeni satırlar için boş.
         return {
             clientIdent: item.clientIdent,
             client: item.client,
@@ -218,50 +214,26 @@ function applyFilterAndRender() {
             checked: checkboxState[key] !== undefined ? checkboxState[key] : true
         };
     });
-    
     renderTable();
     tableContainer.style.display = 'block';
     rowCountInfo.textContent = `${currentDisplayData.length} yeni eşlenecek kayıt (${filteredData.length} filtrelenmiş, toplam kaynak: ${sourceData.length})`;
 }
 
-// Benzersiz anahtar
-function getRowKey(item) { return `${item.clientIdent}_${item.formId}`; }
-
-// Checkbox durumlarını localStorage'a kaydet (sadece UI checkbox'ları için)
-function saveCheckboxState() {
-    const state = {};
-    currentDisplayData.forEach(row => {
-        const key = getRowKey({ clientIdent: row.clientIdent, formId: row.formId });
-        state[key] = row.checked;
-    });
-    localStorage.setItem('LOB_checkboxState', JSON.stringify(state));
-}
-function loadCheckboxState() {
-    const stored = localStorage.getItem('LOB_checkboxState');
-    if (stored) {
-        try { checkboxState = JSON.parse(stored); } catch(e) { checkboxState = {}; }
-    } else { checkboxState = {}; }
-}
-let checkboxState = {};
-
-// Tabloyu çiz
 function renderTable() {
     const thead = document.getElementById('tableHeader');
     const tbody = document.getElementById('tableBody');
     if (!thead || !tbody) return;
     thead.innerHTML = `<tr>
         <th>ClientIdent</th><th>Client</th><th>Form ID</th><th>Form Name</th>
-        <th>LOB Adı</th><th>LOB ID</th><th style="width:80px">Export Et?</th>
+        <th>LOB Adı</th><th>LOB ID</th><th style="width:70px">Export Et?</th>
     </tr>`;
     if (!currentDisplayData.length) {
-        tbody.innerHTML = `<td><td colspan="7" class="empty-state">📭 Gösterilecek yeni kayıt yok (hepsi daha önce eşlenmiş veya client filtresinde değil).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">📭 Gösterilecek yeni kayıt yok (hepsi daha önce eşlenmiş veya client filtresinde değil).</td></tr>`;
         exportBtn.disabled = true;
         return;
     }
     exportBtn.disabled = false;
     tbody.innerHTML = currentDisplayData.map((row, idx) => {
-        const key = getRowKey({ clientIdent: row.clientIdent, formId: row.formId });
-        const isChecked = row.checked;
         return `
         <tr data-row-idx="${idx}">
             <td>${escapeHtml(row.clientIdent)}</td>
@@ -270,11 +242,11 @@ function renderTable() {
             <td>${escapeHtml(row.formName)}</td>
             <td><input type="text" class="lobAdi-input" data-idx="${idx}" value="${escapeHtml(row.lobAdi)}" placeholder="LOB Adı girin"></td>
             <td><input type="text" class="lobId-input" data-idx="${idx}" value="${escapeHtml(row.lobId)}" placeholder="LOB ID girin"></td>
-            <td class="checkbox-cell"><input type="checkbox" class="export-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''}></td>
+            <td class="checkbox-cell"><input type="checkbox" class="export-checkbox" data-idx="${idx}" ${row.checked ? 'checked' : ''}></td>
         </tr>
         `;
     }).join('');
-    // Event binding
+    
     document.querySelectorAll('.lobAdi-input').forEach(inp => {
         inp.addEventListener('change', (e) => {
             const idx = parseInt(inp.dataset.idx);
@@ -298,15 +270,11 @@ function renderTable() {
     });
 }
 
-// Export: yeni satırlar + mevcut master veriyi birleştir, localStorage'a kaydet ve Excel indir
 function exportMaster() {
-    // Seçili yeni satırlar (checked)
     const selectedNewRows = currentDisplayData.filter(row => row.checked === true);
-    // Mevcut masterData (daha önce kaydedilmiş)
     let updatedMaster = [...masterData];
-    // Yeni satırları ekle (üzerine yazma, sadece ekle)
     for (const newRow of selectedNewRows) {
-        if (!newRow.lobAdi && !newRow.lobId) continue; // boşsa atla
+        if (!newRow.lobAdi && !newRow.lobId) continue;
         const existingIndex = updatedMaster.findIndex(m => m.FormID === newRow.formId);
         const newRecord = {
             ClientIdent: newRow.clientIdent,
@@ -317,15 +285,13 @@ function exportMaster() {
             LOBID: newRow.lobId
         };
         if (existingIndex !== -1) {
-            // güncelle
             updatedMaster[existingIndex] = newRecord;
         } else {
             updatedMaster.push(newRecord);
         }
     }
-    // localStorage'a kaydet
     saveMasterToLocalStorage(updatedMaster);
-    // Excel export
+    
     const exportData = updatedMaster.map(record => ({
         'ClientIdent': record.ClientIdent,
         'Client': record.Client,
@@ -334,7 +300,6 @@ function exportMaster() {
         'LOB Adı': record.LOBAdi,
         'LOB ID': record.LOBID
     }));
-    // Sayısal alanları number yap
     const processed = exportData.map(row => {
         const newRow = { ...row };
         if (/^\d+$/.test(String(newRow.ClientIdent))) newRow.ClientIdent = Number(newRow.ClientIdent);
@@ -347,8 +312,6 @@ function exportMaster() {
     XLSX.utils.book_append_sheet(wb, ws, 'LOB_Master');
     XLSX.writeFile(wb, `LOB_Master_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
     alert(`${selectedNewRows.length} yeni kayıt eklendi/güncellendi. Toplam master: ${updatedMaster.length} kayıt. Dosya indirildi.`);
-    // Tabloyu yeniden yükle (çünkü excludedFormIds değişti) – aslında yeni eklenenler artık dışlanacak.
-    // Bu nedenle sayfayı yenilemek gerekir: kullanıcıya mesaj verip sayfayı yenileyelim.
     if (selectedNewRows.length > 0) {
         alert('Yeni eklenen Form ID\'ler artık listeden çıkarılacak. Sayfa yenilenecek.');
         location.reload();
@@ -365,7 +328,6 @@ function resetAllCheckboxes() {
     }
 }
 
-// Drag & Drop setup helper
 function setupDrop(dropEl, inputEl, loadFunc) {
     dropEl.addEventListener('click', e => { if (e.target !== inputEl) inputEl.click(); });
     inputEl.addEventListener('change', e => { if (e.target.files[0]) loadFunc(e.target.files[0]); });
@@ -378,7 +340,6 @@ function setupDrop(dropEl, inputEl, loadFunc) {
     });
 }
 
-// Initialize
 loadMasterFromLocalStorage();
 setupDrop(dropSource, sourceInput, loadSourceData);
 setupDrop(dropRef, refInput, loadRefData);
