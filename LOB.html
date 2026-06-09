@@ -7,16 +7,17 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* LOB'a özel ek stiller */
+/* Ek stiller – mevcut temaya zarar vermez */
 .upload-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
+}
+.file-drop {
+    cursor: pointer;
 }
 .status-text {
     margin-top: 0.5rem;
@@ -25,11 +26,11 @@
 }
 .checkbox-cell {
     text-align: center;
-    width: 60px;
+    width: 50px;
 }
 .checkbox-cell input {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     cursor: pointer;
 }
 .data-table input[type="text"] {
@@ -39,6 +40,7 @@
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
+    font-size: 0.8rem;
 }
 .btn-bar {
     display: flex;
@@ -48,31 +50,62 @@
     flex-wrap: wrap;
     gap: 0.5rem;
 }
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+.filter-bar input, .filter-bar select {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8rem;
+}
+.filter-bar label {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable:hover {
+    background: rgba(124,109,250,0.1);
+}
+.sort-icon {
+    font-size: 0.7rem;
+    margin-left: 4px;
+}
 </style>
 </head>
 <body>
 <div class="header">
   <div class="logo">🏷️ LOB Eşleme Aracı</div>
   <div class="header-controls">
+    <div class="theme-switch"></div>
     <button class="btn btn-ghost" onclick="window.location.href='index.html'">🏠 Ana Sayfaya Dön</button>
   </div>
 </div>
 <div class="main">
   <div class="panel">
-    <h2>📂 Veri Yükleme</h2>
+    <h2>📂 Veri Yükleme (3 adım zorunlu)</h2>
     <div class="upload-grid">
       <div class="upload-card">
-        <h3>📄 1. Kaynak Data (Excel/CSV)</h3>
-        <div class="file-drop drop-zone" id="dropSourceData">
+        <h3>📄 1. Kaynak Data</h3>
+        <div class="file-drop" id="dropSourceData">
           <input type="file" id="sourceFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
           <div>📂 Sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;">Zorunlu: ClientIdent, Client, LOBID, LOB1, Form ID Text, Form Name</div>
+          <div style="font-size:0.7rem;">ClientIdent, Client, LOBID, LOB1, Form ID Text, Form Name</div>
         </div>
         <div class="status-text" id="sourceStatus">Henüz yüklenmedi</div>
       </div>
       <div class="upload-card">
         <h3>📑 2. Proje Referans Listesi</h3>
-        <div class="file-drop drop-zone" id="dropRefList">
+        <div class="file-drop" id="dropRefList">
           <input type="file" id="refFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
           <div>📂 Sürükleyin veya tıklayın</div>
           <div style="font-size:0.7rem;">Excel'de "Client" sütunu olmalı</div>
@@ -80,11 +113,11 @@
         <div class="status-text" id="refStatus">Henüz yüklenmedi</div>
       </div>
       <div class="upload-card">
-        <h3>🗄️ 3. Mevcut LOB Data (Opsiyonel)</h3>
-        <div class="file-drop drop-zone" id="dropLobData">
+        <h3>🗄️ 3. Mevcut LOB Data (Zorunlu)</h3>
+        <div class="file-drop" id="dropLobData">
           <input type="file" id="lobDataFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
-          <div>📂 LOBDatalari.xlsx yükleyin</div>
-          <div style="font-size:0.7rem;">Daha önce eşlenmiş Form ID'ler bu dosyadan okunur ve ana listeden çıkarılır.</div>
+          <div>📂 LOBDatalari.xlsx yükleyin (zorunlu)</div>
+          <div style="font-size:0.7rem;">Bu dosyadaki Form ID'ler daha önce eşlenmiş kabul edilir, ana listeden çıkarılır.</div>
         </div>
         <div class="status-text" id="lobDataStatus">Henüz yüklenmedi</div>
       </div>
@@ -94,10 +127,24 @@
 
     <div id="tableContainer" style="display:none;">
       <div class="btn-bar">
-        <button class="btn btn-primary" id="exportBtn">📎 Master Export (Yeni + Eski Birleştir)</button>
+        <button class="btn btn-primary" id="exportBtn" disabled>📎 Master Export (Yeni + Eski Birleştir)</button>
         <button class="btn btn-ghost" id="resetCheckboxesBtn">🔄 Tüm İşaretleri Sıfırla</button>
         <span id="rowCountInfo" style="font-size:0.8rem; color:var(--muted);"></span>
       </div>
+
+      <!-- Filtre ve sıralama çubuğu -->
+      <div class="filter-bar">
+        <input type="text" id="filterClient" placeholder="Client filtrele...">
+        <input type="text" id="filterFormId" placeholder="Form ID filtrele...">
+        <input type="text" id="filterFormName" placeholder="Form Name filtrele...">
+        <select id="sortSelect">
+          <option value="client">Client (A-Z)</option>
+          <option value="formId">Form ID (A-Z)</option>
+          <option value="formName">Form Name (A-Z)</option>
+        </select>
+        <button class="btn btn-ghost" id="resetFiltersBtn">Filtreleri Temizle</button>
+      </div>
+
       <div class="table-wrapper">
         <table class="data-table" id="dataTable">
           <thead id="tableHeader"></thead>
@@ -108,6 +155,7 @@
   </div>
 </div>
 <footer class="footer">LOB Eşleme Aracı | TP Analitik Uzman Araçları</footer>
+<script src="js/theme.js"></script>
 <script src="js/LOB.js"></script>
 </body>
 </html>
