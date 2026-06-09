@@ -1188,11 +1188,12 @@ reportAreaS3.style.display = 'none';
 exportBtnS3.disabled = true;
 initStep3();
 
-// ==================== STEP 4 (Gelişmiş Tablo - Modern Filtreler) ====================
-let allHistoryData = [];      // { date, dateRaw, week, group, reviewer, project, monitorId, link }
+// ==================== STEP 4 (Gelişmiş Tablo - Hafta Yok, Çoklama Engelli) ====================
+let allHistoryData = [];      // { date, dateRaw, group, reviewer, project, monitorId, link }
 let currentDisplayData = [];
 let sortColumn = null;
 let sortDirection = 'asc';
+let loadedFiles = new Set();   // Dosya adı+boyut+sonDeğişiklik bazında benzersizlik
 
 // DOM Elemanları
 const historyFileInputStep4 = document.getElementById('historyFileInputStep4');
@@ -1204,27 +1205,25 @@ const distributionTableBody = document.getElementById('distributionTableBodyStep
 const exportBtnStep4 = document.getElementById('exportDistributionBtnStep4');
 const filterStatsSpan = document.getElementById('filterStatsStep4');
 
-// Column tanımları (anahtar, başlık, tip, filtre input tipi)
+// Sütun tanımları (hafta yok)
 const columns = [
   { key: 'date', label: 'Dağıtım Tarihi', type: 'string', filterType: 'text' },
-  { key: 'week', label: 'Hafta', type: 'number', filterType: 'number' },
   { key: 'group', label: 'Grup', type: 'string', filterType: 'text' },
   { key: 'reviewer', label: 'Değerlendirici', type: 'string', filterType: 'text' },
   { key: 'project', label: 'Proje', type: 'string', filterType: 'text' },
   { key: 'monitorId', label: 'Monitoring ID', type: 'string', filterType: 'text' },
-  { key: 'link', label: 'Link', type: 'link', filterType: null } // Link sütunu filtrelenmez
+  { key: 'link', label: 'Link', type: 'link', filterType: null }
 ];
 
 let filterValues = {
   date: '',
-  week: '',
   group: '',
   reviewer: '',
   project: '',
   monitorId: ''
 };
 
-// JSON'dan veri çıkarma
+// JSON'dan veri çıkarma (hafta bilgisini artık kullanmıyoruz)
 function extractAssignmentsFromJson(jsonObj) {
   const result = [];
   const groupMap = {
@@ -1235,7 +1234,6 @@ function extractAssignmentsFromJson(jsonObj) {
   for (const [groupKey, groupName] of Object.entries(groupMap)) {
     const entries = jsonObj[groupKey] || [];
     for (const entry of entries) {
-      const week = entry.week;
       const dateRaw = entry.date;
       let formattedDate = '';
       if (dateRaw) {
@@ -1255,7 +1253,6 @@ function extractAssignmentsFromJson(jsonObj) {
         result.push({
           date: formattedDate,
           dateRaw: dateRaw,
-          week: week,
           group: groupName,
           reviewer: ass.FeedbackCreatorName || '',
           project: ass.client_name || '',
@@ -1268,13 +1265,40 @@ function extractAssignmentsFromJson(jsonObj) {
   return result;
 }
 
-// Çoklu JSON yükleme
+// Dosya için benzersiz anahtar oluştur (ad + boyut + son değişiklik)
+function getFileKey(file) {
+  return `${file.name}|${file.size}|${file.lastModified}`;
+}
+
+// Çoklu JSON yükleme (çoklama engelli)
 async function loadMultipleHistoryFiles(files) {
   if (!files || files.length === 0) return;
   if (typeof showLoader === 'function') showLoader('Step4', true);
-  historyStatusStep4.innerHTML = `⏳ ${files.length} dosya yükleniyor...`;
-  let totalAdded = 0;
+  
+  const newFiles = [];
+  const duplicateFiles = [];
   for (const file of files) {
+    const key = getFileKey(file);
+    if (loadedFiles.has(key)) {
+      duplicateFiles.push(file.name);
+    } else {
+      loadedFiles.add(key);
+      newFiles.push(file);
+    }
+  }
+  
+  if (duplicateFiles.length) {
+    alert(`Şu dosyalar daha önce yüklenmiş, atlandı:\n${duplicateFiles.join('\n')}`);
+  }
+  if (newFiles.length === 0) {
+    historyStatusStep4.innerHTML = `⚠️ Yeni dosya yok, hepsi daha önce yüklenmiş.`;
+    if (typeof showLoader === 'function') showLoader('Step4', false);
+    return;
+  }
+  
+  historyStatusStep4.innerHTML = `⏳ ${newFiles.length} yeni dosya yükleniyor...`;
+  let totalAdded = 0;
+  for (const file of newFiles) {
     try {
       const text = await file.text();
       const json = JSON.parse(text);
@@ -1293,7 +1317,7 @@ async function loadMultipleHistoryFiles(files) {
       }, 2000);
     }
   }
-  historyStatusStep4.innerHTML = `✅ Toplam ${allHistoryData.length} dağıtım kaydı yüklendi. (${files.length} dosya)`;
+  historyStatusStep4.innerHTML = `✅ Toplam ${allHistoryData.length} dağıtım kaydı yüklendi. (${newFiles.length} yeni dosya)`;
   historyStatusStep4.style.color = 'var(--accent)';
   if (typeof showLoader === 'function') showLoader('Step4', false);
   distributionAreaStep4.style.display = 'block';
@@ -1302,18 +1326,16 @@ async function loadMultipleHistoryFiles(files) {
   applyFiltersAndRender();
 }
 
-// Başlık satırını oluştur (sütun adları + filtre inputları)
+// Başlık satırını oluştur (sıralama başlıkları + filtre inputları)
 function renderTableHeader() {
   const thead = document.getElementById('historyTableHeaderStep4');
   if (!thead) return;
   
-  // 1. satır: sıralama başlıkları
   const headerRow1 = document.createElement('tr');
-  // 2. satır: filtre inputları
   const headerRow2 = document.createElement('tr');
   
   for (const col of columns) {
-    // Başlık hücresi
+    // Sıralama başlığı
     const th = document.createElement('th');
     th.textContent = col.label;
     th.style.cursor = 'pointer';
@@ -1329,12 +1351,12 @@ function renderTableHeader() {
         sortColumn = col.key;
         sortDirection = 'asc';
       }
-      renderTableHeader();  // Başlıkları yeniden oluştur (ok işareti için)
+      renderTableHeader();
       applyFiltersAndRender();
     });
     headerRow1.appendChild(th);
     
-    // Filtre hücresi
+    // Filtre inputu
     const td = document.createElement('td');
     if (col.filterType && col.key !== 'link') {
       const input = document.createElement('input');
@@ -1363,18 +1385,13 @@ function renderTableHeader() {
   thead.appendChild(headerRow2);
 }
 
-// Filtreleme ve sıralama
+// Filtreleme ve sıralama (hafta yok)
 function applyFiltersAndRender() {
   let filtered = [...allHistoryData];
   
-  // Metin filtreleri (case-insensitive)
   if (filterValues.date) {
     const val = filterValues.date.toLowerCase();
     filtered = filtered.filter(r => r.date.toLowerCase().includes(val));
-  }
-  if (filterValues.week) {
-    const val = filterValues.week.toString();
-    filtered = filtered.filter(r => r.week.toString().includes(val));
   }
   if (filterValues.group) {
     const val = filterValues.group.toLowerCase();
@@ -1398,10 +1415,7 @@ function applyFiltersAndRender() {
     filtered.sort((a, b) => {
       let valA = a[sortColumn];
       let valB = b[sortColumn];
-      if (sortColumn === 'week') {
-        valA = Number(valA);
-        valB = Number(valB);
-      } else if (sortColumn === 'date') {
+      if (sortColumn === 'date') {
         valA = a.dateRaw || '';
         valB = b.dateRaw || '';
       } else {
@@ -1430,7 +1444,6 @@ function renderTableBody() {
   distributionTableBody.innerHTML = currentDisplayData.map(row => `
     <tr>
       <td>${escapeHtml(row.date)}</td>
-      <td>${escapeHtml(String(row.week))}</td>
       <td>${escapeHtml(row.group)}</td>
       <td>${escapeHtml(row.reviewer)}</td>
       <td>${escapeHtml(row.project)}</td>
@@ -1459,7 +1472,6 @@ function exportFilteredToExcel() {
   }
   const exportData = currentDisplayData.map(row => ({
     'Dağıtım Tarihi': row.date,
-    'Hafta': row.week,
     'Grup': row.group,
     'Değerlendirici': row.reviewer,
     'Proje': row.project,
@@ -1472,18 +1484,18 @@ function exportFilteredToExcel() {
   XLSX.writeFile(wb, `gecmis_dagitim_filtreli_${formatDateForFilename()}.xlsx`);
 }
 
-// Tüm veriyi temizle
+// Tüm veriyi temizle (yüklenen dosya listesi de temizlenir)
 function clearAllHistoryData() {
   if (confirm('Tüm yüklenen geçmiş verileri silinecek. Devam etmek istiyor musunuz?')) {
     allHistoryData = [];
     currentDisplayData = [];
+    loadedFiles.clear();
     sortColumn = null;
     sortDirection = 'asc';
-    // Filtre değerlerini sıfırla
     for (let key in filterValues) {
       filterValues[key] = '';
     }
-    renderTableHeader();  // Inputları temizlemek için başlığı yeniden oluştur
+    renderTableHeader();
     renderTableBody();
     updateFilterStats();
     historyStatusStep4.innerHTML = 'Veriler temizlendi. Yeni JSON yükleyebilirsiniz.';
@@ -1499,7 +1511,7 @@ function setupDropStep4() {
   dropHistoryStep4.addEventListener('click', e => { if (e.target !== historyFileInputStep4) historyFileInputStep4.click(); });
   historyFileInputStep4.addEventListener('change', e => {
     if (e.target.files && e.target.files.length) loadMultipleHistoryFiles(Array.from(e.target.files));
-    e.target.value = ''; // aynı dosyayı tekrar seçebilmek için
+    e.target.value = '';
   });
   dropHistoryStep4.addEventListener('dragover', e => { e.preventDefault(); dropHistoryStep4.classList.add('drag'); });
   dropHistoryStep4.addEventListener('dragleave', () => dropHistoryStep4.classList.remove('drag'));
