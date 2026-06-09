@@ -505,6 +505,19 @@
       "isTest": false,
       "isBest": false,
       "order": 33
+    },
+    {
+      "id": "lob",
+      "name": "LOB Veri Güncellemesi",
+      "nameEn": "LOB Data Update",
+      "url": "LOB.html",
+      "cat": "qa",
+      "icon": "logo.png",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "order": 34
     }
   ],
   "users": [
