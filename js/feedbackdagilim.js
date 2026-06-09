@@ -1188,167 +1188,202 @@ reportAreaS3.style.display = 'none';
 exportBtnS3.disabled = true;
 initStep3();
 
-// ==================== STEP 4 (Geçmiş Dağıtım Tablosu - Step2 formatında) ====================
-// Bu kod mevcut Step1, Step2, Step3 işlevlerine dokunmaz. Sadece sona eklenmiştir.
-let historyDataStep4 = { DM: [], ML: [], DONUSUM: [] };
-let currentWeekStep4 = null;
+// ==================== STEP 4 (Geçmiş Dağıtım Tablosu - Haftasız, Tarihli, Çoklu JSON) ====================
+let allHistoryDataStep4 = []; // Tüm yüklenen JSON'lardan gelen dağıtım kayıtları
 
 const historyFileInputStep4 = document.getElementById('historyFileInputStep4');
 const dropHistoryStep4 = document.getElementById('dropHistoryStep4');
 const historyStatusStep4 = document.getElementById('historyStatusStep4');
-const weekSelectStep4 = document.getElementById('weekSelectStep4');
-const showDistributionBtnStep4 = document.getElementById('showDistributionBtnStep4');
 const exportDistributionBtnStep4 = document.getElementById('exportDistributionBtnStep4');
+const clearHistoryBtnStep4 = document.getElementById('clearHistoryStep4Btn');
 const distributionTableBodyStep4 = document.getElementById('distributionTableBodyStep4');
 const distributionAreaStep4 = document.getElementById('distributionAreaStep4');
 
-function loadHistoryFileStep4(file) {
-  if (!file) return;
-  if (typeof showLoader === 'function') showLoader('Step4', true);
-  if (historyStatusStep4) historyStatusStep4.innerHTML = '⏳ Yükleniyor...';
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const parsed = JSON.parse(e.target.result);
-      if (parsed && Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
-        historyDataStep4 = parsed;
-        const weeksSet = new Set();
-        ['DM', 'ML', 'DONUSUM'].forEach(g => {
-          (historyDataStep4[g] || []).forEach(entry => { if (entry.week) weeksSet.add(entry.week); });
-        });
-        const weeks = Array.from(weeksSet).sort((a,b) => a-b);
-        if (weekSelectStep4) {
-          weekSelectStep4.innerHTML = '<option value="">-- Hafta Seçin --</option>' + weeks.map(w => `<option value="${w}">${w}. Hafta</option>`).join('');
-          weekSelectStep4.disabled = false;
+// Bir JSON dosyasını işle ve kayıtları ekle
+function processHistoryJson(file, isMultiple = true) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (parsed && Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
+          const newRecords = [];
+          const groupMapping = [
+            { key: 'DM', name: 'DM' },
+            { key: 'ML', name: 'ML' },
+            { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
+          ];
+          for (const { key, name } of groupMapping) {
+            const entries = parsed[key] || [];
+            for (const entry of entries) {
+              const week = entry.week;
+              const dateStr = entry.date ? new Date(entry.date).toLocaleString('tr-TR') : 'Tarih yok';
+              if (entry.assignments) {
+                entry.assignments.forEach(ass => {
+                  newRecords.push({
+                    date: dateStr,
+                    week: week,
+                    group: name,
+                    FeedbackCreatorName: ass.FeedbackCreatorName,
+                    client_name: ass.client_name,
+                    emp_monitor_ident: ass.emp_monitor_ident,
+                    employee_ident: ass.employee_ident || '',
+                    hpGroup: ass.hpGroup || ''
+                  });
+                });
+              }
+            }
+          }
+          resolve(newRecords);
+        } else {
+          reject(new Error('Geçersiz JSON yapısı (DM, ML, DONUSUM arrayleri eksik)'));
         }
-        if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = false;
-        if (historyStatusStep4) {
-          historyStatusStep4.innerHTML = `✅ Geçmiş yüklendi (DM: ${historyDataStep4.DM.length}, ML: ${historyDataStep4.ML.length}, Dönüşüm: ${historyDataStep4.DONUSUM.length})`;
-          historyStatusStep4.style.color = 'var(--accent)';
-        }
-        if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
-      } else throw new Error('Geçersiz JSON yapısı');
-    } catch (err) {
-      if (historyStatusStep4) {
-        historyStatusStep4.innerHTML = `❌ ${err.message}`;
-        historyStatusStep4.style.color = 'var(--accent3)';
+      } catch (err) {
+        reject(err);
       }
-      historyDataStep4 = { DM: [], ML: [], DONUSUM: [] };
-      if (weekSelectStep4) weekSelectStep4.disabled = true;
-      if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = true;
-    } finally {
-      if (typeof showLoader === 'function') showLoader('Step4', false);
-    }
-  };
-  reader.onerror = () => {
-    if (historyStatusStep4) historyStatusStep4.innerHTML = '❌ Dosya okunamadı';
-    if (typeof showLoader === 'function') showLoader('Step4', false);
-  };
-  reader.readAsText(file);
+    };
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.readAsText(file);
+  });
 }
 
-function showDistributionForWeekStep4() {
-  if (!weekSelectStep4) return;
-  const week = parseInt(weekSelectStep4.value);
-  if (isNaN(week)) { alert('Lütfen bir hafta seçin'); return; }
-  currentWeekStep4 = week;
-  const allAssignments = [];
-  const groupMapping = [
-    { key: 'DM', name: 'DM' },
-    { key: 'ML', name: 'ML' },
-    { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
-  ];
-  for (const { key, name } of groupMapping) {
-    const entries = historyDataStep4[key] || [];
-    const weekEntry = entries.find(e => e.week === week);
-    if (weekEntry && weekEntry.assignments) {
-      weekEntry.assignments.forEach(ass => {
-        allAssignments.push({
-          group: name,
-          FeedbackCreatorName: ass.FeedbackCreatorName,
-          client_name: ass.client_name,
-          emp_monitor_ident: ass.emp_monitor_ident,
-          employee_ident: ass.employee_ident || ''
-        });
-      });
+// Tüm yüklenen dosyaları işle
+async function loadHistoryFilesStep4(files) {
+  if (!files || files.length === 0) return;
+  if (typeof showLoader === 'function') showLoader('Step4', true);
+  if (historyStatusStep4) historyStatusStep4.innerHTML = '⏳ Yükleniyor...';
+  
+  let totalNewRecords = 0;
+  let errors = [];
+  
+  for (let i = 0; i < files.length; i++) {
+    try {
+      const newRecords = await processHistoryJson(files[i]);
+      allHistoryDataStep4.push(...newRecords);
+      totalNewRecords += newRecords.length;
+    } catch (err) {
+      errors.push(`${files[i].name}: ${err.message}`);
     }
   }
+  
+  // Tarihe göre sırala (en yeniden en eskiye)
+  allHistoryDataStep4.sort((a, b) => {
+    // date format: "DD.MM.YYYY HH:MM:SS" veya "Tarih yok"
+    const dateA = a.date !== 'Tarih yok' ? new Date(a.date.split(' ')[0].split('.').reverse().join('-')) : 0;
+    const dateB = b.date !== 'Tarih yok' ? new Date(b.date.split(' ')[0].split('.').reverse().join('-')) : 0;
+    return dateB - dateA;
+  });
+  
+  if (historyStatusStep4) {
+    if (errors.length) {
+      historyStatusStep4.innerHTML = `⚠️ ${totalNewRecords} kayıt eklendi. Hatalar: ${errors.join('; ')}`;
+      historyStatusStep4.style.color = 'var(--accent3)';
+    } else {
+      historyStatusStep4.innerHTML = `✅ Toplam ${totalNewRecords} dağıtım kaydı yüklendi (${files.length} dosya).`;
+      historyStatusStep4.style.color = 'var(--accent)';
+    }
+  }
+  
+  renderDistributionTable();
+  if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
+  if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = (allHistoryDataStep4.length === 0);
+  if (typeof showLoader === 'function') showLoader('Step4', false);
+}
+
+// Tabloyu render et
+function renderDistributionTable() {
   if (!distributionTableBodyStep4) return;
-  if (!allAssignments.length) {
-    distributionTableBodyStep4.innerHTML = '<tr><td colspan="5">Bu hafta için dağıtım kaydı bulunamadı</td></tr>';
-    if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
-    if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
+  
+  if (allHistoryDataStep4.length === 0) {
+    distributionTableBodyStep4.innerHTML = `<tr><td colspan="7" class="empty-state">Henüz veri yok. JSON dosyası yükleyin.</td></tr>`;
     return;
   }
-  distributionTableBodyStep4.innerHTML = allAssignments.map(ass => {
+  
+  distributionTableBodyStep4.innerHTML = allHistoryDataStep4.map(rec => {
     const link = (typeof buildMonitorLinkStep2 === 'function') 
-      ? buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident)
-      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(ass.emp_monitor_ident, 'CHECKLIST') : '#');
+      ? buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident)
+      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(rec.emp_monitor_ident, 'CHECKLIST') : '#');
     return `
       <tr>
-        <td>${escapeHtml(ass.group)}</td>
-        <td>${escapeHtml(ass.FeedbackCreatorName || '')}</td>
-        <td>${escapeHtml(ass.client_name || '')}</td>
-        <td>${escapeHtml(String(ass.emp_monitor_ident || ''))}</td>
+        <td>${escapeHtml(rec.date)}</td>
+        <td>${escapeHtml(rec.week)}</td>
+        <td>${escapeHtml(rec.group)}</td>
+        <td>${escapeHtml(rec.FeedbackCreatorName || '')}</td>
+        <td>${escapeHtml(rec.client_name || '')}</td>
+        <td>${escapeHtml(String(rec.emp_monitor_ident || ''))}</td>
         <td><a href="${link}" target="_blank" class="link-btn">🔗 Link</a></td>
       </tr>
     `;
   }).join('');
-  if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
-  if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = false;
 }
 
-function exportDistributionTableStep4() {
-  if (!currentWeekStep4) { alert('Önce bir hafta seçip tabloyu görüntüleyin.'); return; }
-  const allAssignments = [];
-  const groupMapping = [
-    { key: 'DM', name: 'DM' },
-    { key: 'ML', name: 'ML' },
-    { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
-  ];
-  for (const { key, name } of groupMapping) {
-    const entries = historyDataStep4[key] || [];
-    const weekEntry = entries.find(e => e.week === currentWeekStep4);
-    if (weekEntry && weekEntry.assignments) {
-      weekEntry.assignments.forEach(ass => {
-        allAssignments.push({
-          'Grup': name,
-          'Değerlendirici (FeedbackCreatorName)': ass.FeedbackCreatorName,
-          'Proje (client_name)': ass.client_name,
-          'Monitor Ident (emp_monitor_ident)': ass.emp_monitor_ident,
-          'Monitor Link': (typeof buildMonitorLinkStep2 === 'function') 
-            ? buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident || '')
-            : (typeof buildMonitorLink === 'function' ? buildMonitorLink(ass.emp_monitor_ident, 'CHECKLIST') : '#')
-        });
-      });
-    }
+// Excel'e aktar
+function exportAllDistributionsToExcel() {
+  if (allHistoryDataStep4.length === 0) {
+    alert('Aktarılacak veri yok');
+    return;
   }
-  if (!allAssignments.length) { alert('Aktarılacak veri yok'); return; }
-  if (typeof XLSX === 'undefined') { alert('XLSX kütüphanesi yüklenemedi.'); return; }
-  const ws = XLSX.utils.json_to_sheet(allAssignments);
+  if (typeof XLSX === 'undefined') {
+    alert('XLSX kütüphanesi yüklenemedi.');
+    return;
+  }
+  
+  const exportData = allHistoryDataStep4.map(rec => ({
+    'Dağıtım Tarihi': rec.date,
+    'Hafta': rec.week,
+    'Grup': rec.group,
+    'Değerlendirici (FeedbackCreatorName)': rec.FeedbackCreatorName,
+    'Proje (client_name)': rec.client_name,
+    'Monitoring ID (emp_monitor_ident)': rec.emp_monitor_ident,
+    'HP Alt Grubu': rec.hpGroup || '',
+    'Monitor Link': (typeof buildMonitorLinkStep2 === 'function') 
+      ? buildMonitorLinkStep2(rec.emp_monitor_ident, rec.employee_ident)
+      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(rec.emp_monitor_ident, 'CHECKLIST') : '#')
+  }));
+  
+  const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Hafta_${currentWeekStep4}_Dagitim`);
-  XLSX.writeFile(wb, `gecmis_dagitim_hafta_${currentWeekStep4}_${formatDateForFilename()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, 'Tum_Dagitimlar');
+  XLSX.writeFile(wb, `gecmis_tum_dagitimlar_${formatDateForFilename()}.xlsx`);
 }
 
+// Tüm geçmişi temizle
+function clearAllHistoryStep4() {
+  if (confirm('Tüm yüklenmiş geçmiş verileri silinecek. Devam etmek istiyor musunuz?')) {
+    allHistoryDataStep4 = [];
+    renderDistributionTable();
+    if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
+    if (historyStatusStep4) {
+      historyStatusStep4.innerHTML = 'Henüz yüklenmedi';
+      historyStatusStep4.style.color = '';
+    }
+    if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
+    // Dosya input'unu temizle
+    if (historyFileInputStep4) historyFileInputStep4.value = '';
+  }
+}
+
+// Drag & Drop ve çoklu dosya yükleme için setup
 function setupDropStep4() {
   if (!dropHistoryStep4 || !historyFileInputStep4) return;
+  
   dropHistoryStep4.addEventListener('click', e => { if (e.target !== historyFileInputStep4) historyFileInputStep4.click(); });
-  historyFileInputStep4.addEventListener('change', e => { if (e.target.files[0]) loadHistoryFileStep4(e.target.files[0]); });
+  historyFileInputStep4.addEventListener('change', e => { if (e.target.files && e.target.files.length) loadHistoryFilesStep4(e.target.files); });
+  
   dropHistoryStep4.addEventListener('dragover', e => { e.preventDefault(); dropHistoryStep4.classList.add('drag'); });
   dropHistoryStep4.addEventListener('dragleave', () => dropHistoryStep4.classList.remove('drag'));
   dropHistoryStep4.addEventListener('drop', e => {
     e.preventDefault();
     dropHistoryStep4.classList.remove('drag');
-    if (e.dataTransfer.files[0]) loadHistoryFileStep4(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length) loadHistoryFilesStep4(e.dataTransfer.files);
   });
 }
 
-if (showDistributionBtnStep4) showDistributionBtnStep4.addEventListener('click', showDistributionForWeekStep4);
-if (exportDistributionBtnStep4) exportDistributionBtnStep4.addEventListener('click', exportDistributionTableStep4);
+// Buton olayları
+if (exportDistributionBtnStep4) exportDistributionBtnStep4.addEventListener('click', exportAllDistributionsToExcel);
+if (clearHistoryBtnStep4) clearHistoryBtnStep4.addEventListener('click', clearAllHistoryStep4);
 
-if (weekSelectStep4) weekSelectStep4.disabled = true;
-if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = true;
+// Başlangıç durumları
 if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
 if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
 
