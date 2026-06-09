@@ -3,17 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOB Eşleme Aracı (Tek Tablo)</title>
+<title>LOB Eşleme Aracı | Master + Yeni</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* TEMA DEĞİŞKENLERİ */
 body {
   --bg: #1f1f28;
   --surface: #272734;
@@ -29,184 +24,60 @@ body {
   --accent4: #f4a261;
   --radius: 16px;
   --font: 'Segoe UI', 'DM Sans', system-ui, sans-serif;
-
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  transition: background 0.2s, color 0.2s;
+  transition: 0.2s;
   line-height: 1.5;
 }
+body.dark { --bg: #0d0d14; --surface: #141420; --card: #1a1a26; --card2: #20202e; --text: #eeeef5; --muted: #6a6a88; }
+body.light { --bg: #f5f5fa; --surface: #ffffff; --card: #ffffff; --card2: #f8f8ff; --border: rgba(0,0,0,0.12); --text: #111827; --muted: #4b5563; --accent: #10b981; --accent2: #6366f1; }
+body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; --border: rgba(255,0,130,0.1); --text: #f5eef8; --accent: #FF0082; --accent2: #9b30c0; }
 
-body.dark {
-  --bg: #0d0d14;
-  --surface: #141420;
-  --card: #1a1a26;
-  --card2: #20202e;
-  --border: rgba(255,255,255,0.09);
-  --border2: rgba(255,255,255,0.15);
-  --text: #eeeef5;
-  --muted: #6a6a88;
-}
-body.light {
-  --bg: #f5f5fa;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --card2: #f8f8ff;
-  --border: rgba(0,0,0,0.12);
-  --border2: rgba(0,0,0,0.2);
-  --text: #111827;
-  --muted: #4b5563;
-  --accent: #10b981;
-  --accent2: #6366f1;
-  --accent3: #ef4444;
-  --accent4: #f59e0b;
-}
-body.tp {
-  --bg: #0e0812;
-  --surface: #14091c;
-  --card: #1c1026;
-  --card2: #231530;
-  --border: rgba(255,0,130,0.1);
-  --border2: rgba(255,0,130,0.22);
-  --text: #f5eef8;
-  --muted: #b07ab8;
-  --accent: #FF0082;
-  --accent2: #9b30c0;
-  --accent3: #ff6b6b;
-  --accent4: #f4a261;
-}
-
-/* LAYOUT */
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-  gap: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 12px;
 }
-.logo {
-  font-size: 1.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent2), var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.header-controls {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-.main {
-  max-width: 1400px;
-  margin: 2rem auto;
-  padding: 0 1.5rem;
-}
-.panel {
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-}
+.logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.main { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; }
+.panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.5rem; }
 .upload-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem; margin-bottom: 2rem;
 }
-.upload-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 1.25rem;
-  transition: all 0.2s;
-}
-.upload-card.state-loaded { border-left: 4px solid var(--accent); background: rgba(6,214,160,0.05); }
+.upload-card { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 1.25rem; transition: 0.2s; }
+.upload-card.state-loaded { border-left: 4px solid var(--accent); }
 .upload-card.state-required { border-left: 4px solid var(--accent4); }
-.upload-card.state-error { border-left: 4px solid var(--accent3); background: rgba(255,107,107,0.05); }
-.upload-card h3 { font-size: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px; }
+.upload-card.state-error { border-left: 4px solid var(--accent3); }
 .badge { display: none; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; background: var(--accent2); color: white; }
 .upload-card.state-loaded .badge-loaded { display: inline-block; }
 .upload-card.state-required .badge-required { display: inline-block; background: var(--accent4); }
-.upload-card.state-error .badge-error { display: inline-block; background: var(--accent3); }
-.file-drop {
-  border: 2px dashed var(--border2);
-  border-radius: 1rem;
-  padding: 1.2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: 0.2s;
-  margin-bottom: 0.75rem;
-}
+.file-drop { border: 2px dashed var(--border2); border-radius: 1rem; padding: 1rem; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 0.75rem; }
 .file-drop:hover, .file-drop.drag { border-color: var(--accent2); background: rgba(124,109,250,0.05); }
-.file-drop.state-loaded { border-color: var(--accent); background: rgba(6,214,160,0.1); }
 .status-text { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
-.btn {
-  border: none;
-  padding: 8px 18px;
-  border-radius: 40px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
+.btn { border: none; padding: 6px 16px; border-radius: 40px; font-weight: 600; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .btn-primary { background: var(--accent2); color: white; }
-.btn-primary:hover { opacity: 0.9; transform: scale(1.02); }
+.btn-primary:hover { opacity: 0.9; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
-.btn-success { background: var(--accent); color: #1a1a26; }
-.btn-success:hover { opacity: 0.9; }
-.btn-icon { background: transparent; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px 8px; border-radius: 30px; }
-.btn-icon:hover { background: rgba(124,109,250,0.2); }
-.theme-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  padding: 4px 12px;
-  border-radius: 30px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  color: var(--text);
-}
-.theme-btn.active { background: var(--accent2); color: white; border-color: var(--accent2); }
-.table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); background: var(--surface); margin-top: 0.5rem; }
+.theme-btn { background: transparent; border: 1px solid var(--border); padding: 4px 12px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; }
+.theme-btn.active { background: var(--accent2); color: white; }
+.table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); margin-top: 1rem; background: var(--surface); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.data-table th, .data-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .data-table th { background: var(--card2); font-weight: 600; }
-.sortable { cursor: pointer; user-select: none; }
-.sortable:hover { background: rgba(124,109,250,0.1); }
-.sort-on { color: var(--accent2); }
-.empty-state { text-align: center; padding: 2rem; color: var(--muted); }
-.cb-cell { text-align: center; }
-.cb-cell input { width: 18px; height: 18px; cursor: pointer; }
 .data-table input { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.empty-state { text-align: center; padding: 2rem; color: var(--muted); }
 .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-#tableSearchInput { flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+#globalFilter { flex: 1; padding: 8px 12px; border-radius: 30px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .loader-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0; display: none; }
 .loader-bar.visible { display: block; }
 .loader-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width: 40%; animation: slide 1s infinite; }
 @keyframes slide { 0% { transform: translateX(-150%); } 100% { transform: translateX(350%); } }
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--surface);
-  border-left: 4px solid var(--accent);
-  border-radius: 12px;
-  padding: 10px 18px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  z-index: 2000;
-  font-size: 0.85rem;
-  animation: slideIn 0.2s ease;
-}
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 18px; z-index: 2000; font-size: 0.85rem; animation: slideIn 0.2s ease; }
 @keyframes slideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
 .footer { text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem; }
-@media (max-width: 680px) { .main { padding: 0 1rem; } .panel { padding: 1rem; } }
 </style>
 </head>
 <body class="grey">
@@ -227,371 +98,408 @@ body.tp {
     <h2>📂 Veri Yükleme</h2>
     <div class="upload-grid">
       <div class="upload-card" id="card1">
-        <h3>📄 1. Kaynak Data <span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropSourceData">
-          <input type="file" id="sourceFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        <h3>📄 1. Kaynak Data <span class="badge badge-loaded">✓</span></h3>
+        <div class="file-drop" id="dropSource">
+          <input type="file" id="sourceFile" accept=".xlsx,.xls,.csv" style="display:none;">
           <div>📂 Sürükleyin veya tıklayın</div>
           <div style="font-size:0.7rem;">ClientIdent, Client, LOBID, LOB1, Form ID Text, Form Name</div>
         </div>
         <div class="status-text" id="sourceStatus">Henüz yüklenmedi</div>
       </div>
       <div class="upload-card" id="card2">
-        <h3>📑 2. Proje Referans Listesi <span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropRefList">
-          <input type="file" id="refFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        <h3>📑 2. Proje Referans Listesi <span class="badge badge-loaded">✓</span></h3>
+        <div class="file-drop" id="dropRef">
+          <input type="file" id="refFile" accept=".xlsx,.xls,.csv" style="display:none;">
           <div>📂 Sürükleyin veya tıklayın</div>
           <div style="font-size:0.7rem;">Excel'de "Client" sütunu olmalı</div>
         </div>
         <div class="status-text" id="refStatus">Henüz yüklenmedi</div>
       </div>
       <div class="upload-card state-required" id="card3">
-        <h3>🗄️ 3. Mevcut LOB Data <span class="badge badge-required">Zorunlu</span><span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropLobData">
-          <input type="file" id="lobDataFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        <h3>🗄️ 3. Mevcut LOB Data <span class="badge badge-required">Zorunlu</span><span class="badge badge-loaded">✓</span></h3>
+        <div class="file-drop" id="dropLobMaster">
+          <input type="file" id="lobMasterFile" accept=".xlsx,.xls,.csv" style="display:none;">
           <div>📂 LOBDatalari.xlsx yükleyin (ZORUNLU)</div>
-          <div style="font-size:0.7rem;">Daha önce eşlenmiş Form ID'ler dışlanır, var olan LOB bilgileri gösterilir.</div>
+          <div style="font-size:0.7rem;">Daha önce eşlenmiş kayıtlar (Master)</div>
         </div>
-        <div class="status-text" id="lobDataStatus">Henüz yüklenmedi</div>
+        <div class="status-text" id="lobMasterStatus">Henüz yüklenmedi</div>
       </div>
     </div>
 
-    <div class="loader-bar" id="loaderLOB"><div class="loader-bar-inner"></div></div>
+    <div class="loader-bar" id="loader"><div class="loader-bar-inner"></div></div>
 
-    <div id="lobNotice" style="display:none; background:rgba(244,162,97,0.15); border-left:4px solid var(--accent4); padding:12px 16px; border-radius:12px; margin-bottom:1.5rem;">
-      ⚠️ <strong>3. dosya (Mevcut LOB Data) zorunludur.</strong> Lütfen LOBDatalari.xlsx dosyasını yükleyin.
+    <div id="warning" style="display:none; background:rgba(244,162,97,0.15); border-left:4px solid var(--accent4); padding:12px; border-radius:12px; margin-bottom:1rem;">
+      ⚠️ 3. dosya (LOBDatalari.xlsx) zorunludur. Yüklenmeden tablo gösterilmez.
     </div>
 
-    <!-- Tek Tablo: Mevcut + Yeni birlikte -->
-    <div id="mainTablePanel" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <h3>📋 Tüm LOB Kayıtları (Mevcut + Yeni Eklenecekler)</h3>
-        <div style="display:flex; gap:12px;">
-          <span class="badge" style="background:var(--accent2); color:white; padding:4px 10px;" id="rowCountChip">0 kayıt</span>
-          <span class="status-text" id="rowMeta"></span>
-        </div>
+    <!-- Araç Çubuğu -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
+      <div>
+        <button class="btn btn-primary" id="exportMasterBtn">📎 Master Export (LOBDatalari.xlsx)</button>
+        <button class="btn btn-primary" id="exportNewBtn" style="background:var(--accent);">🆕 Yeni Kayıt Export (LOB.xlsx)</button>
+        <button class="btn btn-ghost" id="clearStorageBtn">🗑️ LocalStorage Temizle</button>
       </div>
       <div class="filter-bar">
-        <input type="text" id="tableSearchInput" placeholder="🔍 Filtrele (Client, Form ID, Form Adı, LOB Adı/ID)...">
-        <button id="btnClearSearch" class="btn-icon" title="Temizle">✖️</button>
+        <input type="text" id="globalFilter" placeholder="🔍 Filtrele (Client, Form ID, LOB Adı, ID...)" style="width:260px;">
       </div>
+    </div>
+
+    <!-- Tek Tablo: Mevcut + Yeni -->
+    <div id="tableContainer" style="display:none;">
       <div class="table-wrapper">
-        <table class="data-table" id="dataTable">
-          <thead id="tableThead"></thead>
-          <tbody id="tableTbody"></tbody>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ClientIdent</th><th>Client</th><th>Form ID</th><th>Form Name</th>
+              <th>LOB Adı</th><th>LOB ID</th><th style="width:70px">Yeni?</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
         </table>
-      </div>
-      <div style="display: flex; gap: 12px; margin-top: 1.5rem; justify-content: flex-end;">
-        <button class="btn btn-success" id="exportNewBtn">📎 SADECE YENİ LOB'ları Export (LOB_Yeni.xlsx)</button>
-        <button class="btn btn-primary" id="exportMasterBtn">💾 MASTER Export (Tüm Kayıtlar, LOB_Master.xlsx)</button>
-        <button class="btn btn-ghost" id="resetCheckboxesBtn">🔄 Tüm İşaretleri Sıfırla</button>
       </div>
     </div>
   </div>
 </div>
-<footer class="footer">LOB Eşleme Aracı | TP Analitik Uzman Araçları</footer>
+<footer class="footer">LOB Eşleme Aracı | TP Analitik</footer>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// LOB MASTER ARACI - TEK TABLO (Mevcut + Yeni birlikte)
-// ═══════════════════════════════════════════════════════════════
+// ==================== STATE ====================
+let sourceData = [];          // { clientIdent, client, formId, formName }
+let refClients = [];          // string[]
+let masterRecords = [];       // { formId, clientIdent, client, formName, lobAdi, lobId }
+let excludedFormIds = new Set();
 
-let sourceData = [], refClientList = [], lobDataRows = [], excludedFormIds = new Set();
-let masterData = [];           // localStorage'daki tüm master kayıtlar
-let currentDisplayData = [];   // tabloda gösterilen satırlar (mevcut master + filtrelenmiş yeni)
-let checkboxState = {};        // sadece yeni eklenenlerin checkbox durumu (master'dakiler işaretli gelir)
-let tableFilter = '', filterTimer;
-let sortCol = 'Client', sortDir = 1;   // varsayılan Client A-Z
+let combinedRows = [];        // { type, clientIdent, client, formId, formName, lobAdi, lobId, isNew, rowId }
+let filterText = '';
 
-let okSource = false, okRef = false, okLobData = false;
+let sourceLoaded = false, refLoaded = false, masterLoaded = false;
 
+// localStorage anahtarları
+const STORAGE_MASTER = 'LOB_masterData';
+const STORAGE_NEW_LOB = 'LOB_newEntries'; // yeni eklenenlerin geçici LOB bilgileri
+
+// DOM
 const $ = id => document.getElementById(id);
-const showLoader = v => $('loaderLOB')?.classList.toggle('visible', v);
-const esc = s => s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-const showToast = (msg, type = 'ok') => {
-  document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-  t.style.borderLeftColor = { ok: 'var(--accent)', err: 'var(--accent3)', warn: 'var(--accent4)' }[type] || 'var(--accent)';
+const showLoader = v => $('loader')?.classList.toggle('visible', v);
+const showToast = (msg, type='ok') => {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  t.style.borderLeftColor={ok:'var(--accent)',err:'var(--accent3)',warn:'var(--accent4)'}[type];
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3400);
+  setTimeout(()=>{t.style.opacity='0'; setTimeout(()=>t.remove(),300);},3400);
 };
-const readExcel = file => new Promise((resolve, reject) => {
-  const r = new FileReader();
-  r.onload = e => { try { const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' }); resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })); } catch(err) { reject(err); } };
-  r.onerror = reject; r.readAsArrayBuffer(file);
-});
 
-function cardLoaded(cardId, statusEl, msg) {
-  const card = $(cardId); card.className = 'upload-card state-loaded';
-  card.querySelector('.file-drop')?.classList.add('state-loaded');
+// Excel oku
+function readExcel(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }));
+      } catch(err) { reject(err); }
+    };
+    r.onerror = reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// Kart UI
+function setCardLoaded(cardId, statusEl, msg) {
+  $(cardId).className = 'upload-card state-loaded';
   statusEl.textContent = msg; statusEl.style.color = 'var(--accent)';
 }
-function cardError(cardId, statusEl, msg, keepRequired = false) {
-  const card = $(cardId); card.className = keepRequired ? 'upload-card state-required state-error' : 'upload-card state-error';
-  card.querySelector('.file-drop')?.classList.remove('state-loaded');
+function setCardError(cardId, statusEl, msg, required=false) {
+  $(cardId).className = required ? 'upload-card state-required state-error' : 'upload-card state-error';
   statusEl.textContent = msg; statusEl.style.color = 'var(--accent3)';
 }
 
+// 1. Kaynak Data
 async function loadSource(file) {
-  showLoader(true); $('sourceStatus').textContent = '⏳ Yükleniyor…';
+  showLoader(true);
+  $('sourceStatus').textContent = '⏳ Yükleniyor...';
   try {
     const rows = await readExcel(file);
-    if (!rows.length) throw new Error('Dosya boş');
-    const missing = ['ClientIdent','Client','LOBID','LOB1','Form ID Text','Form Name'].filter(c => !(c in rows[0]));
-    if (missing.length) throw new Error(`Eksik sütunlar: ${missing.join(', ')}`);
-    sourceData = rows.map(r => ({ 
-      clientIdent: String(r.ClientIdent||'').trim(), 
-      client: String(r.Client||'').trim(), 
-      formId: String(r['Form ID Text']||'').trim(), 
-      formName: String(r['Form Name']||'').trim() 
+    if(!rows.length) throw new Error('Dosya boş');
+    const required = ['ClientIdent','Client','LOBID','LOB1','Form ID Text','Form Name'];
+    const missing = required.filter(c => !(c in rows[0]));
+    if(missing.length) throw new Error(`Eksik sütun: ${missing.join(', ')}`);
+    sourceData = rows.map(r => ({
+      clientIdent: String(r.ClientIdent||'').trim(),
+      client: String(r.Client||'').trim(),
+      formId: String(r['Form ID Text']||'').trim(),
+      formName: String(r['Form Name']||'').trim()
     }));
-    okSource = true;
-    cardLoaded('card1', $('sourceStatus'), `✅ ${sourceData.length} kayıt yüklendi`);
-    checkAndRender();
-  } catch(e) { okSource = false; sourceData = []; cardError('card1', $('sourceStatus'), `❌ ${e.message}`); hideTable(); }
-  finally { showLoader(false); }
+    sourceLoaded = true;
+    setCardLoaded('card1', $('sourceStatus'), `✅ ${sourceData.length} kayıt`);
+    checkAndBuildTable();
+  } catch(e) {
+    sourceLoaded = false; sourceData = [];
+    setCardError('card1', $('sourceStatus'), `❌ ${e.message}`);
+    $('tableContainer').style.display = 'none';
+  } finally { showLoader(false); }
 }
+
+// 2. Referans Listesi
 async function loadRef(file) {
-  showLoader(true); $('refStatus').textContent = '⏳ Yükleniyor…';
+  showLoader(true);
+  $('refStatus').textContent = '⏳ Yükleniyor...';
   try {
     const rows = await readExcel(file);
-    if (!rows.length) throw new Error('Dosya boş');
-    if (!('Client' in rows[0])) throw new Error('"Client" sütunu bulunamadı');
-    refClientList = rows.map(r => String(r.Client||'').trim()).filter(Boolean);
-    okRef = true;
-    cardLoaded('card2', $('refStatus'), `✅ ${refClientList.length} client referansı`);
-    checkAndRender();
-  } catch(e) { okRef = false; refClientList = []; cardError('card2', $('refStatus'), `❌ ${e.message}`); hideTable(); }
-  finally { showLoader(false); }
+    if(!rows.length) throw new Error('Dosya boş');
+    if(!('Client' in rows[0])) throw new Error('"Client" sütunu yok');
+    refClients = rows.map(r => String(r.Client||'').trim()).filter(Boolean);
+    refLoaded = true;
+    setCardLoaded('card2', $('refStatus'), `✅ ${refClients.length} client`);
+    checkAndBuildTable();
+  } catch(e) {
+    refLoaded = false; refClients = [];
+    setCardError('card2', $('refStatus'), `❌ ${e.message}`);
+    $('tableContainer').style.display = 'none';
+  } finally { showLoader(false); }
 }
-async function loadLobData(file) {
-  showLoader(true); $('lobDataStatus').textContent = '⏳ Yükleniyor…';
+
+// 3. Master LOB Data (LOBDatalari.xlsx)
+async function loadMasterData(file) {
+  showLoader(true);
+  $('lobMasterStatus').textContent = '⏳ Yükleniyor...';
   try {
     const rows = await readExcel(file);
-    if (!rows.length) throw new Error('Dosya boş');
-    const formIdCol = Object.keys(rows[0]).find(k => k.toLowerCase().replace(/\s/g,'').includes('formid')) ?? 'FormID';
-    excludedFormIds.clear(); lobDataRows = [];
-    for (const r of rows) {
-      const fid = String(r[formIdCol] || '').trim(); if (!fid) continue;
+    if(!rows.length) throw new Error('Dosya boş');
+    const first = rows[0];
+    const formIdCol = Object.keys(first).find(k => k.toLowerCase().replace(/\s/g,'').includes('formid')) ?? 'FormID';
+    const lobAdiCol = Object.keys(first).find(k => k.toLowerCase().includes('lob adı') || k === 'LOBAdı') ?? 'LOB Adı';
+    const lobIdCol = Object.keys(first).find(k => k.toLowerCase().includes('lob id') || k === 'LOBID') ?? 'LOB ID';
+    masterRecords = [];
+    excludedFormIds.clear();
+    for(const r of rows) {
+      const fid = String(r[formIdCol]||'').trim();
+      if(!fid) continue;
       excludedFormIds.add(fid);
-      lobDataRows.push({
-        ClientIdent: String(r.ClientIdent||'').trim(),
-        Client: String(r.Client||'').trim(),
-        FormID: fid,
-        FormName: String(r.FormName||r['Form Name']||'').trim(),
-        LOBAdi: String(r.LOBAdı||r['LOB Adı']||r.LOBAdi||'').trim(),
-        LOBID: String(r.LOBID||r['LOB ID']||'').trim()
+      masterRecords.push({
+        formId: fid,
+        clientIdent: String(r.ClientIdent||'').trim(),
+        client: String(r.Client||'').trim(),
+        formName: String(r.FormName||r['Form Name']||'').trim(),
+        lobAdi: String(r[lobAdiCol]||'').trim(),
+        lobId: String(r[lobIdCol]||'').trim()
       });
     }
-    okLobData = true;
-    const card3 = $('card3'); card3.className = 'upload-card state-loaded';
-    $('dropLobData').classList.add('state-loaded');
-    $('lobDataStatus').textContent = `✅ ${lobDataRows.length} kayıt · ${excludedFormIds.size} Form ID dışlanacak`;
-    $('lobDataStatus').style.color = 'var(--accent)';
-    // Master'ı localStorage'dan yükle
-    loadMasterFromLocalStorage();
-    checkAndRender();
-  } catch(e) { okLobData = false; lobDataRows = []; excludedFormIds.clear(); cardError('card3', $('lobDataStatus'), `❌ ${e.message}`, true); hideTable(); }
-  finally { showLoader(false); }
-}
-function loadMasterFromLocalStorage() {
-  try {
-    const s = localStorage.getItem('LOB_masterData');
-    if (s) { masterData = JSON.parse(s); }
-    else { masterData = []; }
-  } catch { masterData = []; }
-}
-function saveMasterToLocalStorage(data) {
-  localStorage.setItem('LOB_masterData', JSON.stringify(data));
-  masterData = data;
+    masterLoaded = true;
+    setCardLoaded('card3', $('lobMasterStatus'), `✅ ${masterRecords.length} kayıt (${excludedFormIds.size} benzersiz Form ID)`);
+    // localStorage'a kaydet (master yedek)
+    localStorage.setItem(STORAGE_MASTER, JSON.stringify(masterRecords));
+    checkAndBuildTable();
+  } catch(e) {
+    masterLoaded = false; masterRecords = []; excludedFormIds.clear();
+    setCardError('card3', $('lobMasterStatus'), `❌ ${e.message}`, true);
+    $('tableContainer').style.display = 'none';
+  } finally { showLoader(false); }
 }
 
-function hideTable() { $('mainTablePanel').style.display = 'none'; }
-function showTable() { $('mainTablePanel').style.display = 'block'; }
-
-function checkAndRender() {
-  const missingLob = okSource && okRef && !okLobData;
-  $('lobNotice').style.display = missingLob ? 'block' : 'none';
-  if (okSource && okRef && okLobData) {
-    $('lobNotice').style.display = 'none';
-    buildCombinedTable();
-  } else {
-    hideTable();
+// Yeni kayıtlara kullanıcının girdiği LOB bilgilerini localStorage'dan yükle
+function loadNewLobFromStorage() {
+  const stored = localStorage.getItem(STORAGE_NEW_LOB);
+  if(stored) {
+    try {
+      return JSON.parse(stored);
+    } catch(e) { return {}; }
   }
+  return {};
+}
+function saveNewLobToStorage(newLobMap) {
+  localStorage.setItem(STORAGE_NEW_LOB, JSON.stringify(newLobMap));
 }
 
-function buildCombinedTable() {
-  // 1. Mevcut master kayıtları (FormID bazlı)
+// Tabloyu oluştur (master + yeni kayıtlar birlikte)
+function buildCombinedRows() {
+  if(!sourceLoaded || !refLoaded || !masterLoaded) return [];
+  const refSet = new Set(refClients.map(c => c.toLowerCase()));
+  // Filtrelenmiş kaynak (client bazlı)
+  const filteredSource = sourceData.filter(s => refSet.has(s.client.toLowerCase()));
+  
+  // Master kayıtları bir Map'e koy (formId üzerinden)
   const masterMap = new Map();
-  for (const m of masterData) {
-    masterMap.set(m.FormID, { 
-      type: 'master', 
-      clientIdent: m.ClientIdent, 
-      client: m.Client, 
-      formId: m.FormID, 
-      formName: m.FormName, 
-      lobAdi: m.LOBAdi, 
-      lobId: m.LOBID,
-      checked: true   // master kayıtlar otomatik işaretli (export edilebilir)
+  for(const m of masterRecords) {
+    masterMap.set(m.formId, m);
+  }
+  
+  // Yeni eklenen LOB bilgilerini storage'dan al
+  const newLobMap = loadNewLobFromStorage();
+  
+  const rows = [];
+  const processedFormIds = new Set();
+  
+  // Önce master kayıtları ekle (mevcut)
+  for(const m of masterRecords) {
+    processedFormIds.add(m.formId);
+    rows.push({
+      type: 'master',
+      rowId: `master_${m.formId}`,
+      clientIdent: m.clientIdent,
+      client: m.client,
+      formId: m.formId,
+      formName: m.formName,
+      lobAdi: m.lobAdi,
+      lobId: m.lobId,
+      isNew: false
     });
   }
-  // 2. Yeni kaynak kayıtlar (Client filtresi + dışlanmış FormID olmayanlar)
-  const refSet = new Set(refClientList.map(c => c.toLowerCase()));
-  const newCandidates = sourceData
-    .filter(r => refSet.has(r.client.toLowerCase()))
-    .filter(r => !excludedFormIds.has(r.formId))
-    .map(r => ({
-      type: 'new',
-      clientIdent: r.clientIdent,
-      client: r.client,
-      formId: r.formId,
-      formName: r.formName,
-      lobAdi: '',   // kullanıcı dolduracak
-      lobId: '',    // kullanıcı dolduracak
-      checked: true // varsayılan işaretli
-    }));
-  // Birleştir: master önce, sonra yeni (ancak yeni içinde master'da varsa ekleme, masterMap'te yoksa)
-  const combined = [];
-  for (const m of masterMap.values()) combined.push(m);
-  for (const n of newCandidates) {
-    if (!masterMap.has(n.formId)) combined.push(n);
-  }
-  // localStorage'dan checkbox state yükle (sadece yeni kayıtlar için)
-  loadCheckboxState();
-  for (let i = 0; i < combined.length; i++) {
-    const row = combined[i];
-    if (row.type === 'new') {
-      const key = `${row.clientIdent}_${row.formId}`;
-      if (checkboxState[key] !== undefined) row.checked = checkboxState[key];
-    } else {
-      // master kayıtları her zaman true (değiştirilebilir mi? istenirse değişebilir, ama export mantığı için true kalsın)
-      row.checked = true;
+  
+  // Sonra yeni kaynaklardan master'da olmayanları ekle
+  for(const s of filteredSource) {
+    if(!processedFormIds.has(s.formId)) {
+      const saved = newLobMap[s.formId] || { lobAdi: '', lobId: '' };
+      rows.push({
+        type: 'new',
+        rowId: `new_${s.formId}`,
+        clientIdent: s.clientIdent,
+        client: s.client,
+        formId: s.formId,
+        formName: s.formName,
+        lobAdi: saved.lobAdi,
+        lobId: saved.lobId,
+        isNew: true
+      });
     }
   }
-  currentDisplayData = combined;
-  renderTable();
-  showTable();
-  $('rowCountChip').textContent = `${currentDisplayData.length} kayıt`;
-  const newCount = currentDisplayData.filter(r => r.type === 'new').length;
-  $('rowMeta').textContent = `${newCount} yeni eklenecek, ${currentDisplayData.length - newCount} mevcut`;
+  
+  // Client'a göre A-Z sırala
+  rows.sort((a,b) => a.client.localeCompare(b.client, 'tr'));
+  return rows;
 }
 
-function loadCheckboxState() {
-  try { checkboxState = JSON.parse(localStorage.getItem('LOB_checkboxState') || '{}'); } catch { checkboxState = {}; }
-}
-function saveCheckboxState() {
-  const state = {};
-  for (const row of currentDisplayData) {
-    if (row.type === 'new') {
-      const key = `${row.clientIdent}_${row.formId}`;
-      state[key] = row.checked;
-    }
-  }
-  localStorage.setItem('LOB_checkboxState', JSON.stringify(state));
-}
-
-// Sıralama ve filtreleme
-function applyFilterAndSort() {
-  let data = [...currentDisplayData];
-  if (tableFilter) {
-    const q = tableFilter.toLowerCase();
-    data = data.filter(r => 
-      r.client.toLowerCase().includes(q) ||
-      r.formId.toLowerCase().includes(q) ||
-      r.formName.toLowerCase().includes(q) ||
-      r.lobAdi.toLowerCase().includes(q) ||
-      r.lobId.toLowerCase().includes(q)
+// Tabloyu render et (filtre uygulanarak)
+function renderTable() {
+  const tbody = $('tableBody');
+  if(!tbody) return;
+  
+  let filtered = [...combinedRows];
+  if(filterText.trim()) {
+    const f = filterText.toLowerCase();
+    filtered = filtered.filter(r => 
+      r.client.toLowerCase().includes(f) ||
+      r.formId.toLowerCase().includes(f) ||
+      r.formName.toLowerCase().includes(f) ||
+      r.lobAdi.toLowerCase().includes(f) ||
+      r.lobId.toLowerCase().includes(f)
     );
   }
-  // Sıralama
-  data.sort((a,b) => {
-    let av = a[sortCol] ?? '', bv = b[sortCol] ?? '';
-    if (sortCol === 'client') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    else if (sortCol === 'formId') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    else if (sortCol === 'formName') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    else if (sortCol === 'lobAdi') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    else if (sortCol === 'lobId') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    else { av = String(av).toLowerCase(); bv = String(bv).toLowerCase(); }
-    if (av < bv) return -sortDir;
-    if (av > bv) return sortDir;
-    return 0;
-  });
-  return data;
-}
-
-function renderTable() {
-  const data = applyFilterAndSort();
-  const headers = [
-    { key: 'client', label: 'Client' },
-    { key: 'formId', label: 'Form ID' },
-    { key: 'formName', label: 'Form Adı' },
-    { key: 'lobAdi', label: 'LOB Adı' },
-    { key: 'lobId', label: 'LOB ID' },
-    { key: 'type', label: 'Durum' },
-    { key: 'checked', label: 'Export' }
-  ];
-  $('tableThead').innerHTML = `<tr>` + headers.map(h => `<th class="sortable${sortCol===h.key?' sort-on':''}" data-col="${h.key}">${h.label}${sortCol===h.key?(sortDir===1?' ▲':' ▼'):''}</th>`).join('') + `<th style="width:60px">İşlem</th></tr>`;
   
-  if (!data.length) {
-    $('tableTbody').innerHTML = `<tr><td colspan="8" class="empty-state">📭 Gösterilecek kayıt yok</td></tr>`;
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">📭 Kayıt bulunamadı</td></tr>`;
     return;
   }
-  $('tableTbody').innerHTML = data.map((row, idx) => `
-    <tr>
-      <td>${esc(row.client)}</td>
-      <td>${esc(row.formId)}</td>
-      <td>${esc(row.formName)}</td>
-      <td><input type="text" class="lobAdiInput" data-idx="${idx}" value="${esc(row.lobAdi)}" placeholder="LOB Adı"></td>
-      <td><input type="text" class="lobIdInput" data-idx="${idx}" value="${esc(row.lobId)}" placeholder="LOB ID"></td>
-      <td>${row.type === 'master' ? '✅ Mevcut' : '🆕 Yeni'}</td>
-      <td class="cb-cell"><input type="checkbox" class="rowCheckbox" data-idx="${idx}" ${row.checked ? 'checked' : ''} ${row.type === 'master' ? 'disabled' : ''}></td>
-      <td><button class="btn-icon saveRowBtn" data-idx="${idx}" title="Kaydet">💾</button></td>
-    </tr>
-  `).join('');
   
-  // Olay dinleyicileri
+  tbody.innerHTML = filtered.map(row => {
+    const isNew = row.isNew;
+    const inputValueAdi = row.lobAdi;
+    const inputValueId = row.lobId;
+    return `
+      <tr data-row-id="${row.rowId}" data-formid="${row.formId}" data-type="${row.type}">
+        <td>${escapeHtml(row.clientIdent)}</td>
+        <td>${escapeHtml(row.client)}</td>
+        <td>${escapeHtml(row.formId)}</td>
+        <td>${escapeHtml(row.formName)}</td>
+        <td><input type="text" class="lobAdiInput" value="${escapeHtml(inputValueAdi)}" placeholder="LOB Adı" ${isNew ? '' : 'disabled'}></td>
+        <td><input type="text" class="lobIdInput" value="${escapeHtml(inputValueId)}" placeholder="LOB ID" ${isNew ? '' : 'disabled'}></td>
+        <td style="text-align:center">${isNew ? '🆕 Yeni' : '📌 Mevcut'}</td>
+      </tr>
+    `;
+  }).join('');
+  
+  // Sadece yeni kayıtların inputlarına event listener ekle
   document.querySelectorAll('.lobAdiInput').forEach(inp => {
-    inp.removeEventListener('change', handleInputChange);
-    inp.addEventListener('change', handleInputChange);
+    const row = inp.closest('tr');
+    const isNew = row && row.dataset.type === 'new';
+    if(isNew) {
+      inp.removeEventListener('change', handleLobChange);
+      inp.addEventListener('change', handleLobChange);
+    }
   });
   document.querySelectorAll('.lobIdInput').forEach(inp => {
-    inp.removeEventListener('change', handleInputChange);
-    inp.addEventListener('change', handleInputChange);
+    const row = inp.closest('tr');
+    const isNew = row && row.dataset.type === 'new';
+    if(isNew) {
+      inp.removeEventListener('change', handleLobChange);
+      inp.addEventListener('change', handleLobChange);
+    }
   });
-  document.querySelectorAll('.rowCheckbox').forEach(chk => {
-    chk.removeEventListener('change', handleCheckboxChange);
-    chk.addEventListener('change', handleCheckboxChange);
-  });
-  document.querySelectorAll('.saveRowBtn').forEach(btn => {
-    btn.removeEventListener('click', handleSaveRow);
-    btn.addEventListener('click', handleSaveRow);
-  });
-}
-function handleInputChange(e) {
-  const idx = parseInt(e.target.dataset.idx);
-  if (isNaN(idx) || !currentDisplayData[idx]) return;
-  if (e.target.classList.contains('lobAdiInput')) currentDisplayData[idx].lobAdi = e.target.value;
-  if (e.target.classList.contains('lobIdInput')) currentDisplayData[idx].lobId = e.target.value;
-}
-function handleCheckboxChange(e) {
-  const idx = parseInt(e.target.dataset.idx);
-  if (isNaN(idx) || !currentDisplayData[idx]) return;
-  if (currentDisplayData[idx].type !== 'master') {
-    currentDisplayData[idx].checked = e.target.checked;
-    saveCheckboxState();
-  }
-}
-function handleSaveRow(e) {
-  const idx = parseInt(e.target.dataset.idx);
-  if (isNaN(idx) || !currentDisplayData[idx]) return;
-  showToast(`Kaydedildi: ${currentDisplayData[idx].client} - ${currentDisplayData[idx].formId}`, 'ok');
-  // İsteğe bağlı: localStorage'a anlık yazmak isterseniz yapabiliriz, ama export'ta topluca yapılacak.
 }
 
-// Export: SADECE YENİ (işaretli ve lob bilgisi dolu)
-function exportNewOnly() {
-  const newRows = currentDisplayData.filter(r => r.type === 'new' && r.checked && (r.lobAdi || r.lobId));
-  if (!newRows.length) { showToast('İşaretli ve LOB bilgisi dolu yeni kayıt yok', 'warn'); return; }
-  const exportData = newRows.map(r => ({
+function handleLobChange(e) {
+  const row = e.target.closest('tr');
+  if(!row) return;
+  const formId = row.dataset.formid;
+  const lobAdi = row.querySelector('.lobAdiInput')?.value || '';
+  const lobId = row.querySelector('.lobIdInput')?.value || '';
+  // Storage'ı güncelle
+  const newLobMap = loadNewLobFromStorage();
+  newLobMap[formId] = { lobAdi, lobId };
+  saveNewLobToStorage(newLobMap);
+  // combinedRows'u da güncelle
+  const targetRow = combinedRows.find(r => r.formId === formId && r.isNew === true);
+  if(targetRow) {
+    targetRow.lobAdi = lobAdi;
+    targetRow.lobId = lobId;
+  }
+}
+
+function escapeHtml(str) {
+  if(!str) return '';
+  return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+}
+
+function checkAndBuildTable() {
+  const warningDiv = $('warning');
+  if(sourceLoaded && refLoaded && !masterLoaded) {
+    warningDiv.style.display = 'block';
+    $('tableContainer').style.display = 'none';
+    return;
+  }
+  warningDiv.style.display = 'none';
+  if(sourceLoaded && refLoaded && masterLoaded) {
+    combinedRows = buildCombinedRows();
+    renderTable();
+    $('tableContainer').style.display = 'block';
+  } else {
+    $('tableContainer').style.display = 'none';
+  }
+}
+
+// Filtre input event
+$('globalFilter')?.addEventListener('input', e => {
+  filterText = e.target.value;
+  renderTable();
+});
+
+// Export: Master (LOBDatalari.xlsx) - mevcut master + yeni eklenenlerin birleşimi
+async function exportMaster() {
+  // Yeni eklenen LOB bilgilerini al
+  const newLobMap = loadNewLobFromStorage();
+  // Mevcut master kayıtlarını kopyala
+  let updatedMaster = [...masterRecords];
+  // Yeni kayıtları ekle/güncelle
+  for(const newRow of combinedRows.filter(r => r.isNew)) {
+    const existingIdx = updatedMaster.findIndex(m => m.formId === newRow.formId);
+    const newRecord = {
+      formId: newRow.formId,
+      clientIdent: newRow.clientIdent,
+      client: newRow.client,
+      formName: newRow.formName,
+      lobAdi: newRow.lobAdi,
+      lobId: newRow.lobId
+    };
+    if(existingIdx !== -1) {
+      updatedMaster[existingIdx] = newRecord;
+    } else {
+      updatedMaster.push(newRecord);
+    }
+  }
+  // localStorage'a kaydet
+  localStorage.setItem(STORAGE_MASTER, JSON.stringify(updatedMaster));
+  // Excel oluştur
+  const wsData = updatedMaster.map(r => ({
     'ClientIdent': r.clientIdent,
     'Client': r.client,
     'FormID': r.formId,
@@ -599,110 +507,116 @@ function exportNewOnly() {
     'LOB Adı': r.lobAdi,
     'LOB ID': r.lobId
   }));
-  const ws = XLSX.utils.json_to_sheet(exportData);
+  const ws = XLSX.utils.json_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Yeni_LOB');
-  XLSX.writeFile(wb, `LOB_Yeni_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
-  showToast(`${newRows.length} yeni kayıt dışa aktarıldı.`, 'ok');
+  XLSX.utils.book_append_sheet(wb, ws, 'LOBDatalari');
+  XLSX.writeFile(wb, 'LOBDatalari.xlsx');
+  showToast(`✅ Master export tamamlandı. Toplam ${updatedMaster.length} kayıt.`, 'ok');
+  // Master veriyi yeniden yükle (excludedFormIds güncellensin)
+  masterRecords = updatedMaster;
+  excludedFormIds.clear();
+  masterRecords.forEach(r => excludedFormIds.add(r.formId));
+  checkAndBuildTable();
 }
 
-// Export: MASTER (tüm mevcut + yeni birleşmiş, localStorage güncellenir)
-function exportMaster() {
-  // Önce mevcut master'ı güncelle: yeni kayıtlardan işaretli ve lob bilgisi olanları ekle/güncelle
-  let updatedMaster = [...masterData];
-  const newItems = currentDisplayData.filter(r => r.type === 'new' && r.checked && (r.lobAdi || r.lobId));
-  for (const item of newItems) {
-    const existingIdx = updatedMaster.findIndex(m => m.FormID === item.formId);
-    const newRecord = {
-      ClientIdent: item.clientIdent,
-      Client: item.client,
-      FormID: item.formId,
-      FormName: item.formName,
-      LOBAdi: item.lobAdi,
-      LOBID: item.lobId
-    };
-    if (existingIdx !== -1) updatedMaster[existingIdx] = newRecord;
-    else updatedMaster.push(newRecord);
+// Export: Sadece yeni kayıtlar (LOB.xlsx)
+function exportNewOnly() {
+  const newRows = combinedRows.filter(r => r.isNew && (r.lobAdi || r.lobId));
+  if(newRows.length === 0) {
+    showToast('⚠️ Yeni eklenmiş LOB bilgisi olan kayıt yok.', 'warn');
+    return;
   }
-  // Master'a kaydet
-  saveMasterToLocalStorage(updatedMaster);
-  // excludedFormIds güncelle (yeni eklenenler dışlanacak)
-  for (const item of newItems) {
-    excludedFormIds.add(item.formId);
-  }
-  // Tabloyu yeniden oluştur (yeni eklenenler master'a taşınır)
-  buildCombinedTable();
-  
-  // Excel export
-  const toNum = v => /^\d+$/.test(String(v)) ? +v : v;
-  const exportData = updatedMaster.map(r => ({
-    'ClientIdent': toNum(r.ClientIdent),
-    'Client': r.Client,
-    'FormID': toNum(r.FormID),
-    'FormName': r.FormName,
-    'LOB Adı': r.LOBAdi,
-    'LOB ID': r.LOBID ? toNum(r.LOBID) : r.LOBID
+  const wsData = newRows.map(r => ({
+    'ClientIdent': r.clientIdent,
+    'Client': r.client,
+    'FormID': r.formId,
+    'FormName': r.formName,
+    'LOB Adı': r.lobAdi,
+    'LOB ID': r.lobId
   }));
-  const ws = XLSX.utils.json_to_sheet(exportData);
+  const ws = XLSX.utils.json_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'LOB_Master');
-  XLSX.writeFile(wb, `LOB_Master_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
-  showToast(`Master güncellendi, ${newItems.length} yeni kayıt eklendi.`, 'ok');
+  XLSX.utils.book_append_sheet(wb, ws, 'YeniLOB');
+  XLSX.writeFile(wb, 'LOB.xlsx');
+  showToast(`✅ ${newRows.length} yeni kayıt LOB.xlsx olarak dışa aktarıldı.`, 'ok');
 }
 
-function resetAllCheckboxes() {
-  for (let row of currentDisplayData) {
-    if (row.type === 'new') row.checked = true;
+// LocalStorage temizleme
+function clearLocalStorage() {
+  if(confirm('Tüm localStorage verileri silinecek (master kayıtlar ve yeni LOB girdileri). Devam et?')) {
+    localStorage.removeItem(STORAGE_MASTER);
+    localStorage.removeItem(STORAGE_NEW_LOB);
+    // Ayrıca mevcut state'i sıfırla
+    masterRecords = [];
+    excludedFormIds.clear();
+    masterLoaded = false;
+    sourceLoaded = false;
+    refLoaded = false;
+    sourceData = [];
+    refClients = [];
+    combinedRows = [];
+    // Kartları sıfırla
+    setCardError('card1', $('sourceStatus'), 'Henüz yüklenmedi');
+    setCardError('card2', $('refStatus'), 'Henüz yüklenmedi');
+    setCardError('card3', $('lobMasterStatus'), 'Henüz yüklenmedi', true);
+    $('tableContainer').style.display = 'none';
+    showToast('LocalStorage temizlendi. Sayfayı yenileyin veya dosyaları tekrar yükleyin.', 'ok');
+    setTimeout(() => location.reload(), 1500);
   }
-  saveCheckboxState();
-  renderTable();
-  showToast('Tüm yeni kayıtlar işaretlendi.');
 }
-
-// Sıralama event
-$('tableThead')?.addEventListener('click', e => {
-  const th = e.target.closest('.sortable'); if (!th) return;
-  const col = th.dataset.col;
-  if (sortCol === col) sortDir = -sortDir;
-  else { sortCol = col; sortDir = 1; }
-  renderTable();
-});
-
-// Filtre
-$('tableSearchInput')?.addEventListener('input', e => {
-  clearTimeout(filterTimer);
-  filterTimer = setTimeout(() => { tableFilter = e.target.value.trim(); renderTable(); }, 220);
-});
-$('btnClearSearch')?.addEventListener('click', () => {
-  $('tableSearchInput').value = '';
-  tableFilter = '';
-  renderTable();
-});
-
-// Butonlar
-$('exportNewBtn')?.addEventListener('click', exportNewOnly);
-$('exportMasterBtn')?.addEventListener('click', exportMaster);
-$('resetCheckboxesBtn')?.addEventListener('click', resetAllCheckboxes);
 
 // Tema
-function setTheme(t) { document.body.className = t; localStorage.setItem('qaPortalTheme', t); document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === t)); }
-document.querySelectorAll('.theme-btn').forEach(btn => btn.addEventListener('click', () => setTheme(btn.dataset.theme)));
-setTheme(localStorage.getItem('qaPortalTheme') || 'grey');
+function setTheme(t) {
+  document.body.className = t;
+  localStorage.setItem('qaPortalTheme', t);
+  document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === t));
+}
 
-// Drag & Drop
-function setupDrop(drop, inputId, fn) {
-  const inp = $(inputId); if (!drop || !inp) return;
-  drop.addEventListener('click', e => { if (e.target !== inp) inp.click(); });
-  inp.addEventListener('change', e => { if (e.target.files[0]) fn(e.target.files[0]); });
+// Drag & Drop kurulumu
+function setupDrop(dropId, inputId, handler) {
+  const drop = $(dropId);
+  const inp = $(inputId);
+  if(!drop || !inp) return;
+  drop.addEventListener('click', e => { if(e.target !== inp) inp.click(); });
+  inp.addEventListener('change', e => { if(e.target.files[0]) handler(e.target.files[0]); });
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag'); if (e.dataTransfer.files[0]) fn(e.dataTransfer.files[0]); });
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
+  });
 }
-setupDrop($('dropSourceData'), 'sourceFileInput', loadSource);
-setupDrop($('dropRefList'), 'refFileInput', loadRef);
-setupDrop($('dropLobData'), 'lobDataFileInput', loadLobData);
 
-hideTable();
+// Başlangıç
+function init() {
+  // localStorage'dan master veriyi yükle (eğer varsa)
+  const storedMaster = localStorage.getItem(STORAGE_MASTER);
+  if(storedMaster) {
+    try {
+      masterRecords = JSON.parse(storedMaster);
+      excludedFormIds.clear();
+      masterRecords.forEach(r => excludedFormIds.add(r.formId));
+      masterLoaded = true;
+      setCardLoaded('card3', $('lobMasterStatus'), `✅ ${masterRecords.length} kayıt (localStorage)`);
+    } catch(e) {}
+  }
+  
+  setupDrop('dropSource', 'sourceFile', loadSource);
+  setupDrop('dropRef', 'refFile', loadRef);
+  setupDrop('dropLobMaster', 'lobMasterFile', loadMasterData);
+  
+  $('exportMasterBtn')?.addEventListener('click', exportMaster);
+  $('exportNewBtn')?.addEventListener('click', exportNewOnly);
+  $('clearStorageBtn')?.addEventListener('click', clearLocalStorage);
+  
+  const savedTheme = localStorage.getItem('qaPortalTheme') || 'grey';
+  setTheme(savedTheme);
+  
+  // Eğer master localStorage'dan geldiyse ve diğerleri yüklü değilse bekle, yoksa tablo gösterilmeyecek
+  if(masterLoaded && sourceLoaded && refLoaded) checkAndBuildTable();
+}
+
+init();
 </script>
 </body>
 </html>
