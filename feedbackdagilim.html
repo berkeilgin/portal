@@ -74,6 +74,7 @@ td { color:var(--text); }
       <button class="btn btn-primary step-btn" data-step="step1">🔍 Monitoring ID Kontrolü</button>
       <button class="btn btn-ghost step-btn" data-step="step2">📦 Dağıtım</button>
       <button class="btn btn-ghost step-btn" data-step="step3">📊 Raporlama</button>
+      <button class="btn btn-ghost step-btn" data-step="step4">📜 Geçmiş Dağıtım Tablosu</button>
     </div>
 
     <!-- STEP 1 -->
@@ -91,7 +92,7 @@ td { color:var(--text); }
         <div class="stat-card"><div class="stat-label">✅ Geçerli</div><div class="stat-number success" id="validCountStep1">0</div></div>
       </div>
       <div class="errors-section" id="errorsSectionStep1" style="display:none;">
-        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th><tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
+        <div class="table-wrapper"><table class="error-table"><thead><tr><th># Satır</th><th>Monitoring ID</th><th>Ident</th><th>Hata Nedeni</th><th>Link</th></tr></thead><tbody id="errorTableBodyStep1"><tr><td colspan="5" class="empty-state">Henüz veri yok</td></tr></tbody></table></div>
       </div>
       <div style="display:flex; justify-content:flex-end;"><button class="btn btn-ghost" id="resetStep1Btn">🧹 Temizle</button></div>
     </div>
@@ -138,6 +139,37 @@ td { color:var(--text); }
       <button class="btn btn-primary" id="exportReportBtnStep3" disabled>💾 Excel İndir</button></div>
       <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><div class="table-wrapper"><table class="report-table"><thead id="reportHeaderStep3"></thead><tbody id="reportBodyStep3"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
+    </div>
+
+    <!-- STEP 4 (YENİ) -->
+    <div id="step4" class="step-content">
+      <div class="pt">Geçmiş Dağıtım <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Haftalık Tablo</em></div>
+      <div class="sdesc">Daha önce dışa aktardığınız JSON geçmişini yükleyerek, seçtiğiniz haftaya ait dağıtım tablosunu görüntüleyin.</div>
+      <div class="upload-card" style="margin-bottom:1.5rem;">
+        <h3>📁 Geçmiş JSON Dosyası</h3>
+        <div class="file-drop" id="dropHistoryStep4">
+          <input type="file" id="historyFileInputStep4" accept=".json" style="display:none;">
+          <div>📂 JSON dosyasını sürükleyin veya tıklayın</div>
+          <div style="font-size:0.7rem;">Step2'den "Tüm Geçmişi Dışa Aktar" ile alınan dosya</div>
+        </div>
+        <div class="upload-status" id="historyStatusStep4">Henüz yüklenmedi</div>
+        <div class="loader-bar" id="loaderStep4"><div class="loader-bar-inner"></div></div>
+      </div>
+      <div style="margin-top:1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <label>📅 Hafta Seçin: <select id="weekSelectStep4" style="padding:0.5rem; border-radius:0.5rem; background:var(--bg); color:var(--text); border:1px solid var(--border);"></select></label>
+        <button class="btn btn-primary" id="showDistributionBtnStep4" disabled>📋 Tabloyu Göster</button>
+      </div>
+      <div id="distributionAreaStep4" style="margin-top: 2rem; display:none;">
+        <div class="table-wrapper">
+          <table class="preview-table">
+            <thead>
+              <tr><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Monitoring ID</th><th>Link</th></tr>
+            </thead>
+            <tbody id="distributionTableBodyStep4"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" id="exportDistributionBtnStep4" disabled style="margin-top:1rem;">📎 Excel Olarak Aktar</button>
+      </div>
     </div>
   </div>
 </div>
