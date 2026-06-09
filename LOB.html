@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOB Eşleme Aracı</title>
+<title>LOB Eşleme Aracı - Tek Tablo</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -12,8 +12,6 @@
   padding: 0;
   box-sizing: border-box;
 }
-
-/* TEMA DEĞİŞKENLERİ */
 body {
   --bg: #1f1f28;
   --surface: #272734;
@@ -29,32 +27,23 @@ body {
   --accent4: #f4a261;
   --radius: 16px;
   --font: 'Segoe UI', 'DM Sans', system-ui, sans-serif;
-
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   transition: background 0.2s, color 0.2s;
-  line-height: 1.5;
 }
-
 body.dark {
   --bg: #0d0d14;
   --surface: #141420;
   --card: #1a1a26;
   --card2: #20202e;
-  --border: rgba(255,255,255,0.09);
-  --border2: rgba(255,255,255,0.15);
-  --text: #eeeef5;
-  --muted: #6a6a88;
 }
-
 body.light {
   --bg: #f5f5fa;
   --surface: #ffffff;
   --card: #ffffff;
   --card2: #f8f8ff;
   --border: rgba(0,0,0,0.12);
-  --border2: rgba(0,0,0,0.2);
   --text: #111827;
   --muted: #4b5563;
   --accent: #10b981;
@@ -62,23 +51,16 @@ body.light {
   --accent3: #ef4444;
   --accent4: #f59e0b;
 }
-
 body.tp {
   --bg: #0e0812;
   --surface: #14091c;
   --card: #1c1026;
   --card2: #231530;
   --border: rgba(255,0,130,0.1);
-  --border2: rgba(255,0,130,0.22);
   --text: #f5eef8;
-  --muted: #b07ab8;
   --accent: #FF0082;
   --accent2: #9b30c0;
-  --accent3: #ff6b6b;
-  --accent4: #f4a261;
 }
-
-/* LAYOUT */
 .header {
   display: flex;
   justify-content: space-between;
@@ -124,7 +106,7 @@ body.tp {
   border: 1px solid var(--border);
   border-radius: 1rem;
   padding: 1.25rem;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
 .upload-card.state-loaded { border-left: 4px solid var(--accent); background: rgba(6,214,160,0.05); }
 .upload-card.state-required { border-left: 4px solid var(--accent4); }
@@ -174,7 +156,7 @@ body.tp {
   color: var(--text);
 }
 .theme-btn.active { background: var(--accent2); color: white; border-color: var(--accent2); }
-.table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); background: var(--surface); margin-top: 0.5rem; }
+.table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); background: var(--surface); margin-top: 1rem; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .data-table th { background: var(--card2); font-weight: 600; }
@@ -186,7 +168,7 @@ body.tp {
 .cb-cell input { width: 18px; height: 18px; cursor: pointer; }
 .new-table input { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-#lobSearchInput { flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+#searchInput { flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .loader-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0; display: none; }
 .loader-bar.visible { display: block; }
 .loader-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width: 40%; animation: slide 1s infinite; }
@@ -206,6 +188,8 @@ body.tp {
 }
 @keyframes slideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
 .footer { text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem; }
+.row-existing { background-color: rgba(6,214,160,0.05); }
+.row-new { background-color: rgba(124,109,250,0.05); }
 @media (max-width: 680px) { .main { padding: 0 1rem; } .panel { padding: 1rem; } }
 </style>
 </head>
@@ -226,79 +210,42 @@ body.tp {
   <div class="panel">
     <h2>📂 Veri Yükleme</h2>
     <div class="upload-grid">
-      <!-- Kart 1 -->
       <div class="upload-card" id="card1">
         <h3>📄 1. Kaynak Data <span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropSourceData">
-          <input type="file" id="sourceFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
-          <div>📂 Sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;">ClientIdent, Client, LOBID, LOB1, Form ID Text, Form Name</div>
-        </div>
+        <div class="file-drop" id="dropSourceData"><input type="file" id="sourceFileInput" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükleyin veya tıklayın</div><div style="font-size:0.7rem;">ClientIdent, Client, LOBID, LOB1, Form ID Text, Form Name</div></div>
         <div class="status-text" id="sourceStatus">Henüz yüklenmedi</div>
       </div>
-      <!-- Kart 2 -->
       <div class="upload-card" id="card2">
         <h3>📑 2. Proje Referans Listesi <span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropRefList">
-          <input type="file" id="refFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
-          <div>📂 Sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;">Excel'de "Client" sütunu olmalı</div>
-        </div>
+        <div class="file-drop" id="dropRefList"><input type="file" id="refFileInput" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 Sürükleyin veya tıklayın</div><div style="font-size:0.7rem;">Excel'de "Client" sütunu olmalı</div></div>
         <div class="status-text" id="refStatus">Henüz yüklenmedi</div>
       </div>
-      <!-- Kart 3 (Zorunlu) -->
       <div class="upload-card state-required" id="card3">
         <h3>🗄️ 3. Mevcut LOB Data <span class="badge badge-required">Zorunlu</span><span class="badge badge-loaded">✓ Yüklendi</span><span class="badge badge-error">✗ Hata</span></h3>
-        <div class="file-drop" id="dropLobData">
-          <input type="file" id="lobDataFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
-          <div>📂 LOBDatalari.xlsx yükleyin (ZORUNLU)</div>
-          <div style="font-size:0.7rem;">Daha önce eşlenmiş Form ID'ler bu dosyadan okunur ve ana listeden çıkarılır.</div>
-        </div>
+        <div class="file-drop" id="dropLobData"><input type="file" id="lobDataFileInput" accept=".xlsx,.xls,.csv" style="display:none;"><div>📂 LOBDatalari.xlsx yükleyin (ZORUNLU)</div><div style="font-size:0.7rem;">Daha önce eşlenmiş Form ID'ler bu dosyadan okunur ve ana listeden çıkarılır.</div></div>
         <div class="status-text" id="lobDataStatus">Henüz yüklenmedi</div>
       </div>
     </div>
-
     <div class="loader-bar" id="loaderLOB"><div class="loader-bar-inner"></div></div>
-
-    <div id="lobNotice" style="display:none; background:rgba(244,162,97,0.15); border-left:4px solid var(--accent4); padding:12px 16px; border-radius:12px; margin-bottom:1.5rem;">
-      ⚠️ <strong>3. dosya (Mevcut LOB Data) zorunludur.</strong> Lütfen LOBDatalari.xlsx dosyasını yükleyin. Yeni kayıtlar ancak bu dosya yüklendikten sonra gösterilecektir.
-    </div>
-
-    <!-- Mevcut LOB Data paneli (sıralanabilir/filtrelenebilir) -->
-    <div id="lobDataPanel" style="display:none; margin-bottom: 2rem;">
+    <div id="lobNotice" style="display:none; background:rgba(244,162,97,0.15); border-left:4px solid var(--accent4); padding:12px 16px; border-radius:12px; margin-bottom:1.5rem;">⚠️ <strong>3. dosya (Mevcut LOB Data) zorunludur.</strong> Lütfen LOBDatalari.xlsx dosyasını yükleyin. Yeni kayıtlar ancak bu dosya yüklendikten sonra gösterilecektir.</div>
+    
+    <div id="mainTablePanel" style="display:none;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h3>📋 Mevcut LOB Kayıtları</h3>
-        <span class="badge" style="background:var(--accent2); color:white; padding:4px 10px;" id="lobCountChip">0 kayıt</span>
+        <h3>📋 Tüm Kayıtlar (Mevcut + Yeni Eşlenecek)</h3>
+        <div><span class="badge" style="background:var(--accent); color:white; padding:4px 10px;" id="rowCountChip">0 kayıt</span></div>
       </div>
       <div class="filter-bar">
-        <input type="text" id="lobSearchInput" placeholder="🔍 Filtrele (Client, Form ID, Form Adı, LOB Adı/ID)...">
+        <input type="text" id="searchInput" placeholder="🔍 Filtrele (Client, Form ID, Form Adı, LOB Adı/ID, Tip)">
         <button id="btnClearSearch" class="btn-icon" title="Temizle">✖️</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <button class="btn btn-primary" id="exportBtn" disabled>📎 Master Export (Yeni + Eski Birleştir)</button>
+        <button class="btn btn-ghost" id="resetCheckboxesBtn" style="margin-left:8px;">🔄 Tüm İşaretleri Sıfırla</button>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
-          <thead id="lobThead"></thead>
-          <tbody id="lobTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Yeni eşlenecek kayıtlar paneli -->
-    <div id="newRecordsPanel" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h3>🆕 Yeni Eşlenecek Kayıtlar</h3>
-        <div style="display:flex; gap:12px; align-items:center;">
-          <span class="badge" style="background:var(--accent); color:white; padding:4px 10px;" id="newCountChip">0 kayıt</span>
-          <span class="status-text" id="rowMeta"></span>
-        </div>
-      </div>
-      <div style="display: flex; gap: 12px; margin-bottom: 1rem;">
-        <button class="btn btn-primary" id="exportBtn" disabled>📎 Master Export (Yeni + Eski Birleştir)</button>
-        <button class="btn btn-ghost" id="resetCheckboxesBtn">🔄 Tüm İşaretleri Sıfırla</button>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table new-table">
-          <thead id="newThead"></thead>
-          <tbody id="newTbody"></tbody>
+          <thead id="tableThead"></thead>
+          <tbody id="tableTbody"></tbody>
         </table>
       </div>
     </div>
@@ -308,12 +255,11 @@ body.tp {
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  LOB MASTER EŞLEME ARACI  —  TEK DOSYA (tema + sıralama + filtre)
+//  LOB EŞLEME ARACI — TEK TABLO, CLIENT A-Z SIRALAMA, FİLTRE
 // ═══════════════════════════════════════════════════════════════
-
-let sourceData = [], refClientList = [], lobDataRows = [], excludedFormIds = new Set();
-let filteredData = [], currentDisplayData = [], masterData = [], checkboxState = {};
-let lobSortCol = null, lobSortDir = 1, lobFilter = '', lobFilterTimer;
+let sourceData = [], refClientList = [], lobDataRows = [], excludedFormIds = new Set(), masterData = [], newEntries = [];
+let filterText = '';
+let sortCol = 'client', sortDir = 1; // 1 = A-Z, -1 = Z-A, başlangıç A-Z
 let okSource = false, okRef = false, okLobData = false;
 
 const $ = id => document.getElementById(id);
@@ -332,16 +278,8 @@ const readExcel = file => new Promise((resolve, reject) => {
   r.onerror = reject; r.readAsArrayBuffer(file);
 });
 
-function cardLoaded(cardId, statusEl, msg) {
-  const card = $(cardId); card.className = 'upload-card state-loaded';
-  card.querySelector('.file-drop')?.classList.add('state-loaded');
-  statusEl.textContent = msg; statusEl.style.color = 'var(--accent)';
-}
-function cardError(cardId, statusEl, msg, keepRequired = false) {
-  const card = $(cardId); card.className = keepRequired ? 'upload-card state-required state-error' : 'upload-card state-error';
-  card.querySelector('.file-drop')?.classList.remove('state-loaded');
-  statusEl.textContent = msg; statusEl.style.color = 'var(--accent3)';
-}
+function cardLoaded(cardId, statusEl, msg) { const card = $(cardId); card.className = 'upload-card state-loaded'; card.querySelector('.file-drop')?.classList.add('state-loaded'); statusEl.textContent = msg; statusEl.style.color = 'var(--accent)'; }
+function cardError(cardId, statusEl, msg, keepRequired = false) { const card = $(cardId); card.className = keepRequired ? 'upload-card state-required state-error' : 'upload-card state-error'; card.querySelector('.file-drop')?.classList.remove('state-loaded'); statusEl.textContent = msg; statusEl.style.color = 'var(--accent3)'; }
 
 async function loadSource(file) {
   showLoader(true); $('sourceStatus').textContent = '⏳ Yükleniyor…';
@@ -354,7 +292,7 @@ async function loadSource(file) {
     okSource = true;
     cardLoaded('card1', $('sourceStatus'), `✅ ${sourceData.length} kayıt yüklendi`);
     checkAndRender();
-  } catch(e) { okSource = false; sourceData = []; cardError('card1', $('sourceStatus'), `❌ ${e.message}`); $('newRecordsPanel').style.display = 'none'; }
+  } catch(e) { okSource = false; sourceData = []; cardError('card1', $('sourceStatus'), `❌ ${e.message}`); hidePanels(); }
   finally { showLoader(false); }
 }
 async function loadRef(file) {
@@ -367,7 +305,7 @@ async function loadRef(file) {
     okRef = true;
     cardLoaded('card2', $('refStatus'), `✅ ${refClientList.length} client referansı`);
     checkAndRender();
-  } catch(e) { okRef = false; refClientList = []; cardError('card2', $('refStatus'), `❌ ${e.message}`); $('newRecordsPanel').style.display = 'none'; }
+  } catch(e) { okRef = false; refClientList = []; cardError('card2', $('refStatus'), `❌ ${e.message}`); hidePanels(); }
   finally { showLoader(false); }
 }
 async function loadLobData(file) {
@@ -380,117 +318,151 @@ async function loadLobData(file) {
     for (const r of rows) {
       const fid = String(r[formIdCol] || '').trim(); if (!fid) continue;
       excludedFormIds.add(fid);
-      lobDataRows.push({ ClientIdent: String(r.ClientIdent||'').trim(), Client: String(r.Client||'').trim(), FormID: fid, FormName: String(r.FormName||r['Form Name']||'').trim(), LOBAdi: String(r.LOBAdı||r['LOB Adı']||r.LOBAdi||'').trim(), LOBID: String(r.LOBID||r['LOB ID']||'').trim() });
+      lobDataRows.push({ clientIdent: String(r.ClientIdent||'').trim(), client: String(r.Client||'').trim(), formId: fid, formName: String(r.FormName||r['Form Name']||'').trim(), lobAdi: String(r.LOBAdı||r['LOB Adı']||r.LOBAdi||'').trim(), lobId: String(r.LOBID||r['LOB ID']||'').trim() });
     }
     okLobData = true;
     const card3 = $('card3'); card3.className = 'upload-card state-loaded';
     $('dropLobData').classList.add('state-loaded');
     $('lobDataStatus').textContent = `✅ ${lobDataRows.length} kayıt · ${excludedFormIds.size} Form ID dışlanacak`;
     $('lobDataStatus').style.color = 'var(--accent)';
-    renderLobTable(); $('lobDataPanel').style.display = 'block';
     checkAndRender();
-  } catch(e) { okLobData = false; lobDataRows = []; excludedFormIds.clear(); $('lobDataPanel').style.display = 'none'; cardError('card3', $('lobDataStatus'), `❌ ${e.message}`, true); $('newRecordsPanel').style.display = 'none'; }
+  } catch(e) { okLobData = false; lobDataRows = []; excludedFormIds.clear(); cardError('card3', $('lobDataStatus'), `❌ ${e.message}`, true); hidePanels(); }
   finally { showLoader(false); }
 }
+function hidePanels() { $('mainTablePanel').style.display = 'none'; }
 function checkAndRender() {
   $('lobNotice').style.display = (okSource && okRef && !okLobData) ? 'block' : 'none';
-  if (okSource && okRef && okLobData) { $('lobNotice').style.display = 'none'; applyAndRender(); }
+  if (okSource && okRef && okLobData) {
+    $('lobNotice').style.display = 'none';
+    prepareDataAndRender();
+  } else { $('mainTablePanel').style.display = 'none'; }
 }
-function rKey(r) { return `${r.clientIdent}_${r.formId}`; }
-function saveCheckboxState() { const s = {}; currentDisplayData.forEach(r => { s[rKey(r)] = r.checked; }); localStorage.setItem('LOB_checkboxState', JSON.stringify(s)); }
-function loadCheckboxState() { try { checkboxState = JSON.parse(localStorage.getItem('LOB_checkboxState') || '{}'); } catch { checkboxState = {}; } }
-function applyAndRender() {
+function prepareDataAndRender() {
   const refSet = new Set(refClientList.map(c => c.toLowerCase()));
-  filteredData = sourceData.filter(r => refSet.has(r.client.toLowerCase()) && !excludedFormIds.has(r.formId));
-  loadCheckboxState();
-  currentDisplayData = filteredData.map(item => ({ clientIdent: item.clientIdent, client: item.client, formId: item.formId, formName: item.formName, lobAdi: '', lobId: '', checked: checkboxState[rKey(item)] !== undefined ? checkboxState[rKey(item)] : true }));
-  renderNewTable();
-  $('newRecordsPanel').style.display = 'block';
-  $('rowMeta').textContent = `${currentDisplayData.length} yeni kayıt · ${sourceData.length} toplam · ${excludedFormIds.size} dışlanmış`;
-  $('newCountChip').textContent = `${currentDisplayData.length} kayıt`;
-  $('exportBtn').disabled = currentDisplayData.length === 0;
+  const validSource = sourceData.filter(r => refSet.has(r.client.toLowerCase()));
+  const newItems = validSource.filter(r => !excludedFormIds.has(r.formId)).map(r => ({ type: 'new', ...r, lobAdi: '', lobId: '', checked: true }));
+  const existingItems = lobDataRows.map(r => ({ type: 'existing', clientIdent: r.clientIdent, client: r.client, formId: r.formId, formName: r.formName, lobAdi: r.lobAdi, lobId: r.lobId, checked: false }));
+  let allRows = [...existingItems, ...newItems];
+  // Client'e göre A-Z sırala (varsayılan)
+  allRows.sort((a,b) => a.client.localeCompare(b.client, 'tr'));
+  window.fullData = allRows;
+  applyFilterAndSort();
 }
-const LOB_COLS = [
-  { key: 'ClientIdent', label: 'Clnt ID', w: '68px' }, { key: 'Client', label: 'Client' },
-  { key: 'FormID', label: 'Form ID', w: '80px' }, { key: 'FormName', label: 'Form Adı' },
-  { key: 'LOBAdi', label: 'LOB Adı' }, { key: 'LOBID', label: 'LOB ID', w: '68px' }
-];
-function renderLobTable() {
-  let data = lobDataRows;
-  if (lobFilter) { const q = lobFilter.toLowerCase(); data = data.filter(r => r.Client.toLowerCase().includes(q) || r.FormID.toLowerCase().includes(q) || r.FormName.toLowerCase().includes(q) || r.LOBAdi.toLowerCase().includes(q) || r.LOBID.toLowerCase().includes(q)); }
-  if (lobSortCol) { const col = lobSortCol, dir = lobSortDir; data = data.slice().sort((a,b) => { const av = String(a[col]??'').toLowerCase(), bv = String(b[col]??'').toLowerCase(); return av < bv ? -dir : av > bv ? dir : 0; }); }
-  $('lobCountChip').textContent = lobFilter ? `${data.length} / ${lobDataRows.length}` : `${lobDataRows.length} kayıt`;
-  $('lobThead').innerHTML = '<tr>' + LOB_COLS.map(c => `<th class="sortable${lobSortCol===c.key?' sort-on':''}" data-col="${c.key}"${c.w?` style="width:${c.w}"`:''}>${c.label}${lobSortCol===c.key?(lobSortDir===1?' ▲':' ▼'):''}</th>`).join('') + '</tr>';
-  const slice = data.slice(0, 1500);
-  $('lobTbody').innerHTML = slice.map(r => `<tr><td>${esc(r.ClientIdent)}</td><td>${esc(r.Client)}</td><td>${esc(r.FormID)}</td><td>${esc(r.FormName)}</td><td>${esc(r.LOBAdi)}</td><td>${esc(r.LOBID)}</td></tr>`).join('');
-  if (data.length > 1500) $('lobTbody').insertAdjacentHTML('beforeend', `<tr><td colspan="6" class="empty-state">… ve ${data.length-1500} kayıt daha</td></tr>`);
+function applyFilterAndSort() {
+  let data = [...window.fullData];
+  if (filterText) {
+    const f = filterText.toLowerCase();
+    data = data.filter(r => r.client.toLowerCase().includes(f) || r.formId.toLowerCase().includes(f) || r.formName.toLowerCase().includes(f) || (r.lobAdi && r.lobAdi.toLowerCase().includes(f)) || (r.lobId && r.lobId.toLowerCase().includes(f)) || r.type.includes(f));
+  }
+  if (sortCol === 'client') data.sort((a,b) => sortDir * a.client.localeCompare(b.client, 'tr'));
+  else if (sortCol === 'formId') data.sort((a,b) => sortDir * a.formId.localeCompare(b.formId));
+  else if (sortCol === 'formName') data.sort((a,b) => sortDir * a.formName.localeCompare(b.formName));
+  else if (sortCol === 'lobAdi') data.sort((a,b) => sortDir * (a.lobAdi||'').localeCompare(b.lobAdi||''));
+  else if (sortCol === 'lobId') data.sort((a,b) => sortDir * (a.lobId||'').localeCompare(b.lobId||''));
+  else if (sortCol === 'type') data.sort((a,b) => sortDir * a.type.localeCompare(b.type));
+  renderTable(data);
+  $('rowCountChip').textContent = `${data.length} kayıt (${window.fullData.filter(r=>r.type==='existing').length} mevcut, ${window.fullData.filter(r=>r.type==='new').length} yeni)`;
 }
-function renderNewTable() {
-  $('newThead').innerHTML = `<tr><th style="width:68px">Clnt ID</th><th>Client</th><th style="width:80px">Form ID</th><th>Form Adı</th><th style="min-width:140px">LOB Adı</th><th style="width:110px">LOB ID</th><th style="width:58px">Export?</th></tr>`;
-  if (!currentDisplayData.length) { $('newTbody').innerHTML = `<tr><td colspan="7" class="empty-state">📭 Yeni kayıt yok</td></tr>`; $('exportBtn').disabled = true; return; }
-  $('exportBtn').disabled = false;
-  $('newTbody').innerHTML = currentDisplayData.map((r,i) => `<tr>
-    <td>${esc(r.clientIdent)}</td><td>${esc(r.client)}</td><td>${esc(r.formId)}</td><td>${esc(r.formName)}</td>
-    <td><input type="text" class="la" data-i="${i}" value="${esc(r.lobAdi)}" placeholder="LOB Adı"></td>
-    <td><input type="text" class="li" data-i="${i}" value="${esc(r.lobId)}" placeholder="LOB ID"></td>
-    <td class="cb-cell"><input type="checkbox" class="ec" data-i="${i}" ${r.checked?'checked':''}></td>
-  </tr>`).join('');
+function renderTable(rows) {
+  const thead = $('tableThead');
+  const tbody = $('tableTbody');
+  const headers = [
+    { key: 'type', label: 'Tip' }, { key: 'client', label: 'Client' }, { key: 'formId', label: 'Form ID' },
+    { key: 'formName', label: 'Form Adı' }, { key: 'lobAdi', label: 'LOB Adı' }, { key: 'lobId', label: 'LOB ID' },
+    { key: 'export', label: 'Export Et?' }
+  ];
+  thead.innerHTML = `<tr>${headers.map(h => `<th class="sortable${sortCol===h.key?' sort-on':''}" data-sort="${h.key}">${h.label}${sortCol===h.key?(sortDir===1?' ▲':' ▼'):''}</th>`).join('')}</tr>`;
+  if (!rows.length) { tbody.innerHTML = `<td><td colspan="7" class="empty-state">Kayıt yok</td></tr>`; $('exportBtn').disabled = true; return; }
+  tbody.innerHTML = rows.map((row, idx) => {
+    const isNew = row.type === 'new';
+    const rowClass = isNew ? 'row-new' : 'row-existing';
+    const ident = `r_${idx}`;
+    return `<tr class="${rowClass}" data-type="${row.type}" data-idx="${idx}">
+      <td>${esc(row.type === 'new' ? '🆕 Yeni' : '📌 Mevcut')}</td>
+      <td>${esc(row.client)}</td>
+      <td>${esc(row.formId)}</td>
+      <td>${esc(row.formName)}</td>
+      <td>${isNew ? `<input type="text" class="la" data-idx="${idx}" value="${esc(row.lobAdi)}" placeholder="LOB Adı">` : esc(row.lobAdi)}</td>
+      <td>${isNew ? `<input type="text" class="li" data-idx="${idx}" value="${esc(row.lobId)}" placeholder="LOB ID">` : esc(row.lobId)}</td>
+      <td class="cb-cell">${isNew ? `<input type="checkbox" class="ec" data-idx="${idx}" ${row.checked ? 'checked' : ''}>` : '—'}</td>
+    </tr>`;
+  }).join('');
+  $('exportBtn').disabled = rows.filter(r => r.type === 'new').length === 0;
 }
+function saveCheckboxState() {
+  const state = {};
+  window.fullData.filter(r => r.type === 'new').forEach((r, idx) => { state[idx] = r.checked; });
+  localStorage.setItem('LOB_checkboxState', JSON.stringify(state));
+}
+function loadCheckboxStateIntoData() {
+  try {
+    const state = JSON.parse(localStorage.getItem('LOB_checkboxState') || '{}');
+    window.fullData.filter(r => r.type === 'new').forEach((r, idx) => { if (state[idx] !== undefined) r.checked = state[idx]; });
+  } catch(e) {}
+}
+function loadMasterFromStorage() {
+  try { const s = localStorage.getItem('LOB_masterData'); if (s) { masterData = JSON.parse(s); } } catch { masterData = []; }
+}
+function saveMasterToStorage(data) { localStorage.setItem('LOB_masterData', JSON.stringify(data)); masterData = data; }
 function exportMaster() {
-  const selected = currentDisplayData.filter(r => r.checked && (r.lobAdi || r.lobId));
-  if (!selected.length) { showToast('⚠️ LOB bilgisi dolu ve işaretli kayıt yok', 'warn'); return; }
+  const newRows = window.fullData.filter(r => r.type === 'new' && r.checked && (r.lobAdi || r.lobId));
+  if (!newRows.length) { showToast('⚠️ LOB bilgisi dolu ve işaretli yeni kayıt yok', 'warn'); return; }
   let updated = [...masterData];
-  for (const r of selected) {
-    const rec = { ClientIdent: r.clientIdent, Client: r.client, FormID: r.formId, FormName: r.formName, LOBAdi: r.lobAdi, LOBID: r.lobId };
-    const idx = updated.findIndex(m => m.FormID === r.formId);
+  for (const nr of newRows) {
+    const rec = { ClientIdent: nr.clientIdent, Client: nr.client, FormID: nr.formId, FormName: nr.formName, LOBAdi: nr.lobAdi, LOBID: nr.lobId };
+    const idx = updated.findIndex(m => m.FormID === nr.formId);
     if (idx !== -1) updated[idx] = rec; else updated.push(rec);
   }
-  localStorage.setItem('LOB_masterData', JSON.stringify(updated)); masterData = updated;
-  excludedFormIds.clear(); masterData.forEach(r => { if (r.FormID) excludedFormIds.add(String(r.FormID).trim()); });
+  saveMasterToStorage(updated);
+  // excludedFormIds'ı güncelle
+  updated.forEach(r => { if (r.FormID) excludedFormIds.add(String(r.FormID).trim()); });
   const toNum = v => /^\d+$/.test(String(v)) ? +v : v;
   const ws = XLSX.utils.json_to_sheet(updated.map(r => ({ 'ClientIdent': toNum(r.ClientIdent), 'Client': r.Client, 'FormID': toNum(r.FormID), 'FormName': r.FormName, 'LOB Adı': r.LOBAdi, 'LOB ID': r.LOBID ? toNum(r.LOBID) : r.LOBID })));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'LOB_Master');
   XLSX.writeFile(wb, `LOB_Master_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.xlsx`);
-  showToast(`✅ ${selected.length} kayıt eklendi · Toplam master: ${updated.length}`);
-  setTimeout(applyAndRender, 300);
+  showToast(`✅ ${newRows.length} kayıt eklendi/güncellendi · Toplam master: ${updated.length}`);
+  // Veriyi yenile (excludedFormIds değişti, newRows artık yeni listeden çıkacak)
+  prepareDataAndRender();
 }
-function resetCheckboxes() { currentDisplayData.forEach(r => r.checked = true); saveCheckboxState(); renderNewTable(); showToast('Tüm satırlar işaretlendi.'); }
-function loadMaster() { try { const s = localStorage.getItem('LOB_masterData'); if (s) { masterData = JSON.parse(s); masterData.forEach(r => { if (r.FormID) excludedFormIds.add(String(r.FormID).trim()); }); } } catch { masterData = []; } }
+function resetCheckboxes() {
+  window.fullData.filter(r => r.type === 'new').forEach(r => r.checked = true);
+  saveCheckboxState();
+  applyFilterAndSort();
+  showToast('Tüm yeni kayıtlar işaretlendi.');
+}
 function setTheme(t) { document.body.className = t; localStorage.setItem('qaPortalTheme', t); document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === t)); }
 
 // Event listeners
-$('lobThead')?.addEventListener('click', e => {
+$('tableThead')?.addEventListener('click', e => {
   const th = e.target.closest('.sortable'); if (!th) return;
-  const col = th.dataset.col; lobSortDir = (lobSortCol === col) ? -lobSortDir : 1; lobSortCol = col; renderLobTable();
+  const col = th.dataset.sort;
+  if (sortCol === col) sortDir = -sortDir; else { sortCol = col; sortDir = 1; }
+  applyFilterAndSort();
 });
-$('lobSearchInput')?.addEventListener('input', e => { clearTimeout(lobFilterTimer); lobFilterTimer = setTimeout(() => { lobFilter = e.target.value.trim(); renderLobTable(); }, 220); });
-$('btnClearSearch')?.addEventListener('click', () => { $('lobSearchInput').value = ''; lobFilter = ''; renderLobTable(); });
-$('newTbody')?.addEventListener('change', e => {
-  const i = parseInt(e.target.dataset.i, 10); if (isNaN(i) || !currentDisplayData[i]) return;
-  const cl = e.target.classList;
-  if (cl.contains('la')) currentDisplayData[i].lobAdi = e.target.value;
-  if (cl.contains('li')) currentDisplayData[i].lobId = e.target.value;
-  if (cl.contains('ec')) { currentDisplayData[i].checked = e.target.checked; saveCheckboxState(); }
+$('searchInput')?.addEventListener('input', e => { filterText = e.target.value; applyFilterAndSort(); });
+$('btnClearSearch')?.addEventListener('click', () => { $('searchInput').value = ''; filterText = ''; applyFilterAndSort(); });
+$('tableTbody')?.addEventListener('change', e => {
+  const target = e.target;
+  const idx = parseInt(target.dataset.idx, 10);
+  if (isNaN(idx)) return;
+  const newRow = window.fullData.find(r => r.type === 'new' && window.fullData.indexOf(r) === idx);
+  if (!newRow) return;
+  if (target.classList.contains('la')) newRow.lobAdi = target.value;
+  if (target.classList.contains('li')) newRow.lobId = target.value;
+  if (target.classList.contains('ec')) { newRow.checked = target.checked; saveCheckboxState(); }
 });
 $('exportBtn')?.addEventListener('click', exportMaster);
 $('resetCheckboxesBtn')?.addEventListener('click', resetCheckboxes);
 document.querySelectorAll('.theme-btn').forEach(btn => btn.addEventListener('click', () => setTheme(btn.dataset.theme)));
 
-function setupDrop(drop, inputId, fn) {
-  const inp = $(inputId); if (!drop || !inp) return;
-  drop.addEventListener('click', e => { if (e.target !== inp) inp.click(); });
-  inp.addEventListener('change', e => { if (e.target.files[0]) fn(e.target.files[0]); });
-  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag'); if (e.dataTransfer.files[0]) fn(e.dataTransfer.files[0]); });
-}
+function setupDrop(drop, inputId, fn) { const inp = $(inputId); if (!drop || !inp) return; drop.addEventListener('click', e => { if (e.target !== inp) inp.click(); }); inp.addEventListener('change', e => { if (e.target.files[0]) fn(e.target.files[0]); }); drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); }); drop.addEventListener('dragleave', () => drop.classList.remove('drag')); drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag'); if (e.dataTransfer.files[0]) fn(e.dataTransfer.files[0]); }); }
 setupDrop($('dropSourceData'), 'sourceFileInput', loadSource);
 setupDrop($('dropRefList'), 'refFileInput', loadRef);
 setupDrop($('dropLobData'), 'lobDataFileInput', loadLobData);
 
-loadMaster(); loadCheckboxState(); setTheme(localStorage.getItem('qaPortalTheme') || 'grey');
-$('lobDataPanel').style.display = 'none';
-$('newRecordsPanel').style.display = 'none';
+loadMasterFromStorage();
+setTheme(localStorage.getItem('qaPortalTheme') || 'grey');
+$('mainTablePanel').style.display = 'none';
 </script>
 </body>
 </html>
