@@ -141,11 +141,12 @@ td { color:var(--text); }
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
     </div>
 
-<!-- STEP 4 - Gelişmiş Geçmiş Dağıtım Tablosu -->
+<!-- STEP 4 - Gelişmiş Geçmiş Dağıtım Tablosu (Modern Filtreler) -->
 <div id="step4" class="step-content">
   <div class="pt">Geçmiş Dağıtım <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Filtrele & Sırala</em></div>
   <div class="sdesc">Birden fazla JSON dosyası yükleyin (üst üste eklenir). Tablo üzerinde filtreleme ve sıralama yapabilir, Excel’e aktarabilirsiniz.</div>
-  
+
+  <!-- Dosya yükleme alanı -->
   <div class="upload-card" style="margin-bottom:1.5rem;">
     <h3>📁 Geçmiş JSON Dosyaları (çoklu seçim)</h3>
     <div class="file-drop" id="dropHistoryStep4">
@@ -155,32 +156,25 @@ td { color:var(--text); }
     </div>
     <div class="upload-status" id="historyStatusStep4">Henüz yüklenmedi</div>
     <div class="loader-bar" id="loaderStep4"><div class="loader-bar-inner"></div></div>
-    <div style="margin-top:0.5rem;">
-      <button class="btn btn-ghost" id="clearHistoryDataBtnStep4" style="font-size:0.75rem;">🗑️ Tüm Yüklenen Verileri Temizle</button>
-    </div>
   </div>
 
-  <!-- Filtre satırı -->
-  <div id="filterRowStep4" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; background: var(--bg); padding: 0.75rem; border-radius: 0.75rem;">
-    <input type="text" id="filterDate" placeholder="Dağıtım Tarihi (yyyy-mm-dd)" style="flex:1; min-width:120px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-    <input type="text" id="filterWeek" placeholder="Hafta" style="flex:1; min-width:80px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-    <input type="text" id="filterGroup" placeholder="Grup" style="flex:1; min-width:100px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-    <input type="text" id="filterReviewer" placeholder="Değerlendirici" style="flex:1; min-width:130px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-    <input type="text" id="filterProject" placeholder="Proje" style="flex:1; min-width:130px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-    <input type="text" id="filterMonitorId" placeholder="Monitoring ID" style="flex:1; min-width:120px; padding:0.4rem; border-radius:0.5rem; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-  </div>
-
+  <!-- Tablo ve butonlar -->
   <div id="distributionAreaStep4" style="margin-top: 1rem; display:none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <button class="btn btn-primary" id="exportDistributionBtnStep4" disabled>📎 Excel'e Aktar (Filtrelenmiş)</button>
+        <button class="btn btn-ghost" id="clearHistoryDataBtnStep4" style="margin-left: 0.5rem;">🗑️ Tüm Verileri Temizle</button>
+      </div>
+      <div class="filter-stats" id="filterStatsStep4" style="font-size:0.8rem; color:var(--muted);"></div>
+    </div>
+
     <div class="table-wrapper">
       <table class="preview-table" id="historyTableStep4">
         <thead id="historyTableHeaderStep4">
-          <!-- Başlıklar dinamik olarak eklenecek (sıralama için tıklanabilir) -->
+          <!-- Başlıklar dinamik olarak eklenecek -->
         </thead>
         <tbody id="distributionTableBodyStep4"></tbody>
       </table>
-    </div>
-    <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end;">
-      <button class="btn btn-primary" id="exportDistributionBtnStep4" disabled>📎 Excel Olarak Aktar (Filtrelenmiş)</button>
     </div>
   </div>
 </div>
