@@ -141,37 +141,38 @@ td { color:var(--text); }
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
     </div>
 
-    <!-- STEP 4 (YENİ) -->
-    <div id="step4" class="step-content">
-      <div class="pt">Geçmiş Dağıtım <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Step2 Önizleme Formatında</em></div>
-      <div class="sdesc">Daha önce Step2’den dışa aktardığınız JSON dosyasını yükleyerek, seçtiğiniz haftaya ait dağıtım tablosunu görüntüleyin ve Excel’e aktarın.</div>
-      <div class="upload-card" style="margin-bottom:1.5rem;">
-        <h3>📁 Geçmiş JSON Dosyası</h3>
-        <div class="file-drop" id="dropHistoryStep4">
-          <input type="file" id="historyFileInputStep4" accept=".json" style="display:none;">
-          <div>📂 JSON dosyasını sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;">Step2'deki "Tüm Geçmişi Dışa Aktar" butonu ile alınan dosya</div>
-        </div>
-        <div class="upload-status" id="historyStatusStep4">Henüz yüklenmedi</div>
-        <div class="loader-bar" id="loaderStep4"><div class="loader-bar-inner"></div></div>
-      </div>
-      <div style="margin-top:1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
-        <label>📅 Hafta Seçin: 
-          <select id="weekSelectStep4" style="padding:0.5rem; border-radius:0.5rem; background:var(--bg); color:var(--text); border:1px solid var(--border);"></select>
-        </label>
-        <button class="btn btn-primary" id="showDistributionBtnStep4" disabled>📋 Tabloyu Göster</button>
-      </div>
-      <div id="distributionAreaStep4" style="margin-top: 2rem; display:none;">
-        <div class="table-wrapper">
-          <table class="preview-table">
-            <thead><tr><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Monitoring ID</th><th>Link</th></tr></thead>
-            <tbody id="distributionTableBodyStep4"></tbody>
-          </table>
-        </div>
-        <button class="btn btn-primary" id="exportDistributionBtnStep4" disabled style="margin-top:1rem;">📎 Excel Olarak Aktar</button>
-      </div>
+<!-- STEP 4 (YENİ - Haftasız, Tarihli, Çoklu JSON) -->
+<div id="step4" class="step-content">
+  <div class="pt">Geçmiş Dağıtım <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Tüm Zamanlar</em></div>
+  <div class="sdesc">Birden fazla JSON dosyası yükleyin (Step2 dışa aktarımı). Tüm dağıtımlar tarih bilgisiyle listelenir. Excel'e aktarabilirsiniz.</div>
+  
+  <div class="upload-card" style="margin-bottom:1.5rem;">
+    <h3>📁 Geçmiş JSON Dosyaları (Çoklu)</h3>
+    <div class="file-drop" id="dropHistoryStep4">
+      <input type="file" id="historyFileInputStep4" accept=".json" multiple style="display:none;">
+      <div>📂 JSON dosyalarını sürükleyin veya tıklayın (çoklu seçim)</div>
+      <div style="font-size:0.7rem;">Step2'deki "Tüm Geçmişi Dışa Aktar" ile alınan dosyalar</div>
     </div>
+    <div class="upload-status" id="historyStatusStep4">Henüz yüklenmedi</div>
+    <div class="loader-bar" id="loaderStep4"><div class="loader-bar-inner"></div></div>
+  </div>
 
+  <div style="margin-top:1rem;">
+    <button class="btn btn-primary" id="exportDistributionBtnStep4" disabled style="margin-right:1rem;">📎 Excel Olarak Aktar</button>
+    <button class="btn btn-ghost" id="clearHistoryStep4Btn">🧹 Tüm Geçmişi Temizle</button>
+  </div>
+
+  <div id="distributionAreaStep4" style="margin-top: 2rem; display:none;">
+    <div class="table-wrapper">
+      <table class="preview-table">
+        <thead>
+          <tr><th>Dağıtım Tarihi</th><th>Hafta</th><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Monitoring ID</th><th>Link</th></tr>
+        </thead>
+        <tbody id="distributionTableBodyStep4"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
   </div>
 </div>
 <footer class="footer">Feedback Dağılım — Raporlama | TP Analitik Uzman Araçları</footer>
