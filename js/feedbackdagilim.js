@@ -276,18 +276,28 @@ const groups = {
   DM: {
     key: 'DM', name: 'DM',
     filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
+    // 🆕 DM için extraFilter: sadece "operations supervisor" pozisyonuna sahip kayıtlar
+    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
     sheetPerProject: true,
     fileName: () => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   ML: {
     key: 'ML', name: 'ML',
     filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML',
+    // ML'nin mevcut extraFilter'ı (iki koşul) aynen kalır
+    extraFilter: (rec) => {
+      const pos = String(rec.reviewerPosition || '').trim().toLowerCase();
+      const code = String(rec.position_code_type_full_name || '').trim().toLowerCase();
+      return pos === 'quality assurance analyst i' && code === 'operations supervisor';
+    },
     sheetPerProject: true,
     fileName: () => `ML_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   DONUSUM: {
     key: 'DONUSUM', name: 'Dönüşüm Projeleri',
     filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
+    // 🆕 Dönüşüm için extraFilter: sadece "operations supervisor" pozisyonu
+    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
     sheetPerProject: false,
     fileName: () => `Dönüşüm Projeleri_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   }
