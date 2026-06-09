@@ -30,9 +30,74 @@ body {
   transition: 0.2s;
   line-height: 1.5;
 }
-body.dark { --bg: #0d0d14; --surface: #141420; --card: #1a1a26; --card2: #20202e; --text: #eeeef5; --muted: #6a6a88; }
-body.light { --bg: #f5f5fa; --surface: #ffffff; --card: #ffffff; --card2: #f8f8ff; --border: rgba(0,0,0,0.12); --text: #111827; --muted: #4b5563; --accent: #10b981; --accent2: #6366f1; }
-body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; --border: rgba(255,0,130,0.1); --text: #f5eef8; --accent: #FF0082; --accent2: #9b30c0; }
+
+/* ==================== TEMA RENK TANIMLAMALARI ==================== */
+
+/* Gri (Varsayılan Tema) */
+body.grey {
+  --bg: #1f1f28;
+  --surface: #272734;
+  --card: #2e2e3e;
+  --card2: #35354a;
+  --border: rgba(255,255,255,0.09);
+  --border2: rgba(255,255,255,0.17);
+  --text: #e2e2f0;
+  --muted: #8888aa;
+  --accent: #06d6a0;
+  --accent2: #7c6dfa;
+  --accent3: #ff6b6b;
+  --accent4: #f4a261;
+}
+
+/* Koyu (Dark) Tema */
+body.dark { 
+  --bg: #0d0d14; 
+  --surface: #141420; 
+  --card: #1a1a26; 
+  --card2: #20202e; 
+  --border: rgba(255,255,255,0.05);
+  --border2: rgba(255,255,255,0.12);
+  --text: #eeeef5; 
+  --muted: #6a6a88; 
+  --accent: #06d6a0;
+  --accent2: #5c4eed;
+  --accent3: #ff6b6b;
+  --accent4: #f4a261;
+}
+
+/* Açık (Light) Tema */
+body.light { 
+  --bg: #f5f5fa; 
+  --surface: #ffffff; 
+  --card: #ffffff; 
+  --card2: #f8f8ff; 
+  --border: rgba(0,0,0,0.12); 
+  --border2: rgba(0,0,0,0.2); 
+  --text: #111827; 
+  --muted: #4b5563; 
+  --accent: #10b981; 
+  --accent2: #6366f1; 
+  --accent3: #ef4444;
+  --accent4: #f59e0b;
+}
+
+/* TP Teması */
+body.tp { 
+  --bg: #0e0812; 
+  --surface: #14091c; 
+  --card: #1c1026; 
+  --card2: #231530; 
+  --border: rgba(255,0,130,0.15); 
+  --border2: rgba(255,0,130,0.3); 
+  --text: #f5eef8; 
+  --muted: #a68cb5;
+  --accent: #FF0082; 
+  --accent2: #9b30c0; 
+  --accent3: #ff4a4a;
+  --accent4: #ffaa00;
+}
+
+/* ==================== BİLEŞEN STİLLERİ ==================== */
 
 .header {
   display: flex; justify-content: space-between; align-items: center;
@@ -61,8 +126,8 @@ body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; 
 .btn-primary:hover { opacity: 0.9; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
-.theme-btn { background: transparent; border: 1px solid var(--border); padding: 4px 12px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; }
-.theme-btn.active { background: var(--accent2); color: white; }
+.theme-btn { background: transparent; border: 1px solid var(--border); padding: 4px 12px; border-radius: 30px; font-size: 0.75rem; color: var(--text); cursor: pointer; }
+.theme-btn.active { background: var(--accent2); color: white; border-color: var(--accent2); }
 .table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); margin-top: 1rem; background: var(--surface); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th, .data-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -77,7 +142,7 @@ body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; 
 .loader-bar.visible { display: block; }
 .loader-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width: 40%; animation: slide 1s infinite; }
 @keyframes slide { 0% { transform: translateX(-150%); } 100% { transform: translateX(350%); } }
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 18px; z-index: 2000; font-size: 0.85rem; animation: slideIn 0.2s ease; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 18px; z-index: 2000; font-size: 0.85rem; color: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.2s ease; }
 @keyframes slideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
 .footer { text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem; }
 
@@ -91,7 +156,7 @@ body.dark tr.new-row { background-color: rgba(6,214,160,0.1); }
 <div class="header">
   <div class="logo">🏷️ LOB Eşleme Aracı</div>
   <div class="header-controls">
-    <div class="theme-switch">
+    <div class="theme-switch" style="display: inline-block; margin-right: 8px;">
       <button class="theme-btn" data-theme="grey">Gri</button>
       <button class="theme-btn" data-theme="dark">Koyu</button>
       <button class="theme-btn" data-theme="light">Açık</button>
@@ -139,7 +204,6 @@ body.dark tr.new-row { background-color: rgba(6,214,160,0.1); }
       ⚠️ 3. dosya (LOBDatalari.xlsx) zorunludur. Yüklenmeden tablo gösterilmez.
     </div>
 
-    <!-- Araç Çubuğu -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
       <div>
         <button class="btn btn-primary" id="exportMasterBtn">📎 Master Export (LOBDatalari.xlsx)</button>
@@ -148,7 +212,6 @@ body.dark tr.new-row { background-color: rgba(6,214,160,0.1); }
       </div>
     </div>
 
-    <!-- Filtre Bölümü -->
     <div class="filter-bar">
 
       <div class="filter-group">
@@ -181,7 +244,6 @@ body.dark tr.new-row { background-color: rgba(6,214,160,0.1); }
 
     </div>
 
-    <!-- Tek Tablo -->
     <div id="tableContainer" style="display:none;">
       <div class="table-wrapper">
         <table class="data-table">
@@ -317,28 +379,18 @@ function updateLobNeedFilter() {
   if (!select) return;
 
   const currentVal = select.value;
-
-  // LOB bilgisi eksik olan clientlar
   const clients = new Set();
 
   combinedRows.forEach(r => {
-    const missingLob =
-      !String(r.lobAdi || '').trim() ||
-      !String(r.lobId || '').trim();
-
+    const missingLob = !String(r.lobAdi || '').trim() || !String(r.lobId || '').trim();
     if (missingLob) {
       clients.add(r.client);
     }
   });
 
-  const sorted = Array.from(clients)
-    .sort((a,b)=>a.localeCompare(b,'tr'));
+  const sorted = Array.from(clients).sort((a,b)=>a.localeCompare(b,'tr'));
 
-  select.innerHTML =
-    '<option value="all">LOB Gereken Clientlar</option>' +
-    sorted.map(c =>
-      `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
-    ).join('');
+  select.innerHTML = '<option value="all">LOB Gereken Clientlar</option>' + sorted.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
 
   if (sorted.includes(currentVal)) {
     select.value = currentVal;
@@ -386,7 +438,6 @@ async function loadMasterData(file) {
   } finally { showLoader(false); }
 }
 
-// Yeni kayıt LOB bilgilerini localStorage'dan al/kaydet
 function loadNewLobFromStorage() {
   const stored = localStorage.getItem(STORAGE_NEW_LOB);
   try { return stored ? JSON.parse(stored) : {}; } catch(e) { return {}; }
@@ -395,7 +446,6 @@ function saveNewLobToStorage(map) {
   localStorage.setItem(STORAGE_NEW_LOB, JSON.stringify(map));
 }
 
-// Birleştirilmiş satırları oluştur (master + yeni)
 function buildCombinedRows() {
   if(!sourceLoaded || !refLoaded || !masterLoaded) return [];
   const refSet = new Set(refClients.map(c => c.toLowerCase()));
@@ -405,7 +455,7 @@ function buildCombinedRows() {
   const newLobMap = loadNewLobFromStorage();
   const rows = [];
   const processedFormIds = new Set();
-  // Mevcut master kayıtları
+  
   for(const m of masterRecords) {
     processedFormIds.add(m.formId);
     rows.push({
@@ -420,7 +470,7 @@ function buildCombinedRows() {
       isNew: false
     });
   }
-  // Yeni kaynaklardan master'da olmayanlar
+  
   for(const s of filteredSource) {
     if(!processedFormIds.has(s.formId)) {
       const saved = newLobMap[s.formId] || { lobAdi: '', lobId: '' };
@@ -437,17 +487,13 @@ function buildCombinedRows() {
       });
     }
   }
-  // Client A-Z sırala
   rows.sort((a,b) => a.client.localeCompare(b.client, 'tr'));
   return rows;
 }
 
-// Filtreleri uygulayıp tabloyu render et
 function applyFiltersAndRender() {
-
   let filtered = [...combinedRows];
 
-  // Tip filtresi
   if (typeFilter === 'master') {
     filtered = filtered.filter(r => !r.isNew);
   }
@@ -455,22 +501,16 @@ function applyFiltersAndRender() {
     filtered = filtered.filter(r => r.isNew);
   }
 
-  // Client filtresi
   if (selectedClient !== 'all') {
     filtered = filtered.filter(r => r.client === selectedClient);
   }
 
-  // LOB client filtresi
   if (lobNeedFilter !== 'all') {
-    filtered = filtered.filter(r =>
-      r.client === lobNeedFilter
-    );
+    filtered = filtered.filter(r => r.client === lobNeedFilter);
   }
 
-  // Metin filtresi
   if (filterText.trim()) {
     const f = filterText.toLowerCase();
-
     filtered = filtered.filter(r =>
       r.client.toLowerCase().includes(f) ||
       r.formId.toLowerCase().includes(f) ||
@@ -483,12 +523,11 @@ function applyFiltersAndRender() {
   renderTableBody(filtered);
 }
 
-// Tablo gövdesini çiz
 function renderTableBody(rows) {
   const tbody = $('tableBody');
   if(!tbody) return;
   if(rows.length === 0) {
-    tbody.innerHTML = `<table><td colspan="7" class="empty-state">📭 Kayıt bulunamadı</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">📭 Kayıt bulunamadı</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(row => {
@@ -507,7 +546,7 @@ function renderTableBody(rows) {
       </tr>
     `;
   }).join('');
-  // Sadece yeni kayıtların inputlarına event listener ekle
+
   document.querySelectorAll('.lobAdiInput, .lobIdInput').forEach(inp => {
     const row = inp.closest('tr');
     const isNewRow = row && row.dataset.type === 'new';
@@ -527,7 +566,7 @@ function handleLobChange(e) {
   const newLobMap = loadNewLobFromStorage();
   newLobMap[formId] = { lobAdi, lobId };
   saveNewLobToStorage(newLobMap);
-  // combinedRows güncelle
+  
   const targetRow = combinedRows.find(r => r.formId === formId && r.isNew === true);
   if(targetRow) {
     targetRow.lobAdi = lobAdi;
@@ -582,7 +621,6 @@ $('globalFilter')?.addEventListener('input', e => {
 
 // Export: Master (LOBDatalari.xlsx)
 async function exportMaster() {
-  const newLobMap = loadNewLobFromStorage();
   let updatedMaster = [...masterRecords];
   for(const newRow of combinedRows.filter(r => r.isNew)) {
     const existingIdx = updatedMaster.findIndex(m => m.formId === newRow.formId);
@@ -647,7 +685,7 @@ function clearLocalStorage() {
   }
 }
 
-// Tema
+// Tema Yönetimi
 function setTheme(t) {
   document.body.className = t;
   localStorage.setItem('qaPortalTheme', t);
@@ -686,6 +724,14 @@ function init() {
   $('exportMasterBtn')?.addEventListener('click', exportMaster);
   $('exportNewBtn')?.addEventListener('click', exportNewOnly);
   $('clearStorageBtn')?.addEventListener('click', clearLocalStorage);
+
+  // Tema butonlarına tıklama olaylarını bağlama
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setTheme(btn.dataset.theme);
+    });
+  });
+
   const savedTheme = localStorage.getItem('qaPortalTheme') || 'grey';
   setTheme(savedTheme);
   checkAndBuildTable();
