@@ -83,7 +83,7 @@ body.light .data-table tr.new-record {
 .filter-group { display: flex; gap: 8px; align-items: center; background: var(--card2); padding: 4px 12px; border-radius: 40px; }
 .filter-group span { font-size: 0.75rem; color: var(--muted); }
 .client-filter-group { display: flex; gap: 8px; align-items: center; background: var(--card2); padding: 4px 12px; border-radius: 40px; }
-.client-filter-group select { background: var(--surface); border: 1px solid var(--border); border-radius: 30px; padding: 4px 8px; color: var(--text); font-size: 0.8rem; }
+.client-filter-group select { background: var(--surface); border: 1px solid var(--border); border-radius: 30px; padding: 4px 8px; color: var(--text); font-size: 0.75rem; }
 .loader-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0; display: none; }
 .loader-bar.visible { display: block; }
 .loader-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width: 40%; animation: slide 1s infinite; }
@@ -163,8 +163,8 @@ body.light .data-table tr.new-record {
         <button id="filterOnlyNewBtn" class="btn-primary-outline" style="padding:4px 12px;">🆕 Sadece Yeni Kayıtlar</button>
       </div>
       <div class="client-filter-group">
-        <span>🏢 Eklenmesi Gereken Client:</span>
-        <select id="clientSelectFilter">
+        <span>🏢 Client Filtresi:</span>
+        <select id="clientFilterSelect">
           <option value="">Tüm Client'lar</option>
         </select>
       </div>
@@ -190,21 +190,23 @@ body.light .data-table tr.new-record {
 
 <script>
 // ==================== STATE ====================
-let sourceData = [];
-let refClients = [];
-let masterRecords = [];
+let sourceData = [];          // { clientIdent, client, formId, formName }
+let refClients = [];          // string[]
+let masterRecords = [];       // { formId, clientIdent, client, formName, lobAdi, lobId }
 let excludedFormIds = new Set();
 
-let combinedRows = [];
+let combinedRows = [];        // { type, clientIdent, client, formId, formName, lobAdi, lobId, isNew, rowId }
 let filterText = '';
-let onlyNewFilter = false;
-let selectedClient = '';         // Yeni: client bazlı filtre
+let onlyNewFilter = false;    // sadece yeni kayıtları göster
+let selectedClientFilter = ''; // seçilen client (tüm client'lar için boş)
 
 let sourceLoaded = false, refLoaded = false, masterLoaded = false;
 
+// localStorage anahtarları
 const STORAGE_MASTER = 'LOB_masterData';
 const STORAGE_NEW_LOB = 'LOB_newEntries';
 
+// DOM
 const $ = id => document.getElementById(id);
 const showLoader = v => $('loader')?.classList.toggle('visible', v);
 const showToast = (msg, type='ok') => {
@@ -215,6 +217,7 @@ const showToast = (msg, type='ok') => {
   setTimeout(()=>{t.style.opacity='0'; setTimeout(()=>t.remove(),300);},3400);
 };
 
+// Excel oku
 function readExcel(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -229,6 +232,7 @@ function readExcel(file) {
   });
 }
 
+// Kart UI
 function setCardLoaded(cardId, statusEl, msg) {
   $(cardId).className = 'upload-card state-loaded';
   statusEl.textContent = msg; statusEl.style.color = 'var(--accent)';
@@ -320,6 +324,7 @@ async function loadMasterData(file) {
   } finally { showLoader(false); }
 }
 
+// Yeni kayıtlara kullanıcının girdiği LOB bilgilerini localStorage'dan yükle
 function loadNewLobFromStorage() {
   const stored = localStorage.getItem(STORAGE_NEW_LOB);
   if(stored) {
@@ -331,10 +336,14 @@ function saveNewLobToStorage(newLobMap) {
   localStorage.setItem(STORAGE_NEW_LOB, JSON.stringify(newLobMap));
 }
 
+// Tabloyu oluştur (master + yeni kayıtlar birlikte)
 function buildCombinedRows() {
   if(!sourceLoaded || !refLoaded || !masterLoaded) return [];
   const refSet = new Set(refClients.map(c => c.toLowerCase()));
   const filteredSource = sourceData.filter(s => refSet.has(s.client.toLowerCase()));
+  
+  const masterMap = new Map();
+  for(const m of masterRecords) masterMap.set(m.formId, m);
   
   const newLobMap = loadNewLobFromStorage();
   const rows = [];
@@ -374,27 +383,56 @@ function buildCombinedRows() {
     }
   }
   
+  // Client'a göre A-Z sırala
   rows.sort((a,b) => a.client.localeCompare(b.client, 'tr'));
   return rows;
 }
 
+// Client dropdown'unu güncelle (sadece yeni kaydı olan client'lar)
+function updateClientFilterDropdown() {
+  const select = $('#clientFilterSelect');
+  if(!select) return;
+  const newClientsSet = new Set();
+  for(const row of combinedRows) {
+    if(row.isNew) newClientsSet.add(row.client);
+  }
+  const sortedClients = Array.from(newClientsSet).sort((a,b) => a.localeCompare(b, 'tr'));
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">Tüm Client\'lar</option>';
+  for(const client of sortedClients) {
+    const option = document.createElement('option');
+    option.value = client;
+    option.textContent = client;
+    select.appendChild(option);
+  }
+  // Eğer seçili olan client hala listede varsa koru, yoksa sıfırla
+  if(currentValue && newClientsSet.has(currentValue)) {
+    select.value = currentValue;
+    selectedClientFilter = currentValue;
+  } else {
+    select.value = '';
+    selectedClientFilter = '';
+  }
+}
+
+// Tabloyu render et (filtreler uygulanarak)
 function renderTable() {
   const tbody = $('tableBody');
   if(!tbody) return;
   
   let filtered = [...combinedRows];
   
-  // 1. Sadece yeni filtresi
+  // "Sadece yeni" filtresi
   if(onlyNewFilter) {
     filtered = filtered.filter(r => r.isNew === true);
   }
   
-  // 2. Client filtresi (eğer seçilmişse)
-  if(selectedClient) {
-    filtered = filtered.filter(r => r.client === selectedClient);
+  // Client filtresi (eklenmesi gereken client)
+  if(selectedClientFilter) {
+    filtered = filtered.filter(r => r.client === selectedClientFilter);
   }
   
-  // 3. Metin filtresi
+  // Metin filtresi
   if(filterText.trim()) {
     const f = filterText.toLowerCase();
     filtered = filtered.filter(r => 
@@ -413,6 +451,8 @@ function renderTable() {
   
   tbody.innerHTML = filtered.map(row => {
     const isNew = row.isNew;
+    const inputValueAdi = row.lobAdi;
+    const inputValueId = row.lobId;
     const rowClass = isNew ? 'new-record' : '';
     return `
       <tr data-row-id="${row.rowId}" data-formid="${row.formId}" data-type="${row.type}" class="${rowClass}">
@@ -420,14 +460,14 @@ function renderTable() {
         <td>${escapeHtml(row.client)}</td>
         <td>${escapeHtml(row.formId)}</td>
         <td>${escapeHtml(row.formName)}</td>
-        <td><input type="text" class="lobAdiInput" value="${escapeHtml(row.lobAdi)}" placeholder="LOB Adı" ${isNew ? '' : 'disabled'}></td>
-        <td><input type="text" class="lobIdInput" value="${escapeHtml(row.lobId)}" placeholder="LOB ID" ${isNew ? '' : 'disabled'}></td>
+        <td><input type="text" class="lobAdiInput" value="${escapeHtml(inputValueAdi)}" placeholder="LOB Adı" ${isNew ? '' : 'disabled'}></td>
+        <td><input type="text" class="lobIdInput" value="${escapeHtml(inputValueId)}" placeholder="LOB ID" ${isNew ? '' : 'disabled'}></td>
         <td style="text-align:center">${isNew ? '🆕 Yeni' : '📌 Mevcut'}</td>
       </tr>
     `;
   }).join('');
   
-  // Yeni kayıtların inputlarına event
+  // Sadece yeni kayıtların inputlarına event listener ekle
   document.querySelectorAll('.lobAdiInput').forEach(inp => {
     const row = inp.closest('tr');
     const isNew = row && row.dataset.type === 'new';
@@ -455,6 +495,7 @@ function handleLobChange(e) {
   const newLobMap = loadNewLobFromStorage();
   newLobMap[formId] = { lobAdi, lobId };
   saveNewLobToStorage(newLobMap);
+  // combinedRows'u güncelle
   const targetRow = combinedRows.find(r => r.formId === formId && r.isNew === true);
   if(targetRow) {
     targetRow.lobAdi = lobAdi;
@@ -467,26 +508,6 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
 }
 
-function updateClientFilterDropdown() {
-  const select = $('clientSelectFilter');
-  if(!select) return;
-  // Sadece yeni kayıtların client'larını topla (eklenmesi gereken client'lar)
-  const newClientsSet = new Set();
-  for(const row of combinedRows) {
-    if(row.isNew && row.client) newClientsSet.add(row.client);
-  }
-  const newClients = Array.from(newClientsSet).sort((a,b)=>a.localeCompare(b,'tr'));
-  select.innerHTML = '<option value="">Tüm Client\'lar</option>' + 
-    newClients.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  // Eğer seçili olan client hala listedeyse koru, yoksa sıfırla
-  if(selectedClient && newClientsSet.has(selectedClient)) {
-    select.value = selectedClient;
-  } else {
-    selectedClient = '';
-    select.value = '';
-  }
-}
-
 function checkAndBuildTable() {
   const warningDiv = $('warning');
   if(sourceLoaded && refLoaded && !masterLoaded) {
@@ -497,7 +518,7 @@ function checkAndBuildTable() {
   warningDiv.style.display = 'none';
   if(sourceLoaded && refLoaded && masterLoaded) {
     combinedRows = buildCombinedRows();
-    updateClientFilterDropdown();
+    updateClientFilterDropdown();  // client dropdown'u güncelle
     renderTable();
     $('tableContainer').style.display = 'block';
   } else {
@@ -511,25 +532,32 @@ $('globalFilter')?.addEventListener('input', e => {
   renderTable();
 });
 
+// "Sadece Yeni Kayıtlar" filtresi butonları
 const filterAllBtn = $('#filterAllBtn');
 const filterOnlyNewBtn = $('#filterOnlyNewBtn');
 
 function setOnlyNewFilter(value) {
   onlyNewFilter = value;
-  filterAllBtn.classList.toggle('active', !value);
-  filterOnlyNewBtn.classList.toggle('active', value);
+  if(onlyNewFilter) {
+    filterAllBtn.classList.remove('active');
+    filterOnlyNewBtn.classList.add('active');
+  } else {
+    filterAllBtn.classList.add('active');
+    filterOnlyNewBtn.classList.remove('active');
+  }
   renderTable();
 }
+
 filterAllBtn?.addEventListener('click', () => setOnlyNewFilter(false));
 filterOnlyNewBtn?.addEventListener('click', () => setOnlyNewFilter(true));
 
-// Client filtre değişikliği
-$('clientSelectFilter')?.addEventListener('change', e => {
-  selectedClient = e.target.value;
+// Client filtre dropdown event
+$('#clientFilterSelect')?.addEventListener('change', e => {
+  selectedClientFilter = e.target.value;
   renderTable();
 });
 
-// Export: Master (LOBDatalari.xlsx)
+// Export: Master (LOBDatalari.xlsx) - başlıkları da düzenli
 async function exportMaster() {
   const newLobMap = loadNewLobFromStorage();
   let updatedMaster = [...masterRecords];
@@ -550,8 +578,8 @@ async function exportMaster() {
   const wsData = updatedMaster.map(r => ({
     'ClientIdent': r.clientIdent,
     'Client': r.client,
-    'FormID': r.formId,
-    'FormName': r.formName,
+    'Form ID': r.formId,
+    'Form Name': r.formName,
     'LOB Adı': r.lobAdi,
     'LOB ID': r.lobId
   }));
@@ -566,7 +594,7 @@ async function exportMaster() {
   checkAndBuildTable();
 }
 
-// Export: Sadece yeni kayıtlar (LOB.xlsx) - İSTENEN BAŞLIKLARLA
+// Export: Sadece yeni kayıtlar (LOB.xlsx) - başlıklar birebir istenen formatta
 function exportNewOnly() {
   const newRows = combinedRows.filter(r => r.isNew && (r.lobAdi || r.lobId));
   if(newRows.length === 0) {
@@ -588,6 +616,7 @@ function exportNewOnly() {
   showToast(`✅ ${newRows.length} yeni kayıt LOB.xlsx olarak dışa aktarıldı.`, 'ok');
 }
 
+// LocalStorage temizleme
 function clearLocalStorage() {
   if(confirm('Tüm localStorage verileri silinecek (master kayıtlar ve yeni LOB girdileri). Devam et?')) {
     localStorage.removeItem(STORAGE_MASTER);
@@ -609,12 +638,14 @@ function clearLocalStorage() {
   }
 }
 
+// Tema
 function setTheme(t) {
   document.body.className = t;
   localStorage.setItem('qaPortalTheme', t);
   document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === t));
 }
 
+// Drag & Drop kurulumu
 function setupDrop(dropId, inputId, handler) {
   const drop = $(dropId);
   const inp = $(inputId);
@@ -625,10 +656,11 @@ function setupDrop(dropId, inputId, handler) {
   drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
   drop.addEventListener('drop', e => {
     e.preventDefault(); drop.classList.remove('drag');
-    if(e.dataTransfer.files[0]) handler(e.target.files[0]);
+    if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
   });
 }
 
+// Başlangıç
 function init() {
   const storedMaster = localStorage.getItem(STORAGE_MASTER);
   if(storedMaster) {
