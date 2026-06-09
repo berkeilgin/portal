@@ -82,8 +82,6 @@ body.light .data-table tr.new-record {
 #globalFilter { flex: 2; min-width: 200px; padding: 8px 12px; border-radius: 30px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .filter-group { display: flex; gap: 8px; align-items: center; background: var(--card2); padding: 4px 12px; border-radius: 40px; }
 .filter-group span { font-size: 0.75rem; color: var(--muted); }
-.client-filter-group { display: flex; gap: 8px; align-items: center; background: var(--card2); padding: 4px 12px; border-radius: 40px; }
-.client-filter-group select { background: var(--surface); border: 1px solid var(--border); border-radius: 30px; padding: 4px 8px; color: var(--text); font-size: 0.75rem; }
 .loader-bar { height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 1rem 0; display: none; }
 .loader-bar.visible { display: block; }
 .loader-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); width: 40%; animation: slide 1s infinite; }
@@ -145,7 +143,7 @@ body.light .data-table tr.new-record {
       ⚠️ 3. dosya (LOBDatalari.xlsx) zorunludur. Yüklenmeden tablo gösterilmez.
     </div>
 
-    <!-- Araç Çubuğu: Butonlar -->
+    <!-- Araç Çubuğu: Butonlar + Filtreler -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
       <div>
         <button class="btn btn-primary" id="exportMasterBtn">📎 Master Export (LOBDatalari.xlsx)</button>
@@ -154,19 +152,13 @@ body.light .data-table tr.new-record {
       </div>
     </div>
 
-    <!-- Filtre satırı: global metin + "Sadece Yeni Kayıtlar" + "Eklenmesi Gereken Client" -->
+    <!-- Filtre satırı: global metin + "Sadece Yeni Kayıtlar" filtresi -->
     <div class="filter-bar">
       <input type="text" id="globalFilter" placeholder="🔍 Metin filtresi (Client, Form ID, LOB Adı/ID...)">
       <div class="filter-group">
         <span>📌 Göster:</span>
         <button id="filterAllBtn" class="btn-primary-outline active" style="padding:4px 12px;">Tümü</button>
         <button id="filterOnlyNewBtn" class="btn-primary-outline" style="padding:4px 12px;">🆕 Sadece Yeni Kayıtlar</button>
-      </div>
-      <div class="client-filter-group">
-        <span>🏢 Client Filtresi:</span>
-        <select id="clientFilterSelect">
-          <option value="">Tüm Client'lar</option>
-        </select>
       </div>
     </div>
 
@@ -197,8 +189,7 @@ let excludedFormIds = new Set();
 
 let combinedRows = [];        // { type, clientIdent, client, formId, formName, lobAdi, lobId, isNew, rowId }
 let filterText = '';
-let onlyNewFilter = false;    // sadece yeni kayıtları göster
-let selectedClientFilter = ''; // seçilen client (tüm client'lar için boş)
+let onlyNewFilter = false;    // YENİ: sadece yeni kayıtları göster
 
 let sourceLoaded = false, refLoaded = false, masterLoaded = false;
 
@@ -388,33 +379,6 @@ function buildCombinedRows() {
   return rows;
 }
 
-// Client dropdown'unu güncelle (sadece yeni kaydı olan client'lar)
-function updateClientFilterDropdown() {
-  const select = $('#clientFilterSelect');
-  if(!select) return;
-  const newClientsSet = new Set();
-  for(const row of combinedRows) {
-    if(row.isNew) newClientsSet.add(row.client);
-  }
-  const sortedClients = Array.from(newClientsSet).sort((a,b) => a.localeCompare(b, 'tr'));
-  const currentValue = select.value;
-  select.innerHTML = '<option value="">Tüm Client\'lar</option>';
-  for(const client of sortedClients) {
-    const option = document.createElement('option');
-    option.value = client;
-    option.textContent = client;
-    select.appendChild(option);
-  }
-  // Eğer seçili olan client hala listede varsa koru, yoksa sıfırla
-  if(currentValue && newClientsSet.has(currentValue)) {
-    select.value = currentValue;
-    selectedClientFilter = currentValue;
-  } else {
-    select.value = '';
-    selectedClientFilter = '';
-  }
-}
-
 // Tabloyu render et (filtreler uygulanarak)
 function renderTable() {
   const tbody = $('tableBody');
@@ -422,17 +386,12 @@ function renderTable() {
   
   let filtered = [...combinedRows];
   
-  // "Sadece yeni" filtresi
+  // Önce "sadece yeni" filtresi
   if(onlyNewFilter) {
     filtered = filtered.filter(r => r.isNew === true);
   }
   
-  // Client filtresi (eklenmesi gereken client)
-  if(selectedClientFilter) {
-    filtered = filtered.filter(r => r.client === selectedClientFilter);
-  }
-  
-  // Metin filtresi
+  // Sonra metin filtresi
   if(filterText.trim()) {
     const f = filterText.toLowerCase();
     filtered = filtered.filter(r => 
@@ -463,7 +422,7 @@ function renderTable() {
         <td><input type="text" class="lobAdiInput" value="${escapeHtml(inputValueAdi)}" placeholder="LOB Adı" ${isNew ? '' : 'disabled'}></td>
         <td><input type="text" class="lobIdInput" value="${escapeHtml(inputValueId)}" placeholder="LOB ID" ${isNew ? '' : 'disabled'}></td>
         <td style="text-align:center">${isNew ? '🆕 Yeni' : '📌 Mevcut'}</td>
-      </tr>
+      </table>
     `;
   }).join('');
   
@@ -518,7 +477,6 @@ function checkAndBuildTable() {
   warningDiv.style.display = 'none';
   if(sourceLoaded && refLoaded && masterLoaded) {
     combinedRows = buildCombinedRows();
-    updateClientFilterDropdown();  // client dropdown'u güncelle
     renderTable();
     $('tableContainer').style.display = 'block';
   } else {
@@ -551,13 +509,7 @@ function setOnlyNewFilter(value) {
 filterAllBtn?.addEventListener('click', () => setOnlyNewFilter(false));
 filterOnlyNewBtn?.addEventListener('click', () => setOnlyNewFilter(true));
 
-// Client filtre dropdown event
-$('#clientFilterSelect')?.addEventListener('change', e => {
-  selectedClientFilter = e.target.value;
-  renderTable();
-});
-
-// Export: Master (LOBDatalari.xlsx) - başlıkları düzenli
+// Export: Master (LOBDatalari.xlsx)
 async function exportMaster() {
   const newLobMap = loadNewLobFromStorage();
   let updatedMaster = [...masterRecords];
@@ -578,8 +530,8 @@ async function exportMaster() {
   const wsData = updatedMaster.map(r => ({
     'ClientIdent': r.clientIdent,
     'Client': r.client,
-    'Form ID': r.formId,
-    'Form Name': r.formName,
+    'FormID': r.formId,
+    'FormName': r.formName,
     'LOB Adı': r.lobAdi,
     'LOB ID': r.lobId
   }));
@@ -594,7 +546,7 @@ async function exportMaster() {
   checkAndBuildTable();
 }
 
-// Export: Sadece yeni kayıtlar (LOB.xlsx) - başlıklar istenen formatta
+// Export: Sadece yeni kayıtlar (LOB.xlsx)
 function exportNewOnly() {
   const newRows = combinedRows.filter(r => r.isNew && (r.lobAdi || r.lobId));
   if(newRows.length === 0) {
@@ -604,8 +556,8 @@ function exportNewOnly() {
   const wsData = newRows.map(r => ({
     'ClientIdent': r.clientIdent,
     'Client': r.client,
-    'Form ID': r.formId,
-    'Form Name': r.formName,
+    'FormID': r.formId,
+    'FormName': r.formName,
     'LOB Adı': r.lobAdi,
     'LOB ID': r.lobId
   }));
