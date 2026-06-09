@@ -33,6 +33,12 @@
       "labelEn": "QA Tools"
     },
     {
+      "id": "analitikuzman",
+      "label": "Analitik Uzman Araçları",
+      "labelEn": "Analytics Expert Tools",
+      "icon": "💹"
+    },
+    {
       "id": "reports",
       "label": "Power BI Raproları",
       "icon": "📊",
