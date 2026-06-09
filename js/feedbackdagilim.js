@@ -1188,10 +1188,13 @@ reportAreaS3.style.display = 'none';
 exportBtnS3.disabled = true;
 initStep3();
 
-// ==================== STEP 4 (Gelişmiş Geçmiş Tablosu - Filtre & Sıralama) ====================
-let allHistoryData = []; // { date, week, group, reviewer, project, monitorId, link }
+// ==================== STEP 4 (Gelişmiş Tablo - Modern Filtreler) ====================
+let allHistoryData = [];      // { date, dateRaw, week, group, reviewer, project, monitorId, link }
+let currentDisplayData = [];
+let sortColumn = null;
+let sortDirection = 'asc';
 
-// DOM elemanları
+// DOM Elemanları
 const historyFileInputStep4 = document.getElementById('historyFileInputStep4');
 const dropHistoryStep4 = document.getElementById('dropHistoryStep4');
 const historyStatusStep4 = document.getElementById('historyStatusStep4');
@@ -1199,20 +1202,29 @@ const clearHistoryBtn = document.getElementById('clearHistoryDataBtnStep4');
 const distributionAreaStep4 = document.getElementById('distributionAreaStep4');
 const distributionTableBody = document.getElementById('distributionTableBodyStep4');
 const exportBtnStep4 = document.getElementById('exportDistributionBtnStep4');
-const filterInputs = {
-  date: document.getElementById('filterDate'),
-  week: document.getElementById('filterWeek'),
-  group: document.getElementById('filterGroup'),
-  reviewer: document.getElementById('filterReviewer'),
-  project: document.getElementById('filterProject'),
-  monitorId: document.getElementById('filterMonitorId')
+const filterStatsSpan = document.getElementById('filterStatsStep4');
+
+// Column tanımları (anahtar, başlık, tip, filtre input tipi)
+const columns = [
+  { key: 'date', label: 'Dağıtım Tarihi', type: 'string', filterType: 'text' },
+  { key: 'week', label: 'Hafta', type: 'number', filterType: 'number' },
+  { key: 'group', label: 'Grup', type: 'string', filterType: 'text' },
+  { key: 'reviewer', label: 'Değerlendirici', type: 'string', filterType: 'text' },
+  { key: 'project', label: 'Proje', type: 'string', filterType: 'text' },
+  { key: 'monitorId', label: 'Monitoring ID', type: 'string', filterType: 'text' },
+  { key: 'link', label: 'Link', type: 'link', filterType: null } // Link sütunu filtrelenmez
+];
+
+let filterValues = {
+  date: '',
+  week: '',
+  group: '',
+  reviewer: '',
+  project: '',
+  monitorId: ''
 };
 
-let currentDisplayData = [];      // filtrelenmiş/sıralanmış veri
-let sortColumn = null;
-let sortDirection = 'asc';         // 'asc' veya 'desc'
-
-// Yardımcı: JSON'dan veri çıkar
+// JSON'dan veri çıkarma
 function extractAssignmentsFromJson(jsonObj) {
   const result = [];
   const groupMap = {
@@ -1224,7 +1236,7 @@ function extractAssignmentsFromJson(jsonObj) {
     const entries = jsonObj[groupKey] || [];
     for (const entry of entries) {
       const week = entry.week;
-      const dateRaw = entry.date; // ISO string
+      const dateRaw = entry.date;
       let formattedDate = '';
       if (dateRaw) {
         const d = new Date(dateRaw);
@@ -1234,7 +1246,6 @@ function extractAssignmentsFromJson(jsonObj) {
       }
       const assignments = entry.assignments || [];
       for (const ass of assignments) {
-        // Link oluştur
         let link = '#';
         if (typeof buildMonitorLinkStep2 === 'function') {
           link = buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident || '');
@@ -1257,7 +1268,7 @@ function extractAssignmentsFromJson(jsonObj) {
   return result;
 }
 
-// Tüm JSON dosyalarını yükle (birden fazla)
+// Çoklu JSON yükleme
 async function loadMultipleHistoryFiles(files) {
   if (!files || files.length === 0) return;
   if (typeof showLoader === 'function') showLoader('Step4', true);
@@ -1285,43 +1296,105 @@ async function loadMultipleHistoryFiles(files) {
   historyStatusStep4.innerHTML = `✅ Toplam ${allHistoryData.length} dağıtım kaydı yüklendi. (${files.length} dosya)`;
   historyStatusStep4.style.color = 'var(--accent)';
   if (typeof showLoader === 'function') showLoader('Step4', false);
-  // Tabloyu göster ve filtreleri sıfırla
   distributionAreaStep4.style.display = 'block';
   exportBtnStep4.disabled = false;
+  renderTableHeader();
   applyFiltersAndRender();
 }
 
-// Filtreleme ve sıralama uygula
+// Başlık satırını oluştur (sütun adları + filtre inputları)
+function renderTableHeader() {
+  const thead = document.getElementById('historyTableHeaderStep4');
+  if (!thead) return;
+  
+  // 1. satır: sıralama başlıkları
+  const headerRow1 = document.createElement('tr');
+  // 2. satır: filtre inputları
+  const headerRow2 = document.createElement('tr');
+  
+  for (const col of columns) {
+    // Başlık hücresi
+    const th = document.createElement('th');
+    th.textContent = col.label;
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.dataset.sort = col.key;
+    if (sortColumn === col.key) {
+      th.textContent += sortDirection === 'asc' ? ' ▲' : ' ▼';
+    }
+    th.addEventListener('click', () => {
+      if (sortColumn === col.key) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col.key;
+        sortDirection = 'asc';
+      }
+      renderTableHeader();  // Başlıkları yeniden oluştur (ok işareti için)
+      applyFiltersAndRender();
+    });
+    headerRow1.appendChild(th);
+    
+    // Filtre hücresi
+    const td = document.createElement('td');
+    if (col.filterType && col.key !== 'link') {
+      const input = document.createElement('input');
+      input.type = col.filterType === 'number' ? 'number' : 'text';
+      input.placeholder = `Filtrele...`;
+      input.style.width = '100%';
+      input.style.padding = '0.3rem';
+      input.style.borderRadius = '0.4rem';
+      input.style.border = '1px solid var(--border)';
+      input.style.background = 'var(--surface)';
+      input.style.color = 'var(--text)';
+      input.value = filterValues[col.key] || '';
+      input.addEventListener('input', (e) => {
+        filterValues[col.key] = e.target.value;
+        applyFiltersAndRender();
+      });
+      td.appendChild(input);
+    } else {
+      td.textContent = '';
+    }
+    headerRow2.appendChild(td);
+  }
+  
+  thead.innerHTML = '';
+  thead.appendChild(headerRow1);
+  thead.appendChild(headerRow2);
+}
+
+// Filtreleme ve sıralama
 function applyFiltersAndRender() {
-  // Filtrele
   let filtered = [...allHistoryData];
-  if (filterInputs.date && filterInputs.date.value.trim()) {
-    const filterVal = filterInputs.date.value.trim().toLowerCase();
-    filtered = filtered.filter(row => row.date.toLowerCase().includes(filterVal));
+  
+  // Metin filtreleri (case-insensitive)
+  if (filterValues.date) {
+    const val = filterValues.date.toLowerCase();
+    filtered = filtered.filter(r => r.date.toLowerCase().includes(val));
   }
-  if (filterInputs.week && filterInputs.week.value.trim()) {
-    const filterVal = filterInputs.week.value.trim();
-    filtered = filtered.filter(row => String(row.week).includes(filterVal));
+  if (filterValues.week) {
+    const val = filterValues.week.toString();
+    filtered = filtered.filter(r => r.week.toString().includes(val));
   }
-  if (filterInputs.group && filterInputs.group.value.trim()) {
-    const filterVal = filterInputs.group.value.trim().toLowerCase();
-    filtered = filtered.filter(row => row.group.toLowerCase().includes(filterVal));
+  if (filterValues.group) {
+    const val = filterValues.group.toLowerCase();
+    filtered = filtered.filter(r => r.group.toLowerCase().includes(val));
   }
-  if (filterInputs.reviewer && filterInputs.reviewer.value.trim()) {
-    const filterVal = filterInputs.reviewer.value.trim().toLowerCase();
-    filtered = filtered.filter(row => row.reviewer.toLowerCase().includes(filterVal));
+  if (filterValues.reviewer) {
+    const val = filterValues.reviewer.toLowerCase();
+    filtered = filtered.filter(r => r.reviewer.toLowerCase().includes(val));
   }
-  if (filterInputs.project && filterInputs.project.value.trim()) {
-    const filterVal = filterInputs.project.value.trim().toLowerCase();
-    filtered = filtered.filter(row => row.project.toLowerCase().includes(filterVal));
+  if (filterValues.project) {
+    const val = filterValues.project.toLowerCase();
+    filtered = filtered.filter(r => r.project.toLowerCase().includes(val));
   }
-  if (filterInputs.monitorId && filterInputs.monitorId.value.trim()) {
-    const filterVal = filterInputs.monitorId.value.trim().toLowerCase();
-    filtered = filtered.filter(row => row.monitorId.toLowerCase().includes(filterVal));
+  if (filterValues.monitorId) {
+    const val = filterValues.monitorId.toLowerCase();
+    filtered = filtered.filter(r => r.monitorId.toLowerCase().includes(val));
   }
   
   // Sıralama
-  if (sortColumn) {
+  if (sortColumn && sortColumn !== 'link') {
     filtered.sort((a, b) => {
       let valA = a[sortColumn];
       let valB = b[sortColumn];
@@ -1342,47 +1415,19 @@ function applyFiltersAndRender() {
   }
   
   currentDisplayData = filtered;
-  renderTable(currentDisplayData);
+  renderTableBody();
+  updateFilterStats();
 }
 
-// Tabloyu çiz
-function renderTable(data) {
+// Tablo gövdesini çiz
+function renderTableBody() {
   if (!distributionTableBody) return;
-  const headers = [
-    { key: 'date', label: 'Dağıtım Tarihi' },
-    { key: 'week', label: 'Hafta' },
-    { key: 'group', label: 'Grup' },
-    { key: 'reviewer', label: 'Değerlendirici' },
-    { key: 'project', label: 'Proje' },
-    { key: 'monitorId', label: 'Monitoring ID' },
-    { key: 'link', label: 'Link' }
-  ];
-  
-  // Başlık satırını oluştur (sıralama için tıklanabilir)
-  const thead = document.getElementById('historyTableHeaderStep4');
-  if (thead) {
-    thead.innerHTML = `<tr>${headers.map(h => `<th data-sort="${h.key}" style="cursor:pointer; user-select:none;">${h.label} ${sortColumn === h.key ? (sortDirection === 'asc' ? '▲' : '▼') : ''}</th>`).join('')}</tr>`;
-    // Sıralama eventleri
-    document.querySelectorAll('#historyTableHeaderStep4 th').forEach(th => {
-      th.addEventListener('click', () => {
-        const sortKey = th.dataset.sort;
-        if (sortColumn === sortKey) {
-          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortColumn = sortKey;
-          sortDirection = 'asc';
-        }
-        applyFiltersAndRender();
-      });
-    });
-  }
-  
-  if (!data.length) {
-    distributionTableBody.innerHTML = `<tr><td colspan="${headers.length}" class="empty-state">Hiç kayıt yok</td></tr>`;
+  if (!currentDisplayData.length) {
+    distributionTableBody.innerHTML = `<tr><td colspan="${columns.length}" class="empty-state">Hiç kayıt yok</td></tr>`;
     return;
   }
   
-  distributionTableBody.innerHTML = data.map(row => `
+  distributionTableBody.innerHTML = currentDisplayData.map(row => `
     <tr>
       <td>${escapeHtml(row.date)}</td>
       <td>${escapeHtml(String(row.week))}</td>
@@ -1395,7 +1440,14 @@ function renderTable(data) {
   `).join('');
 }
 
-// Excel aktar (görünen filtrelenmiş/sıralanmış veri)
+// Filtre istatistiğini güncelle
+function updateFilterStats() {
+  if (filterStatsSpan) {
+    filterStatsSpan.textContent = `${currentDisplayData.length} / ${allHistoryData.length} kayıt gösteriliyor`;
+  }
+}
+
+// Excel'e aktar (filtrelenmiş veri)
 function exportFilteredToExcel() {
   if (!currentDisplayData.length) {
     alert('Aktarılacak veri yok');
@@ -1427,11 +1479,13 @@ function clearAllHistoryData() {
     currentDisplayData = [];
     sortColumn = null;
     sortDirection = 'asc';
-    // Filtre inputlarını temizle
-    for (const key in filterInputs) {
-      if (filterInputs[key]) filterInputs[key].value = '';
+    // Filtre değerlerini sıfırla
+    for (let key in filterValues) {
+      filterValues[key] = '';
     }
-    renderTable([]);
+    renderTableHeader();  // Inputları temizlemek için başlığı yeniden oluştur
+    renderTableBody();
+    updateFilterStats();
     historyStatusStep4.innerHTML = 'Veriler temizlendi. Yeni JSON yükleyebilirsiniz.';
     historyStatusStep4.style.color = 'var(--muted)';
     distributionAreaStep4.style.display = 'none';
@@ -1458,22 +1512,11 @@ function setupDropStep4() {
   });
 }
 
-// Filtre inputlarına event listener ekle
-function bindFilterEvents() {
-  for (const key in filterInputs) {
-    const input = filterInputs[key];
-    if (input) {
-      input.addEventListener('input', () => applyFiltersAndRender());
-    }
-  }
-}
-
 // Buton olayları
 if (exportBtnStep4) exportBtnStep4.addEventListener('click', exportFilteredToExcel);
 if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearAllHistoryData);
 
 // Başlangıç
 setupDropStep4();
-bindFilterEvents();
 distributionAreaStep4.style.display = 'none';
 exportBtnStep4.disabled = true;
