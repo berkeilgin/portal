@@ -557,7 +557,7 @@ $('#clientFilterSelect')?.addEventListener('change', e => {
   renderTable();
 });
 
-// Export: Master (LOBDatalari.xlsx) - başlıkları da düzenli
+// Export: Master (LOBDatalari.xlsx) - başlıkları düzenli
 async function exportMaster() {
   const newLobMap = loadNewLobFromStorage();
   let updatedMaster = [...masterRecords];
@@ -594,7 +594,7 @@ async function exportMaster() {
   checkAndBuildTable();
 }
 
-// Export: Sadece yeni kayıtlar (LOB.xlsx) - başlıklar birebir istenen formatta
+// Export: Sadece yeni kayıtlar (LOB.xlsx) - başlıklar istenen formatta
 function exportNewOnly() {
   const newRows = combinedRows.filter(r => r.isNew && (r.lobAdi || r.lobId));
   if(newRows.length === 0) {
