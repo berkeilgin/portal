@@ -1187,3 +1187,169 @@ tabKisi.addEventListener('click', () => setReportViewS3('kisi'));
 reportAreaS3.style.display = 'none';
 exportBtnS3.disabled = true;
 initStep3();
+
+// ==================== STEP 4 (Geçmiş Dağıtım Tablosu - Step2 formatında) ====================
+// Bu kod mevcut Step1, Step2, Step3 işlevlerine dokunmaz. Sadece sona eklenmiştir.
+let historyDataStep4 = { DM: [], ML: [], DONUSUM: [] };
+let currentWeekStep4 = null;
+
+const historyFileInputStep4 = document.getElementById('historyFileInputStep4');
+const dropHistoryStep4 = document.getElementById('dropHistoryStep4');
+const historyStatusStep4 = document.getElementById('historyStatusStep4');
+const weekSelectStep4 = document.getElementById('weekSelectStep4');
+const showDistributionBtnStep4 = document.getElementById('showDistributionBtnStep4');
+const exportDistributionBtnStep4 = document.getElementById('exportDistributionBtnStep4');
+const distributionTableBodyStep4 = document.getElementById('distributionTableBodyStep4');
+const distributionAreaStep4 = document.getElementById('distributionAreaStep4');
+
+function loadHistoryFileStep4(file) {
+  if (!file) return;
+  if (typeof showLoader === 'function') showLoader('Step4', true);
+  if (historyStatusStep4) historyStatusStep4.innerHTML = '⏳ Yükleniyor...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed && Array.isArray(parsed.DM) && Array.isArray(parsed.ML) && Array.isArray(parsed.DONUSUM)) {
+        historyDataStep4 = parsed;
+        const weeksSet = new Set();
+        ['DM', 'ML', 'DONUSUM'].forEach(g => {
+          (historyDataStep4[g] || []).forEach(entry => { if (entry.week) weeksSet.add(entry.week); });
+        });
+        const weeks = Array.from(weeksSet).sort((a,b) => a-b);
+        if (weekSelectStep4) {
+          weekSelectStep4.innerHTML = '<option value="">-- Hafta Seçin --</option>' + weeks.map(w => `<option value="${w}">${w}. Hafta</option>`).join('');
+          weekSelectStep4.disabled = false;
+        }
+        if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = false;
+        if (historyStatusStep4) {
+          historyStatusStep4.innerHTML = `✅ Geçmiş yüklendi (DM: ${historyDataStep4.DM.length}, ML: ${historyDataStep4.ML.length}, Dönüşüm: ${historyDataStep4.DONUSUM.length})`;
+          historyStatusStep4.style.color = 'var(--accent)';
+        }
+        if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
+      } else throw new Error('Geçersiz JSON yapısı');
+    } catch (err) {
+      if (historyStatusStep4) {
+        historyStatusStep4.innerHTML = `❌ ${err.message}`;
+        historyStatusStep4.style.color = 'var(--accent3)';
+      }
+      historyDataStep4 = { DM: [], ML: [], DONUSUM: [] };
+      if (weekSelectStep4) weekSelectStep4.disabled = true;
+      if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = true;
+    } finally {
+      if (typeof showLoader === 'function') showLoader('Step4', false);
+    }
+  };
+  reader.onerror = () => {
+    if (historyStatusStep4) historyStatusStep4.innerHTML = '❌ Dosya okunamadı';
+    if (typeof showLoader === 'function') showLoader('Step4', false);
+  };
+  reader.readAsText(file);
+}
+
+function showDistributionForWeekStep4() {
+  if (!weekSelectStep4) return;
+  const week = parseInt(weekSelectStep4.value);
+  if (isNaN(week)) { alert('Lütfen bir hafta seçin'); return; }
+  currentWeekStep4 = week;
+  const allAssignments = [];
+  const groupMapping = [
+    { key: 'DM', name: 'DM' },
+    { key: 'ML', name: 'ML' },
+    { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
+  ];
+  for (const { key, name } of groupMapping) {
+    const entries = historyDataStep4[key] || [];
+    const weekEntry = entries.find(e => e.week === week);
+    if (weekEntry && weekEntry.assignments) {
+      weekEntry.assignments.forEach(ass => {
+        allAssignments.push({
+          group: name,
+          FeedbackCreatorName: ass.FeedbackCreatorName,
+          client_name: ass.client_name,
+          emp_monitor_ident: ass.emp_monitor_ident,
+          employee_ident: ass.employee_ident || ''
+        });
+      });
+    }
+  }
+  if (!distributionTableBodyStep4) return;
+  if (!allAssignments.length) {
+    distributionTableBodyStep4.innerHTML = '<tr><td colspan="5">Bu hafta için dağıtım kaydı bulunamadı</td></tr>';
+    if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
+    if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
+    return;
+  }
+  distributionTableBodyStep4.innerHTML = allAssignments.map(ass => {
+    const link = (typeof buildMonitorLinkStep2 === 'function') 
+      ? buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident)
+      : (typeof buildMonitorLink === 'function' ? buildMonitorLink(ass.emp_monitor_ident, 'CHECKLIST') : '#');
+    return `
+      <tr>
+        <td>${escapeHtml(ass.group)}</td>
+        <td>${escapeHtml(ass.FeedbackCreatorName || '')}</td>
+        <td>${escapeHtml(ass.client_name || '')}</td>
+        <td>${escapeHtml(String(ass.emp_monitor_ident || ''))}</td>
+        <td><a href="${link}" target="_blank" class="link-btn">🔗 Link</a></td>
+      </tr>
+    `;
+  }).join('');
+  if (distributionAreaStep4) distributionAreaStep4.style.display = 'block';
+  if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = false;
+}
+
+function exportDistributionTableStep4() {
+  if (!currentWeekStep4) { alert('Önce bir hafta seçip tabloyu görüntüleyin.'); return; }
+  const allAssignments = [];
+  const groupMapping = [
+    { key: 'DM', name: 'DM' },
+    { key: 'ML', name: 'ML' },
+    { key: 'DONUSUM', name: 'Dönüşüm Projeleri' }
+  ];
+  for (const { key, name } of groupMapping) {
+    const entries = historyDataStep4[key] || [];
+    const weekEntry = entries.find(e => e.week === currentWeekStep4);
+    if (weekEntry && weekEntry.assignments) {
+      weekEntry.assignments.forEach(ass => {
+        allAssignments.push({
+          'Grup': name,
+          'Değerlendirici (FeedbackCreatorName)': ass.FeedbackCreatorName,
+          'Proje (client_name)': ass.client_name,
+          'Monitor Ident (emp_monitor_ident)': ass.emp_monitor_ident,
+          'Monitor Link': (typeof buildMonitorLinkStep2 === 'function') 
+            ? buildMonitorLinkStep2(ass.emp_monitor_ident, ass.employee_ident || '')
+            : (typeof buildMonitorLink === 'function' ? buildMonitorLink(ass.emp_monitor_ident, 'CHECKLIST') : '#')
+        });
+      });
+    }
+  }
+  if (!allAssignments.length) { alert('Aktarılacak veri yok'); return; }
+  if (typeof XLSX === 'undefined') { alert('XLSX kütüphanesi yüklenemedi.'); return; }
+  const ws = XLSX.utils.json_to_sheet(allAssignments);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Hafta_${currentWeekStep4}_Dagitim`);
+  XLSX.writeFile(wb, `gecmis_dagitim_hafta_${currentWeekStep4}_${formatDateForFilename()}.xlsx`);
+}
+
+function setupDropStep4() {
+  if (!dropHistoryStep4 || !historyFileInputStep4) return;
+  dropHistoryStep4.addEventListener('click', e => { if (e.target !== historyFileInputStep4) historyFileInputStep4.click(); });
+  historyFileInputStep4.addEventListener('change', e => { if (e.target.files[0]) loadHistoryFileStep4(e.target.files[0]); });
+  dropHistoryStep4.addEventListener('dragover', e => { e.preventDefault(); dropHistoryStep4.classList.add('drag'); });
+  dropHistoryStep4.addEventListener('dragleave', () => dropHistoryStep4.classList.remove('drag'));
+  dropHistoryStep4.addEventListener('drop', e => {
+    e.preventDefault();
+    dropHistoryStep4.classList.remove('drag');
+    if (e.dataTransfer.files[0]) loadHistoryFileStep4(e.dataTransfer.files[0]);
+  });
+}
+
+if (showDistributionBtnStep4) showDistributionBtnStep4.addEventListener('click', showDistributionForWeekStep4);
+if (exportDistributionBtnStep4) exportDistributionBtnStep4.addEventListener('click', exportDistributionTableStep4);
+
+if (weekSelectStep4) weekSelectStep4.disabled = true;
+if (showDistributionBtnStep4) showDistributionBtnStep4.disabled = true;
+if (exportDistributionBtnStep4) exportDistributionBtnStep4.disabled = true;
+if (distributionAreaStep4) distributionAreaStep4.style.display = 'none';
+
+setupDropStep4();
