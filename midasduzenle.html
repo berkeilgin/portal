@@ -717,8 +717,6 @@ function buildSummary(detayRows) {
     const cleaned = { ...row };
     delete cleaned.Attribute;
     delete cleaned.Value;
-    delete cleaned.Date;
-    delete cleaned.Data;        // Summary'de Data sütunu olmasın
     if (!uniqueMap.has(kaliteNo)) {
       uniqueMap.set(kaliteNo, cleaned);
     }
