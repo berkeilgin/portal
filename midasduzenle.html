@@ -13,7 +13,7 @@
   box-sizing: border-box;
 }
 
-/* TEMA DEĞİŞKENLERİ – yüksek okunabilirlik için kontrast artırıldı */
+/* TEMA DEĞİŞKENLERİ – yüksek kontrast */
 body {
   --bg: #f0f2f5;
   --surface: #ffffff;
@@ -54,7 +54,7 @@ body.dark {
   --accent4: #fbbf24;
 }
 
-/* Açık Tema (özel) */
+/* Açık Tema */
 body.light {
   --bg: #f8fafc;
   --surface: #ffffff;
@@ -71,7 +71,7 @@ body.light {
   --accent4: #d97706;
 }
 
-/* TP teması (canlı) */
+/* TP teması */
 body.tp {
   --bg: #0b0816;
   --surface: #18132b;
@@ -106,6 +106,9 @@ body.tp {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .main {
@@ -441,8 +444,12 @@ let processedDetay = null;
 let processedListe = null;
 let processedSummary = null;
 
-// DOM helpers
-const $ = id => document.getElementById(id);
+// Güvenli ID getter (ID'den # temizler)
+function getEl(id) {
+  if (!id) return null;
+  const cleanId = id.startsWith('#') ? id.substring(1) : id;
+  return document.getElementById(cleanId);
+}
 
 // Toast mesajı
 function showToast(msg, type = 'ok') {
@@ -458,7 +465,7 @@ function showToast(msg, type = 'ok') {
   }, 3500);
 }
 
-// Excel okuma (ArrayBuffer)
+// Excel okuma
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -478,7 +485,7 @@ function readExcelFile(file) {
   });
 }
 
-// Tek dosya için unpivot (sabit sütunlar + kalanlar Attribute/Value + Data)
+// Tek dosya için unpivot
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
   if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
@@ -487,17 +494,14 @@ async function unpivotFile(file, fileBaseName) {
   const unpivoted = [];
 
   for (const row of rows) {
-    // Sabit sütun değerlerini al
     const fixedValues = {};
     for (const col of FIXED_COLUMNS) {
       let val = row[col];
       if (val === undefined || val === null) val = "";
-      // Tarih objesi varsa string'e çevir
       if (val instanceof Date) val = val.toISOString().split('T')[0];
       fixedValues[col] = String(val).trim();
     }
 
-    // Kalan sütunlar (sabit olmayan) -> Attribute/Value
     const otherCols = allCols.filter(col => !FIXED_COLUMNS.includes(col));
     for (const attr of otherCols) {
       let val = row[attr];
@@ -507,7 +511,7 @@ async function unpivotFile(file, fileBaseName) {
         ...fixedValues,
         Attribute: attr,
         Value: String(val),
-        Data: fileBaseName   // dosya adından custom sütun
+        Data: fileBaseName
       };
       unpivoted.push(newRow);
     }
@@ -515,7 +519,6 @@ async function unpivotFile(file, fileBaseName) {
   return unpivoted;
 }
 
-// Birden çok dosyayı işle
 async function processGroup(filesArray) {
   if (!filesArray.length) return [];
   let allRows = [];
@@ -533,17 +536,15 @@ async function processGroup(filesArray) {
   return allRows;
 }
 
-// Dönüşüm: Date sütunu ekle, tip dönüşümleri (Form Puan, Csat), sıralama
+// Dönüşüm: Date sütunu, tip dönüşümleri, sıralama
 function transformTable(rows) {
   if (!rows.length) return [];
 
-  // 1. Date sütunu ekle (Yeni Kayıt Tarihi'nden)
   const withDate = rows.map(row => {
     let dateObj = null;
     const rawDate = row["Yeni Kayıt Tarihi"];
     if (rawDate && typeof rawDate === 'string' && rawDate.trim() !== "") {
       let cleaned = rawDate.trim();
-      // format dd.mm.yyyy veya yyyy-mm-dd veya dd/mm/yyyy
       let datePart = cleaned.split(' ')[0];
       let parsed = null;
       if (datePart.includes('.')) {
@@ -572,7 +573,6 @@ function transformTable(rows) {
     return { ...row, Date: dateObj };
   });
 
-  // 2. Sayısal dönüşümler
   const typed = withDate.map(row => {
     let formPuan = row["Form Puan"];
     let csat = row["Csat Puanı"];
@@ -588,28 +588,25 @@ function transformTable(rows) {
     return newRow;
   });
 
-  // 3. Sıralama (Date artan, null'lar en sonda)
-  const sorted = typed.sort((a, b) => {
+  return typed.sort((a, b) => {
     if (!a.Date && !b.Date) return 0;
     if (!a.Date) return 1;
     if (!b.Date) return -1;
     return a.Date - b.Date;
   });
-  return sorted;
 }
 
-// Summary: DetayListe'den Attribute & Value kaldır, Kalite No bazlı distinct
+// Summary: Attribute & Value kaldır, Kalite No distinct
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
   const uniqueMap = new Map();
   for (const row of detayRows) {
     const kaliteNo = row["Kalite No"] ? String(row["Kalite No"]).trim() : "";
     if (!kaliteNo) continue;
-    // Attribute ve Value'yu kaldırarak temiz satır
     const cleaned = { ...row };
     delete cleaned.Attribute;
     delete cleaned.Value;
-    delete cleaned.Date;   // summary'de tarihe gerek yok
+    delete cleaned.Date;
     if (!uniqueMap.has(kaliteNo)) {
       uniqueMap.set(kaliteNo, cleaned);
     }
@@ -617,10 +614,13 @@ function buildSummary(detayRows) {
   return Array.from(uniqueMap.values());
 }
 
-// Tabloyu render et (performans için virtual yok, ama limit koy)
+// Tablo render
 function renderTable(containerId, rows, maxRows = 400) {
-  const container = $(containerId);
-  if (!container) return;
+  const container = getEl(containerId);
+  if (!container) {
+    console.error(`Container ${containerId} bulunamadı`);
+    return;
+  }
   if (!rows || rows.length === 0) {
     container.innerHTML = `<div class="empty-state"><span class="icon">📭</span> Veri bulunamadı</div>`;
     return;
@@ -711,7 +711,7 @@ async function processAll() {
   }
 }
 
-// Excel export (3 sayfa)
+// Excel export
 function exportToExcel() {
   if (!processedDetay && !processedListe && !processedSummary) {
     showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
@@ -747,25 +747,31 @@ function exportToExcel() {
   showToast("✅ Excel dosyası oluşturuldu (3 sayfa).", 'ok');
 }
 
-// Dosya listesi UI güncelle
+// Dosya listesi UI
 function updateFileListUI() {
-  const detayDiv = $('#detayFileList');
-  const listeDiv = $('#listeFileList');
-  detayDiv.innerHTML = detayFilesList.length ? detayFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
-  listeDiv.innerHTML = listeFilesList.length ? listeFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
-  $('#detayStatus').innerHTML = detayFilesList.length ? `<span class="icon">✅</span> ${detayFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
-  $('#listeStatus').innerHTML = listeFilesList.length ? `<span class="icon">✅</span> ${listeFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
+  const detayDiv = getEl('detayFileList');
+  const listeDiv = getEl('listeFileList');
+  const detayStatus = getEl('detayStatus');
+  const listeStatus = getEl('listeStatus');
+  
+  if (detayDiv) detayDiv.innerHTML = detayFilesList.length ? detayFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
+  if (listeDiv) listeDiv.innerHTML = listeFilesList.length ? listeFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
+  if (detayStatus) detayStatus.innerHTML = detayFilesList.length ? `<span class="icon">✅</span> ${detayFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
+  if (listeStatus) listeStatus.innerHTML = listeFilesList.length ? `<span class="icon">✅</span> ${listeFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
 }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Dosya ekleme (multiple)
+// Drag & Drop
 function setupDropZone(dropId, inputId, isDetay) {
-  const drop = $(dropId);
-  const input = $(inputId);
-  if (!drop || !input) return;
+  const drop = getEl(dropId);
+  const input = getEl(inputId);
+  if (!drop || !input) {
+    console.error(`Drop zone veya input bulunamadı: ${dropId}, ${inputId}`);
+    return;
+  }
 
   const handleFiles = (files) => {
     const fileArray = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
@@ -803,9 +809,12 @@ function clearAll() {
     processedListe = null;
     processedSummary = null;
     updateFileListUI();
-    $('#detayTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
-    $('#listeTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
-    $('#summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> İşlem sonrası gösterilecek</div>';
+    const detayCont = getEl('detayTableContainer');
+    const listeCont = getEl('listeTableContainer');
+    const summaryCont = getEl('summaryTableContainer');
+    if (detayCont) detayCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
+    if (listeCont) listeCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
+    if (summaryCont) summaryCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> İşlem sonrası gösterilecek</div>';
     showToast("Tüm veriler temizlendi.", 'ok');
   }
 }
@@ -815,9 +824,10 @@ function initTabs() {
   const btns = document.querySelectorAll('.tab-btn');
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const tabId = btn.dataset.tab;
+      const tabId = btn.getAttribute('data-tab');
       document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-      $(tabId).classList.add('active');
+      const activePane = getEl(tabId);
+      if (activePane) activePane.classList.add('active');
       btns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
@@ -829,35 +839,46 @@ function setTheme(theme) {
   document.body.className = theme;
   localStorage.setItem('dataMergeTheme', theme);
   document.querySelectorAll('.theme-btn').forEach(btn => {
-    if (btn.dataset.theme === theme) btn.classList.add('active');
+    if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
     else btn.classList.remove('active');
   });
 }
 
-// Ana Sayfa butonu
+// Ana Sayfa
 function goHome() {
   window.location.href = 'index.html';
 }
 
-// Initialization
+// Başlat
 function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
-  $('#processBtn').addEventListener('click', processAll);
-  $('#exportBtn').addEventListener('click', exportToExcel);
-  $('#clearBtn').addEventListener('click', clearAll);
-  $('#homeBtn').addEventListener('click', goHome);
+  
+  const processBtn = getEl('processBtn');
+  const exportBtn = getEl('exportBtn');
+  const clearBtn = getEl('clearBtn');
+  const homeBtn = getEl('homeBtn');
+  
+  if (processBtn) processBtn.addEventListener('click', processAll);
+  if (exportBtn) exportBtn.addEventListener('click', exportToExcel);
+  if (clearBtn) clearBtn.addEventListener('click', clearAll);
+  if (homeBtn) homeBtn.addEventListener('click', goHome);
+  
   initTabs();
-
+  
   const savedTheme = localStorage.getItem('dataMergeTheme') || 'grey';
   setTheme(savedTheme);
   updateFileListUI();
-
+  
   // Başlangıç mesajları
-  $('#detayTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
-  $('#listeTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
-  $('#summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
+  const detayCont = getEl('detayTableContainer');
+  const listeCont = getEl('listeTableContainer');
+  const summaryCont = getEl('summaryTableContainer');
+  if (detayCont) detayCont.innerHTML = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
+  if (listeCont) listeCont.innerHTML = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
+  if (summaryCont) summaryCont.innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
 }
+
 init();
 </script>
 </body>
