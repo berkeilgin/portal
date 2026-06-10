@@ -13,7 +13,7 @@
   box-sizing: border-box;
 }
 
-/* TEMA DEĞİŞKENLERİ – yüksek kontrast */
+/* TEMA DEĞİŞKENLERİ */
 body {
   --bg: #f0f2f5;
   --surface: #ffffff;
@@ -29,7 +29,7 @@ body {
   --accent3: #ef4444;
   --accent4: #f59e0b;
   --radius: 16px;
-  --font: 'Segoe UI', 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font: 'Segoe UI', 'DM Sans', system-ui, sans-serif;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
@@ -37,7 +37,6 @@ body {
   line-height: 1.5;
 }
 
-/* Koyu Tema */
 body.dark {
   --bg: #0f172a;
   --surface: #1e293b;
@@ -54,7 +53,6 @@ body.dark {
   --accent4: #fbbf24;
 }
 
-/* Açık Tema */
 body.light {
   --bg: #f8fafc;
   --surface: #ffffff;
@@ -71,7 +69,6 @@ body.light {
   --accent4: #d97706;
 }
 
-/* TP teması */
 body.tp {
   --bg: #0b0816;
   --surface: #18132b;
@@ -282,23 +279,6 @@ body.tp {
   align-items: center;
 }
 
-.action-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  background: var(--card2);
-  padding: 6px 12px;
-  border-radius: 48px;
-  align-items: center;
-}
-
-.separator {
-  width: 1px;
-  height: 30px;
-  background: var(--border);
-  margin: 0 4px;
-}
-
 .toast {
   position: fixed;
   bottom: 24px;
@@ -396,7 +376,6 @@ body.tp {
       <span class="icon">⚙️</span> Dosyaları Yükle (Birden Çok)
     </h2>
     <div class="upload-grid">
-      <!-- DetayListe Dosyaları -->
       <div class="upload-card" id="cardDetay">
         <h3><span class="icon">📄</span> DetayListe Dosyaları</h3>
         <div class="file-drop" id="dropDetay">
@@ -407,7 +386,6 @@ body.tp {
         <div class="status-text" id="detayStatus">Henüz dosya seçilmedi</div>
         <div class="file-list" id="detayFileList"></div>
       </div>
-      <!-- ListeSecili Dosyaları -->
       <div class="upload-card" id="cardListe">
         <h3><span class="icon">📑</span> ListeSecili Dosyaları</h3>
         <div class="file-drop" id="dropListe">
@@ -424,25 +402,14 @@ body.tp {
       <button class="btn btn-primary" id="processBtn">
         <span class="icon">⚡</span> Birleştir & Unpivot
       </button>
-      <div class="separator"></div>
-      <div class="action-group">
-        <span class="icon">📎</span> Ayrı Exportlar:
-      </div>
-      <button class="btn btn-export" id="exportDetayBtn">
-        <span class="icon">📋</span> DetayListeScoresAtt.xlsx
-      </button>
-      <button class="btn btn-export" id="exportListeBtn">
-        <span class="icon">📋</span> ListeSeciliAnswersAtt.xlsx
-      </button>
-      <button class="btn btn-export" id="exportSummaryBtn">
-        <span class="icon">📊</span> Summary.xlsx
+      <button class="btn btn-export" id="exportAllBtn">
+        <span class="icon">💾</span> 3 Dosyayı Dışa Aktar (DetayListeScoresAtt, ListeSeciliAnswersAtt, Summary)
       </button>
       <button class="btn btn-ghost" id="clearBtn">
         <span class="icon">🗑️</span> Temizle
       </button>
     </div>
 
-    <!-- Sekmeler -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="tabDetay"><span class="icon">📌</span> DetayListe (Birleşik)</button>
       <button class="tab-btn" data-tab="tabListe"><span class="icon">📌</span> ListeSecili (Birleşik)</button>
@@ -473,21 +440,18 @@ const FIXED_COLUMNS = [
   "Link", "Call ID", "Agent Kapama", "Csat Puanı", "Dakika : Saniye", "Müşteri Numarası"
 ];
 
-// Global state
-let detayFilesList = [];      // { file, name }
+let detayFilesList = [];
 let listeFilesList = [];
 let processedDetay = null;
 let processedListe = null;
 let processedSummary = null;
 
-// Güvenli ID getter
 function getEl(id) {
   if (!id) return null;
   const cleanId = id.startsWith('#') ? id.substring(1) : id;
   return document.getElementById(cleanId);
 }
 
-// Toast mesajı
 function showToast(msg, type = 'ok') {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
@@ -501,7 +465,6 @@ function showToast(msg, type = 'ok') {
   }, 3500);
 }
 
-// Excel okuma
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -512,23 +475,18 @@ function readExcelFile(file) {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
         resolve(rows);
-      } catch (err) {
-        reject(err);
-      }
+      } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
 }
 
-// Tek dosya için unpivot
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
   if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
-
   const allCols = Object.keys(rows[0]);
   const unpivoted = [];
-
   for (const row of rows) {
     const fixedValues = {};
     for (const col of FIXED_COLUMNS) {
@@ -537,19 +495,17 @@ async function unpivotFile(file, fileBaseName) {
       if (val instanceof Date) val = val.toISOString().split('T')[0];
       fixedValues[col] = String(val).trim();
     }
-
     const otherCols = allCols.filter(col => !FIXED_COLUMNS.includes(col));
     for (const attr of otherCols) {
       let val = row[attr];
       if (val === undefined || val === null) val = "";
       if (val instanceof Date) val = val.toISOString().split('T')[0];
-      const newRow = {
+      unpivoted.push({
         ...fixedValues,
         Attribute: attr,
         Value: String(val),
         Data: fileBaseName
-      };
-      unpivoted.push(newRow);
+      });
     }
   }
   return unpivoted;
@@ -572,10 +528,8 @@ async function processGroup(filesArray) {
   return allRows;
 }
 
-// Dönüşüm: Date sütunu, tip dönüşümleri, sıralama
 function transformTable(rows) {
   if (!rows.length) return [];
-
   const withDate = rows.map(row => {
     let dateObj = null;
     const rawDate = row["Yeni Kayıt Tarihi"];
@@ -608,7 +562,6 @@ function transformTable(rows) {
     }
     return { ...row, Date: dateObj };
   });
-
   const typed = withDate.map(row => {
     let formPuan = row["Form Puan"];
     let csat = row["Csat Puanı"];
@@ -623,7 +576,6 @@ function transformTable(rows) {
     }
     return newRow;
   });
-
   return typed.sort((a, b) => {
     if (!a.Date && !b.Date) return 0;
     if (!a.Date) return 1;
@@ -632,7 +584,6 @@ function transformTable(rows) {
   });
 }
 
-// Summary: Attribute & Value kaldır, Kalite No distinct
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
   const uniqueMap = new Map();
@@ -650,23 +601,17 @@ function buildSummary(detayRows) {
   return Array.from(uniqueMap.values());
 }
 
-// Tablo render
 function renderTable(containerId, rows, maxRows = 400) {
   const container = getEl(containerId);
-  if (!container) {
-    console.error(`Container ${containerId} bulunamadı`);
-    return;
-  }
+  if (!container) return;
   if (!rows || rows.length === 0) {
     container.innerHTML = `<div class="empty-state"><span class="icon">📭</span> Veri bulunamadı</div>`;
     return;
   }
-
   const displayRows = rows.slice(0, maxRows);
   const allKeys = new Set();
   displayRows.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
   const columns = Array.from(allKeys);
-
   const table = document.createElement('table');
   table.className = 'data-table';
   const thead = document.createElement('thead');
@@ -678,29 +623,22 @@ function renderTable(containerId, rows, maxRows = 400) {
   });
   thead.appendChild(headerRow);
   table.appendChild(thead);
-
   const tbody = document.createElement('tbody');
   for (const row of displayRows) {
     const tr = document.createElement('tr');
     columns.forEach(col => {
       const td = document.createElement('td');
       let val = row[col];
-      if (val instanceof Date) {
-        val = val.toLocaleDateString('tr-TR');
-      } else if (val === undefined || val === null) {
-        val = '';
-      } else if (typeof val === 'object') {
-        val = JSON.stringify(val).slice(0, 50);
-      } else {
-        val = String(val);
-      }
+      if (val instanceof Date) val = val.toLocaleDateString('tr-TR');
+      else if (val === undefined || val === null) val = '';
+      else if (typeof val === 'object') val = JSON.stringify(val).slice(0, 50);
+      else val = String(val);
       td.textContent = val.length > 100 ? val.slice(0, 100) + '…' : val;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
-
   const wrapper = document.createElement('div');
   wrapper.className = 'table-wrapper';
   wrapper.appendChild(table);
@@ -714,12 +652,31 @@ function renderTable(containerId, rows, maxRows = 400) {
   }
 }
 
-// Ayrı export fonksiyonları
-function exportToExcelSingle(data, fileName, sheetName = "Data") {
-  if (!data || data.length === 0) {
-    showToast(`${fileName} için veri yok. Önce 'Birleştir & Unpivot' yapın.`, 'warn');
-    return false;
+async function processAll() {
+  if (detayFilesList.length === 0 && listeFilesList.length === 0) {
+    showToast("Lütfen en az bir DetayListe veya ListeSecili dosyası yükleyin.", 'warn');
+    return;
   }
+  showToast("İşlem başladı, dosyalar okunuyor...", 'ok');
+  try {
+    let detayRaw = [], listeRaw = [];
+    if (detayFilesList.length) detayRaw = await processGroup(detayFilesList);
+    if (listeFilesList.length) listeRaw = await processGroup(listeFilesList);
+    processedDetay = transformTable(detayRaw);
+    processedListe = transformTable(listeRaw);
+    processedSummary = buildSummary(processedDetay);
+    renderTable('detayTableContainer', processedDetay, 400);
+    renderTable('listeTableContainer', processedListe, 400);
+    renderTable('summaryTableContainer', processedSummary, 400);
+    showToast(`✅ Tamam! Detay: ${processedDetay.length}, Liste: ${processedListe.length}, Summary: ${processedSummary.length}`, 'ok');
+  } catch (err) {
+    console.error(err);
+    showToast(`Hata: ${err.message}`, 'err');
+  }
+}
+
+function downloadExcel(data, filename, sheetName = "Data") {
+  if (!data || data.length === 0) return false;
   const processed = data.map(row => {
     const newRow = {};
     for (const [k, v] of Object.entries(row)) {
@@ -732,77 +689,44 @@ function exportToExcelSingle(data, fileName, sheetName = "Data") {
   const ws = XLSX.utils.json_to_sheet(processed);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, fileName);
+  XLSX.writeFile(wb, filename);
   return true;
 }
 
-function exportDetay() {
-  if (processedDetay && processedDetay.length) {
-    exportToExcelSingle(processedDetay, "DetayListeScoresAtt.xlsx", "DetayListe");
-    showToast("DetayListeScoresAtt.xlsx dışa aktarıldı", 'ok');
-  } else {
-    showToast("DetayListe verisi yok, önce işlem yapın.", 'warn');
-  }
-}
-
-function exportListe() {
-  if (processedListe && processedListe.length) {
-    exportToExcelSingle(processedListe, "ListeSeciliAnswersAtt.xlsx", "ListeSecili");
-    showToast("ListeSeciliAnswersAtt.xlsx dışa aktarıldı", 'ok');
-  } else {
-    showToast("ListeSecili verisi yok, önce işlem yapın.", 'warn');
-  }
-}
-
-function exportSummary() {
-  if (processedSummary && processedSummary.length) {
-    exportToExcelSingle(processedSummary, "Summary.xlsx", "Summary");
-    showToast("Summary.xlsx dışa aktarıldı", 'ok');
-  } else {
-    showToast("Summary verisi yok, önce işlem yapın.", 'warn');
-  }
-}
-
-// Ana işleme
-async function processAll() {
-  if (detayFilesList.length === 0 && listeFilesList.length === 0) {
-    showToast("Lütfen en az bir DetayListe veya ListeSecili dosyası yükleyin.", 'warn');
+function exportAllThree() {
+  if (!processedDetay && !processedListe && !processedSummary) {
+    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
     return;
   }
-  showToast("İşlem başladı, dosyalar okunuyor...", 'ok');
-  try {
-    let detayRaw = [];
-    let listeRaw = [];
-
-    if (detayFilesList.length) {
-      detayRaw = await processGroup(detayFilesList);
-    }
-    if (listeFilesList.length) {
-      listeRaw = await processGroup(listeFilesList);
-    }
-
-    processedDetay = transformTable(detayRaw);
-    processedListe = transformTable(listeRaw);
-    processedSummary = buildSummary(processedDetay);
-
-    renderTable('detayTableContainer', processedDetay, 400);
-    renderTable('listeTableContainer', processedListe, 400);
-    renderTable('summaryTableContainer', processedSummary, 400);
-
-    showToast(`✅ Tamam! Detay: ${processedDetay.length}, Liste: ${processedListe.length}, Summary: ${processedSummary.length}`, 'ok');
-  } catch (err) {
-    console.error(err);
-    showToast(`Hata: ${err.message}`, 'err');
+  let successCount = 0;
+  if (processedDetay && processedDetay.length) {
+    downloadExcel(processedDetay, "DetayListeScoresAtt.xlsx", "DetayListe");
+    successCount++;
+  } else {
+    console.warn("DetayListe verisi yok");
   }
+  if (processedListe && processedListe.length) {
+    downloadExcel(processedListe, "ListeSeciliAnswersAtt.xlsx", "ListeSecili");
+    successCount++;
+  } else {
+    console.warn("ListeSecili verisi yok");
+  }
+  if (processedSummary && processedSummary.length) {
+    downloadExcel(processedSummary, "Summary.xlsx", "Summary");
+    successCount++;
+  } else {
+    console.warn("Summary verisi yok");
+  }
+  if (successCount === 3) showToast("3 dosya başarıyla indirildi.", 'ok');
+  else if (successCount > 0) showToast(`${successCount} dosya indirildi (eksik veriler nedeniyle bazı dosyalar oluşmadı).`, 'warn');
+  else showToast("Hiçbir veri bulunamadı, lütfen önce işlem yapın.", 'err');
 }
 
-// Dosya listesi UI
 function updateFileListUI() {
   const detayDiv = getEl('detayFileList');
   const listeDiv = getEl('listeFileList');
   const detayStatus = getEl('detayStatus');
   const listeStatus = getEl('listeStatus');
-  
   if (detayDiv) detayDiv.innerHTML = detayFilesList.length ? detayFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
   if (listeDiv) listeDiv.innerHTML = listeFilesList.length ? listeFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
   if (detayStatus) detayStatus.innerHTML = detayFilesList.length ? `<span class="icon">✅</span> ${detayFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
@@ -813,15 +737,10 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Drag & Drop
 function setupDropZone(dropId, inputId, isDetay) {
   const drop = getEl(dropId);
   const input = getEl(inputId);
-  if (!drop || !input) {
-    console.error(`Drop zone veya input bulunamadı: ${dropId}, ${inputId}`);
-    return;
-  }
-
+  if (!drop || !input) return;
   const handleFiles = (files) => {
     const fileArray = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
     if (!fileArray.length) {
@@ -829,15 +748,11 @@ function setupDropZone(dropId, inputId, isDetay) {
       return;
     }
     const newItems = fileArray.map(f => ({ file: f, name: f.name }));
-    if (isDetay) {
-      detayFilesList.push(...newItems);
-    } else {
-      listeFilesList.push(...newItems);
-    }
+    if (isDetay) detayFilesList.push(...newItems);
+    else listeFilesList.push(...newItems);
     updateFileListUI();
     showToast(`${fileArray.length} dosya eklendi.`, 'ok');
   };
-
   input.addEventListener('change', e => handleFiles(e.target.files));
   drop.addEventListener('click', () => input.click());
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
@@ -849,7 +764,6 @@ function setupDropZone(dropId, inputId, isDetay) {
   });
 }
 
-// Temizle
 function clearAll() {
   if (confirm("Tüm yüklenen dosyalar ve işlenmiş veriler silinecek. Devam?")) {
     detayFilesList = [];
@@ -868,7 +782,6 @@ function clearAll() {
   }
 }
 
-// Sekme
 function initTabs() {
   const btns = document.querySelectorAll('.tab-btn');
   btns.forEach(btn => {
@@ -883,7 +796,6 @@ function initTabs() {
   });
 }
 
-// Tema
 function setTheme(theme) {
   document.body.className = theme;
   localStorage.setItem('dataMergeTheme', theme);
@@ -893,36 +805,25 @@ function setTheme(theme) {
   });
 }
 
-// Ana Sayfa
 function goHome() {
   window.location.href = 'index.html';
 }
 
-// Başlat
 function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
-  
   const processBtn = getEl('processBtn');
-  const exportDetay = getEl('exportDetayBtn');
-  const exportListe = getEl('exportListeBtn');
-  const exportSummary = getEl('exportSummaryBtn');
+  const exportBtn = getEl('exportAllBtn');
   const clearBtn = getEl('clearBtn');
   const homeBtn = getEl('homeBtn');
-  
   if (processBtn) processBtn.addEventListener('click', processAll);
-  if (exportDetay) exportDetay.addEventListener('click', exportDetay);
-  if (exportListe) exportListe.addEventListener('click', exportListe);
-  if (exportSummary) exportSummary.addEventListener('click', exportSummary);
+  if (exportBtn) exportBtn.addEventListener('click', exportAllThree);
   if (clearBtn) clearBtn.addEventListener('click', clearAll);
   if (homeBtn) homeBtn.addEventListener('click', goHome);
-  
   initTabs();
-  
   const savedTheme = localStorage.getItem('dataMergeTheme') || 'grey';
   setTheme(savedTheme);
   updateFileListUI();
-  
   const detayCont = getEl('detayTableContainer');
   const listeCont = getEl('listeTableContainer');
   const summaryCont = getEl('summaryTableContainer');
