@@ -415,7 +415,7 @@ body.tp {
       </button>
     </div>
     <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
-      💡 <strong>Not:</strong> Excel dosyası, Power Query'den 2-3 kat büyük olabilir (sıkıştırma farkı). <strong>CSV</strong> tercih ederseniz dosya boyutu Power Query Excel'iyle neredeyse aynı olur. Boş sütun sorunu tamamen giderildi.
+      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Unpivot'ta boş Value satırları eklenmez. Summary'de Data sütunu yok.
     </div>
 
     <div class="tabs">
@@ -473,6 +473,81 @@ function showToast(msg, type = 'ok') {
   }, 3500);
 }
 
+// Tarih formatı: herhangi bir girdiyi GG.AA.YYYY'ye çevir
+function formatPeriodDate(value) {
+  if (!value) return "";
+  let str = String(value).trim();
+  if (str === "") return "";
+  
+  // Önce tarih nesnesi oluşturmayı dene
+  let dateObj = null;
+  // Eğer zaten Date objesi ise
+  if (value instanceof Date) {
+    dateObj = value;
+  } else {
+    // String'den ayıkla
+    let cleaned = str.split(' ')[0]; // saat varsa at
+    
+    // Yaygın formatlar: 2026-06, 2026-06-01, 01.06.2026, 01/06/2026
+    let day = null, month = null, year = null;
+    if (cleaned.includes('-')) {
+      let parts = cleaned.split('-');
+      if (parts.length >= 2) {
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10) - 1;
+        day = parts.length >= 3 ? parseInt(parts[2], 10) : 1;
+      }
+    } else if (cleaned.includes('.')) {
+      let parts = cleaned.split('.');
+      if (parts.length >= 2) {
+        // Türkçe format: gg.aa.yyyy veya aa.gg.yyyy? Genelde gg.aa.yyyy
+        if (parts[0].length === 4) { // yyyy.aa.gg gibi nadir
+          year = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10) - 1;
+          day = parts.length >= 3 ? parseInt(parts[2], 10) : 1;
+        } else {
+          day = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10) - 1;
+          year = parseInt(parts[2], 10);
+        }
+      }
+    } else if (cleaned.includes('/')) {
+      let parts = cleaned.split('/');
+      if (parts.length >= 2) {
+        day = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10) - 1;
+        year = parseInt(parts[2], 10);
+      }
+    } else {
+      // sadece yıl-ay gibi (2026-06) -> ayın ilk günü
+      if (cleaned.length === 7 && cleaned.includes('-')) {
+        let y = parseInt(cleaned.substring(0,4),10);
+        let m = parseInt(cleaned.substring(5,7),10)-1;
+        if (!isNaN(y) && !isNaN(m)) {
+          year = y; month = m; day = 1;
+        }
+      } else if (!isNaN(parseInt(cleaned,10)) && cleaned.length === 6) { // 202606
+        year = parseInt(cleaned.substring(0,4),10);
+        month = parseInt(cleaned.substring(4,6),10)-1;
+        day = 1;
+      }
+    }
+    if (year && month !== null && day) {
+      dateObj = new Date(year, month, day);
+      if (isNaN(dateObj.getTime())) dateObj = null;
+    }
+  }
+  
+  if (dateObj && !isNaN(dateObj.getTime())) {
+    let dd = String(dateObj.getDate()).padStart(2, '0');
+    let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    let yyyy = dateObj.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  }
+  // hiçbiri işe yaramazsa olduğu gibi döndür
+  return str;
+}
+
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -500,18 +575,28 @@ async function unpivotFile(file, fileBaseName) {
     for (const col of FIXED_COLUMNS) {
       let val = row[col];
       if (val === undefined || val === null) val = "";
-      if (val instanceof Date) val = val.toISOString().split('T')[0];
-      fixedValues[col] = String(val).trim();
+      if (col === "Period Adı") {
+        // Period Adı formatını düzenle
+        val = formatPeriodDate(val);
+      } else if (val instanceof Date) {
+        val = val.toISOString().split('T')[0];
+      } else {
+        val = String(val).trim();
+      }
+      fixedValues[col] = val;
     }
     const otherCols = allCols.filter(col => !FIXED_COLUMNS.includes(col));
     for (const attr of otherCols) {
       let val = row[attr];
       if (val === undefined || val === null) val = "";
       if (val instanceof Date) val = val.toISOString().split('T')[0];
+      val = String(val).trim();
+      // BOŞ VALUE SATIRLARINI EKLEME (boş, null, sadece boşluk)
+      if (val === "") continue;
       unpivoted.push({
         ...fixedValues,
         Attribute: attr,
-        Value: String(val),
+        Value: val,
         Data: fileBaseName
       });
     }
@@ -568,6 +653,7 @@ function transformTable(rows) {
     } else if (rawDate instanceof Date) {
       dateObj = rawDate;
     }
+    // Period Adı zaten formatlanmış, bir daha dokunma
     return { ...row, Date: dateObj };
   });
   const typed = withDate.map(row => {
@@ -602,6 +688,7 @@ function buildSummary(detayRows) {
     delete cleaned.Attribute;
     delete cleaned.Value;
     delete cleaned.Date;
+    delete cleaned.Data;        // Summary'de Data sütunu olmasın
     if (!uniqueMap.has(kaliteNo)) {
       uniqueMap.set(kaliteNo, cleaned);
     }
@@ -683,13 +770,11 @@ async function processAll() {
   }
 }
 
-// Temiz veri export - boş sütunları otomatik temizler
+// Tüm sütunlardaki boş değerleri temizleme (export öncesi)
 function cleanData(data) {
   if (!data || !data.length) return data;
-  // Tüm satırlardaki anahtarları birleştir
   const allKeys = new Set();
   data.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
-  // Hangi sütunların tamamen boş olduğunu kontrol et
   const keysArray = Array.from(allKeys);
   const nonEmptyColumns = keysArray.filter(col => {
     for (let row of data) {
@@ -698,7 +783,6 @@ function cleanData(data) {
     }
     return false;
   });
-  // Sadece dolu sütunları içeren yeni dizi
   return data.map(row => {
     const newRow = {};
     nonEmptyColumns.forEach(col => { newRow[col] = row[col]; });
