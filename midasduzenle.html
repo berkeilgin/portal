@@ -178,46 +178,15 @@ body.tp {
   transition: 0.2s;
 }
 
-.btn-primary {
-  background: var(--accent2);
-  color: white;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn-success {
-  background: var(--accent);
-  color: var(--text);
-}
-
-.btn-export {
-  background: #8b5cf6;
-  color: white;
-}
-.btn-export:hover {
-  background: #7c3aed;
-}
-.btn-csv {
-  background: #f59e0b;
-  color: white;
-}
-.btn-csv:hover {
-  background: #d97706;
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-.btn-ghost:hover {
-  border-color: var(--accent2);
-  background: rgba(59, 130, 246, 0.1);
-}
+.btn-primary { background: var(--accent2); color: white; }
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-success { background: var(--accent); color: var(--text); }
+.btn-export { background: #8b5cf6; color: white; }
+.btn-export:hover { background: #7c3aed; }
+.btn-csv { background: #f59e0b; color: white; }
+.btn-csv:hover { background: #d97706; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--accent2); background: rgba(59, 130, 246, 0.1); }
 
 .theme-btn {
   background: transparent;
@@ -297,14 +266,8 @@ body.tp {
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(60px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .footer {
@@ -336,23 +299,12 @@ body.tp {
   transition: 0.2s;
 }
 
-.tab-btn.active {
-  background: var(--accent2);
-  color: white;
-}
+.tab-btn.active { background: var(--accent2); color: white; }
 
-.tab-pane {
-  display: none;
-}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
 
-.tab-pane.active {
-  display: block;
-}
-
-.icon {
-  font-size: 1.1rem;
-  display: inline-block;
-}
+.icon { font-size: 1.1rem; display: inline-block; }
 </style>
 </head>
 <body>
@@ -372,6 +324,7 @@ body.tp {
     </div>
   </div>
 </div>
+
 <div class="main">
   <div class="panel">
     <h2 style="display: flex; gap: 8px; align-items: center; margin-bottom: 1rem;">
@@ -415,7 +368,7 @@ body.tp {
       </button>
     </div>
     <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
-      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Unpivot'ta boş Value satırları eklenmez. Summary'de Data sütunu yok.
+      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Unpivot'ta boş Value satırları eklenmez. Summary'de Data ve Date dahil.
     </div>
 
     <div class="tabs">
@@ -435,8 +388,9 @@ body.tp {
     </div>
   </div>
 </div>
+
 <footer class="footer">
-  <span class="icon">🔄</span> Power Query mantığı: "Müşteri Numarası" sonrası tüm sütunlar Unpivot | Data sütunu = dosya adı
+  <span class="icon">🔄</span> Power Query mantığı: "Müşteri Numarası" sonrası tüm sütunlar Unpivot | Data sütunu = dosya adı | phantom satır/sütun otomatik temizlenir
 </footer>
 
 <script>
@@ -450,151 +404,120 @@ const FIXED_COLUMNS = [
 
 let detayFilesList = [];
 let listeFilesList = [];
-let processedDetay = null;
-let processedListe = null;
+let processedDetay   = null;
+let processedListe   = null;
 let processedSummary = null;
 
-function getEl(id) {
-  if (!id) return null;
-  const cleanId = id.startsWith('#') ? id.substring(1) : id;
-  return document.getElementById(cleanId);
-}
+// ==================== UTILS ====================
+const getEl = id => document.getElementById(id.startsWith('#') ? id.slice(1) : id);
+
+const escapeHtml = str =>
+  String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 
 function showToast(msg, type = 'ok') {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
   t.className = 'toast';
-  t.innerHTML = `<span class="icon">${type === 'ok' ? '✅' : type === 'err' ? '❌' : '⚠️'}</span> ${msg}`;
-  t.style.borderLeftColor = { ok: 'var(--accent)', err: 'var(--accent3)', warn: 'var(--accent4)' }[type];
+  t.innerHTML = `<span class="icon">${{ok:'✅',err:'❌',warn:'⚠️'}[type]}</span> ${msg}`;
+  t.style.borderLeftColor = {ok:'var(--accent)',err:'var(--accent3)',warn:'var(--accent4)'}[type];
   document.body.appendChild(t);
-  setTimeout(() => {
-    t.style.opacity = '0';
-    setTimeout(() => t.remove(), 300);
-  }, 3500);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-// Tarih formatı: herhangi bir girdiyi GG.AA.YYYY'ye çevir
-function formatPeriodDate(value) {
-  if (!value) return "";
-  let str = String(value).trim();
-  if (str === "") return "";
-  
-  // Önce tarih nesnesi oluşturmayı dene
-  let dateObj = null;
-  // Eğer zaten Date objesi ise
-  if (value instanceof Date) {
-    dateObj = value;
-  } else {
-    // String'den ayıkla
-    let cleaned = str.split(' ')[0]; // saat varsa at
-    
-    // Yaygın formatlar: 2026-06, 2026-06-01, 01.06.2026, 01/06/2026
-    let day = null, month = null, year = null;
-    if (cleaned.includes('-')) {
-      let parts = cleaned.split('-');
-      if (parts.length >= 2) {
-        year = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10) - 1;
-        day = parts.length >= 3 ? parseInt(parts[2], 10) : 1;
-      }
-    } else if (cleaned.includes('.')) {
-      let parts = cleaned.split('.');
-      if (parts.length >= 2) {
-        // Türkçe format: gg.aa.yyyy veya aa.gg.yyyy? Genelde gg.aa.yyyy
-        if (parts[0].length === 4) { // yyyy.aa.gg gibi nadir
-          year = parseInt(parts[0], 10);
-          month = parseInt(parts[1], 10) - 1;
-          day = parts.length >= 3 ? parseInt(parts[2], 10) : 1;
-        } else {
-          day = parseInt(parts[0], 10);
-          month = parseInt(parts[1], 10) - 1;
-          year = parseInt(parts[2], 10);
-        }
-      }
-    } else if (cleaned.includes('/')) {
-      let parts = cleaned.split('/');
-      if (parts.length >= 2) {
-        day = parseInt(parts[0], 10);
-        month = parseInt(parts[1], 10) - 1;
-        year = parseInt(parts[2], 10);
-      }
-    } else {
-      // sadece yıl-ay gibi (2026-06) -> ayın ilk günü
-      if (cleaned.length === 7 && cleaned.includes('-')) {
-        let y = parseInt(cleaned.substring(0,4),10);
-        let m = parseInt(cleaned.substring(5,7),10)-1;
-        if (!isNaN(y) && !isNaN(m)) {
-          year = y; month = m; day = 1;
-        }
-      } else if (!isNaN(parseInt(cleaned,10)) && cleaned.length === 6) { // 202606
-        year = parseInt(cleaned.substring(0,4),10);
-        month = parseInt(cleaned.substring(4,6),10)-1;
-        day = 1;
-      }
-    }
-    if (year && month !== null && day) {
-      dateObj = new Date(year, month, day);
-      if (isNaN(dateObj.getTime())) dateObj = null;
-    }
+// Period Adı → GG.AA.YYYY
+function formatPeriodDate(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    const dd = String(val.getDate()).padStart(2,'0');
+    const mm = String(val.getMonth()+1).padStart(2,'0');
+    return `${dd}.${mm}.${val.getFullYear()}`;
   }
-  
-  if (dateObj && !isNaN(dateObj.getTime())) {
-    let dd = String(dateObj.getDate()).padStart(2, '0');
-    let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-    let yyyy = dateObj.getFullYear();
-    return `${dd}.${mm}.${yyyy}`;
-  }
-  // hiçbiri işe yaramazsa olduğu gibi döndür
-  return str;
+  const s = String(val).trim().split(' ')[0];
+  let d, m, y;
+  if (s.includes('-')) {
+    [y, m, d] = s.split('-').map(Number); d = d || 1;
+  } else if (s.includes('.')) {
+    const p = s.split('.');
+    if (p[0].length === 4) { [y, m, d] = p.map(Number); d = d || 1; }
+    else { [d, m, y] = p.map(Number); }
+  } else if (s.includes('/')) {
+    [d, m, y] = s.split('/').map(Number);
+  } else return s;
+  const dt = new Date(y, m - 1, d);
+  if (isNaN(dt.getTime())) return s;
+  return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
 }
 
+// Yeni Kayıt Tarihi → Date object
+function parseDate(str) {
+  if (!str) return null;
+  if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
+  const s = String(str).trim().split(' ')[0];
+  let d, m, y;
+  if (s.includes('.')) { [d, m, y] = s.split('.').map(Number); }
+  else if (s.includes('/')) { [d, m, y] = s.split('/').map(Number); }
+  else if (s.includes('-')) { [y, m, d] = s.split('-').map(Number); }
+  else return null;
+  if (!d || !m || !y) return null;
+  const dt = new Date(y, m - 1, d);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+// ==================== CORE: PHANTOM-SAFE EXCEL READ ====================
+// Strateji: header:1 ile array-of-arrays → headersız sütunları at → tamamen boş satırları at
+// Bu yöntem SheetJS'in !ref'i ne kadar geniş olursa olsun gerçek veriyi yakalar.
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(new Uint8Array(e.target.result), {
+          type: 'array',
+          cellDates: true   // tarih hücrelerini JS Date olarak oku
+        });
         const ws = wb.Sheets[wb.SheetNames[0]];
 
-        // !ref trim: phantom satır/sütunları okumadan kes
-        if (ws['!ref']) {
-          const range = XLSX.utils.decode_range(ws['!ref']);
+        // array-of-arrays; blankrows:false SheetJS seviyesinde tamamen boş satırları atar
+        const aoa = XLSX.utils.sheet_to_json(ws, {
+          header: 1,
+          defval: null,
+          blankrows: false
+        });
+        if (!aoa.length) { resolve([]); return; }
 
-          // Gerçek son satırı arkadan tara
-          let lastRow = range.s.r;
-          for (let R = range.e.r; R >= range.s.r; R--) {
-            let hasData = false;
-            for (let C = range.s.c; C <= range.e.c; C++) {
-              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-              if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-                hasData = true; break;
-              }
-            }
-            if (hasData) { lastRow = R; break; }
+        // İlk dolu satır = header
+        let hdrIdx = 0;
+        for (let i = 0; i < aoa.length; i++) {
+          if (aoa[i].some(v => v !== null && v !== undefined && String(v).trim() !== '')) {
+            hdrIdx = i; break;
           }
-
-          // Gerçek son sütunu arkadan tara
-          let lastCol = range.s.c;
-          for (let C = range.e.c; C >= range.s.c; C--) {
-            let hasData = false;
-            for (let R = range.s.r; R <= lastRow; R++) {
-              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-              if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-                hasData = true; break;
-              }
-            }
-            if (hasData) { lastCol = C; break; }
-          }
-
-          // Range'i gerçek veriye göre kes — phantom hücreler artık scope dışı
-          ws['!ref'] = XLSX.utils.encode_range({
-            s: range.s,
-            e: { r: lastRow, c: lastCol }
-          });
         }
+        const headers = aoa[hdrIdx];
 
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        // Sadece header'ı olan (string, boş değil) sütunları tut → phantom sütunları eler
+        const validCols = [];
+        headers.forEach((h, ci) => {
+          const name = (h !== null && h !== undefined) ? String(h).trim() : '';
+          if (name !== '') validCols.push({ ci, name });
+        });
+        if (!validCols.length) { resolve([]); return; }
+
+        // Veri satırlarını oluştur; geçerli sütunlarda hiç veri yoksa satırı atla (phantom satır)
+        const rows = [];
+        for (let ri = hdrIdx + 1; ri < aoa.length; ri++) {
+          const arr = aoa[ri] || [];
+          const hasData = validCols.some(({ ci }) => {
+            const v = arr[ci];
+            return v !== null && v !== undefined && String(v).trim() !== '';
+          });
+          if (!hasData) continue; // phantom/boş satır → atla
+
+          const obj = {};
+          validCols.forEach(({ ci, name }) => {
+            obj[name] = arr[ci] ?? '';
+          });
+          rows.push(obj);
+        }
         resolve(rows);
       } catch (err) { reject(err); }
     };
@@ -603,178 +526,264 @@ function readExcelFile(file) {
   });
 }
 
+// ==================== UNPIVOT ====================
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
   if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
-  const allCols = Object.keys(rows[0]);
+
+  const allCols  = Object.keys(rows[0]);
+  const attrCols = allCols.filter(c => !FIXED_COLUMNS.includes(c));
   const unpivoted = [];
+
   for (const row of rows) {
-    const fixedValues = {};
+    // Sabit sütun değerlerini al
+    const fixed = {};
     for (const col of FIXED_COLUMNS) {
-      let val = row[col];
-      if (val === undefined || val === null) val = "";
-      if (col === "Period Adı") {
-        // Period Adı formatını düzenle
-        val = formatPeriodDate(val);
-      } else if (val instanceof Date) {
-        val = val.toISOString().split('T')[0];
+      let v = row[col] ?? '';
+      if (col === 'Period Adı') {
+        v = formatPeriodDate(v);
+      } else if (v instanceof Date) {
+        // Tarih sütunlarını okunabilir string'e çevir (Yeni Kayıt Tarihi vb.)
+        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
       } else {
-        val = String(val).trim();
+        v = String(v).trim();
       }
-      fixedValues[col] = val;
+      fixed[col] = v;
     }
-    const otherCols = allCols.filter(col => !FIXED_COLUMNS.includes(col));
-    for (const attr of otherCols) {
-      let val = row[attr];
-      if (val === undefined || val === null) val = "";
-      if (val instanceof Date) val = val.toISOString().split('T')[0];
-      val = String(val).trim();
-      // BOŞ VALUE SATIRLARINI EKLEME (boş, null, sadece boşluk)
-      if (val === "") continue;
-      unpivoted.push({
-        ...fixedValues,
-        Attribute: attr,
-        Value: val,
-        Data: fileBaseName
-      });
+
+    // Her boş olmayan attribute için bir satır üret
+    for (const attr of attrCols) {
+      let v = row[attr] ?? '';
+      if (v instanceof Date) {
+        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+      } else {
+        v = String(v).trim();
+      }
+      if (v === '') continue; // boş value → satır ekleme
+      unpivoted.push({ ...fixed, Attribute: attr, Value: v, Data: fileBaseName });
     }
   }
   return unpivoted;
 }
 
 async function processGroup(filesArray) {
-  if (!filesArray.length) return [];
-  let allRows = [];
+  let all = [];
   for (const item of filesArray) {
     try {
       const baseName = item.name.replace(/\.(xlsx|xls|csv)$/i, '');
-      const unpivoted = await unpivotFile(item.file, baseName);
-      allRows.push(...unpivoted);
+      const rows = await unpivotFile(item.file, baseName);
+      all.push(...rows);
     } catch (err) {
-      console.error(err);
-      showToast(`${item.name} işlenirken hata: ${err.message}`, 'err');
+      showToast(`${item.name} hata: ${err.message}`, 'err');
       throw err;
     }
   }
-  return allRows;
+  return all;
 }
 
+// ==================== TRANSFORM & SORT ====================
 function transformTable(rows) {
   if (!rows.length) return [];
-  const withDate = rows.map(row => {
-    let dateObj = null;
-    const rawDate = row["Yeni Kayıt Tarihi"];
-    if (rawDate && typeof rawDate === 'string' && rawDate.trim() !== "") {
-      let cleaned = rawDate.trim();
-      let datePart = cleaned.split(' ')[0];
-      let parsed = null;
-      if (datePart.includes('.')) {
-        let parts = datePart.split('.');
-        if (parts.length === 3) {
-          let day = parseInt(parts[0], 10);
-          let month = parseInt(parts[1], 10) - 1;
-          let year = parseInt(parts[2], 10);
-          parsed = new Date(year, month, day);
+  return rows
+    .map(row => {
+      const r = { ...row };
+      // Sayısal alanlar
+      ['Form Puan', 'Csat Puanı'].forEach(k => {
+        if (r[k] !== undefined && r[k] !== '') {
+          const n = parseFloat(String(r[k]).replace(',', '.'));
+          r[k] = isNaN(n) ? '' : n;
         }
-      } else if (datePart.includes('/')) {
-        let parts = datePart.split('/');
-        if (parts.length === 3) {
-          let day = parseInt(parts[0], 10);
-          let month = parseInt(parts[1], 10) - 1;
-          let year = parseInt(parts[2], 10);
-          parsed = new Date(year, month, day);
-        }
-      } else {
-        parsed = new Date(datePart);
-      }
-      if (parsed && !isNaN(parsed.getTime())) dateObj = parsed;
-    } else if (rawDate instanceof Date) {
-      dateObj = rawDate;
-    }
-    // Period Adı zaten formatlanmış, bir daha dokunma
-    return { ...row, Date: dateObj };
-  });
-  const typed = withDate.map(row => {
-    let formPuan = row["Form Puan"];
-    let csat = row["Csat Puanı"];
-    let newRow = { ...row };
-    if (formPuan !== undefined && formPuan !== "") {
-      let num = parseFloat(String(formPuan).replace(',', '.'));
-      newRow["Form Puan"] = isNaN(num) ? null : num;
-    }
-    if (csat !== undefined && csat !== "") {
-      let num = parseFloat(String(csat).replace(',', '.'));
-      newRow["Csat Puanı"] = isNaN(num) ? null : num;
-    }
-    return newRow;
-  });
-  return typed.sort((a, b) => {
-    if (!a.Date && !b.Date) return 0;
-    if (!a.Date) return 1;
-    if (!b.Date) return -1;
-    return a.Date - b.Date;
-  });
+      });
+      // Sıralama için internal key
+      r._sd = parseDate(r['Yeni Kayıt Tarihi']);
+      return r;
+    })
+    .sort((a, b) => {
+      if (!a._sd && !b._sd) return 0;
+      if (!a._sd) return 1;
+      if (!b._sd) return -1;
+      return a._sd - b._sd;
+    })
+    .map(({ _sd, ...rest }) => rest); // internal key'i kaldır
 }
 
+// ==================== SUMMARY ====================
+// Kalite No başına ilk satırı tut; Attribute ve Value'yu çıkar, Data'yı BIRAK
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
-  const uniqueMap = new Map();
+  const seen = new Map();
   for (const row of detayRows) {
-    const kaliteNo = row["Kalite No"] ? String(row["Kalite No"]).trim() : "";
+    const kaliteNo = String(row['Kalite No'] ?? '').trim();
     if (!kaliteNo) continue;
-    const cleaned = { ...row };
-    delete cleaned.Attribute;
-    delete cleaned.Value;
-    if (!uniqueMap.has(kaliteNo)) {
-      uniqueMap.set(kaliteNo, cleaned);
+    if (!seen.has(kaliteNo)) {
+      const { Attribute, Value, ...rest } = row; // sadece bu ikisini çıkar
+      seen.set(kaliteNo, rest);
     }
   }
-  return Array.from(uniqueMap.values());
+  return Array.from(seen.values());
 }
 
+// ==================== EXPORT PIPELINE ====================
+// 1) serialize  → Date objeleri & null/undefined → string
+// 2) dropEmpty  → tüm satırlarda boş olan sütunları at (phantom sütun güvencesi)
+// 3) download   → xlsx / csv
+
+function serializeRows(data) {
+  return data.map(row => {
+    const out = {};
+    for (const [k, v] of Object.entries(row)) {
+      if (v instanceof Date) {
+        out[k] = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+      } else if (v === null || v === undefined) {
+        out[k] = '';
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  });
+}
+
+function dropEmptyColumns(data) {
+  if (!data.length) return data;
+  const keys = Object.keys(data[0]);
+  const active = keys.filter(k =>
+    data.some(r => r[k] !== '' && r[k] !== null && r[k] !== undefined)
+  );
+  return data.map(r => {
+    const o = {};
+    active.forEach(k => { o[k] = r[k]; });
+    return o;
+  });
+}
+
+function prepareExport(data) {
+  if (!data || !data.length) return null;
+  return dropEmptyColumns(serializeRows(data));
+}
+
+function downloadExcel(data, filename, sheetName = 'Data') {
+  const prepared = prepareExport(data);
+  if (!prepared) return false;
+  const ws = XLSX.utils.json_to_sheet(prepared);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+  return true;
+}
+
+function downloadCsv(data, filename) {
+  const prepared = prepareExport(data);
+  if (!prepared) return false;
+  const ws  = XLSX.utils.json_to_sheet(prepared);
+  const csv = XLSX.utils.sheet_to_csv(ws);
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  return true;
+}
+
+function exportAllExcel() {
+  if (!processedDetay && !processedListe && !processedSummary) {
+    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn'); return;
+  }
+  let n = 0;
+  if (processedDetay?.length)   { downloadExcel(processedDetay,   'DetayListeScoresAtt.xlsx',   'DetayListe');  n++; }
+  if (processedListe?.length)   { downloadExcel(processedListe,   'ListeSeciliAnswersAtt.xlsx', 'ListeSecili'); n++; }
+  if (processedSummary?.length) { downloadExcel(processedSummary, 'Summary.xlsx',               'Summary');     n++; }
+  if (n === 3)    showToast('3 Excel dosyası indirildi.', 'ok');
+  else if (n > 0) showToast(`${n} dosya indirildi (bazı veriler boş).`, 'warn');
+  else            showToast('Hiç veri yok.', 'err');
+}
+
+function exportAllCsv() {
+  if (!processedDetay && !processedListe && !processedSummary) {
+    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn'); return;
+  }
+  let n = 0;
+  if (processedDetay?.length)   { downloadCsv(processedDetay,   'DetayListeScoresAtt.csv');   n++; }
+  if (processedListe?.length)   { downloadCsv(processedListe,   'ListeSeciliAnswersAtt.csv'); n++; }
+  if (processedSummary?.length) { downloadCsv(processedSummary, 'Summary.csv');               n++; }
+  if (n === 3)    showToast('3 CSV dosyası indirildi.', 'ok');
+  else if (n > 0) showToast(`${n} CSV indirildi.`, 'warn');
+  else            showToast('Hiç veri yok.', 'err');
+}
+
+// ==================== PROCESS ALL ====================
+async function processAll() {
+  if (!detayFilesList.length && !listeFilesList.length) {
+    showToast('Lütfen en az bir dosya yükleyin.', 'warn'); return;
+  }
+  showToast('İşlem başladı, dosyalar okunuyor...', 'ok');
+  try {
+    // İki grubu paralel oku
+    const [detayRaw, listeRaw] = await Promise.all([
+      detayFilesList.length ? processGroup(detayFilesList) : Promise.resolve([]),
+      listeFilesList.length ? processGroup(listeFilesList) : Promise.resolve([])
+    ]);
+    processedDetay   = transformTable(detayRaw);
+    processedListe   = transformTable(listeRaw);
+    processedSummary = buildSummary(processedDetay);
+    renderTable('detayTableContainer',   processedDetay,   400);
+    renderTable('listeTableContainer',   processedListe,   400);
+    renderTable('summaryTableContainer', processedSummary, 400);
+    showToast(`✅ Detay: ${processedDetay.length} | Liste: ${processedListe.length} | Summary: ${processedSummary.length}`, 'ok');
+  } catch (err) {
+    console.error(err);
+    showToast(`Hata: ${err.message}`, 'err');
+  }
+}
+
+// ==================== TABLE RENDER ====================
 function renderTable(containerId, rows, maxRows = 400) {
   const container = getEl(containerId);
   if (!container) return;
-  if (!rows || rows.length === 0) {
-    container.innerHTML = `<div class="empty-state"><span class="icon">📭</span> Veri bulunamadı</div>`;
+  if (!rows?.length) {
+    container.innerHTML = '<div class="empty-state"><span class="icon">📭</span> Veri bulunamadı</div>';
     return;
   }
-  const displayRows = rows.slice(0, maxRows);
-  const allKeys = new Set();
-  displayRows.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
-  const columns = Array.from(allKeys);
-  const table = document.createElement('table');
+  const display = rows.slice(0, maxRows);
+  const columns = Array.from(new Set(display.flatMap(r => Object.keys(r))));
+  const table   = document.createElement('table');
   table.className = 'data-table';
+
   const thead = document.createElement('thead');
-  const headerRow = document.createElement('tr');
+  const hdr   = document.createElement('tr');
   columns.forEach(col => {
     const th = document.createElement('th');
     th.textContent = col;
-    headerRow.appendChild(th);
+    hdr.appendChild(th);
   });
-  thead.appendChild(headerRow);
+  thead.appendChild(hdr);
   table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
-  for (const row of displayRows) {
+  display.forEach(row => {
     const tr = document.createElement('tr');
     columns.forEach(col => {
       const td = document.createElement('td');
-      let val = row[col];
-      if (val instanceof Date) val = val.toLocaleDateString('tr-TR');
-      else if (val === undefined || val === null) val = '';
-      else if (typeof val === 'object') val = JSON.stringify(val).slice(0, 50);
-      else val = String(val);
-      td.textContent = val.length > 100 ? val.slice(0, 100) + '…' : val;
+      let v = row[col];
+      if (v instanceof Date)           v = v.toLocaleDateString('tr-TR');
+      else if (v === null || v === undefined) v = '';
+      else v = String(v);
+      td.textContent = v.length > 100 ? v.slice(0, 100) + '…' : v;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
-  }
+  });
   table.appendChild(tbody);
-  const wrapper = document.createElement('div');
-  wrapper.className = 'table-wrapper';
-  wrapper.appendChild(table);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrapper';
+  wrap.appendChild(table);
   container.innerHTML = '';
-  container.appendChild(wrapper);
+  container.appendChild(wrap);
+
   if (rows.length > maxRows) {
     const info = document.createElement('div');
     info.className = 'empty-state';
@@ -783,209 +792,57 @@ function renderTable(containerId, rows, maxRows = 400) {
   }
 }
 
-async function processAll() {
-  if (detayFilesList.length === 0 && listeFilesList.length === 0) {
-    showToast("Lütfen en az bir DetayListe veya ListeSecili dosyası yükleyin.", 'warn');
-    return;
-  }
-  showToast("İşlem başladı, dosyalar okunuyor...", 'ok');
-  try {
-    let detayRaw = [], listeRaw = [];
-    if (detayFilesList.length) detayRaw = await processGroup(detayFilesList);
-    if (listeFilesList.length) listeRaw = await processGroup(listeFilesList);
-    processedDetay = transformTable(detayRaw);
-    processedListe = transformTable(listeRaw);
-    processedSummary = buildSummary(processedDetay);
-    renderTable('detayTableContainer', processedDetay, 400);
-    renderTable('listeTableContainer', processedListe, 400);
-    renderTable('summaryTableContainer', processedSummary, 400);
-    showToast(`✅ Tamam! Detay: ${processedDetay.length}, Liste: ${processedListe.length}, Summary: ${processedSummary.length}`, 'ok');
-  } catch (err) {
-    console.error(err);
-    showToast(`Hata: ${err.message}`, 'err');
-  }
-}
-
-// Tüm sütunlardaki boş değerleri temizleme (export öncesi)
-function cleanData(data) {
-  if (!data || !data.length) return data;
-  const allKeys = new Set();
-  data.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
-  const keysArray = Array.from(allKeys);
-  const nonEmptyColumns = keysArray.filter(col => {
-    for (let row of data) {
-      let val = row[col];
-      if (val !== undefined && val !== null && val !== "") return true;
-    }
-    return false;
-  });
-  return data.map(row => {
-    const newRow = {};
-    nonEmptyColumns.forEach(col => { newRow[col] = row[col]; });
-    return newRow;
-  });
-}
-
-function downloadExcel(data, filename, sheetName = "Data") {
-  if (!data || data.length === 0) return false;
-  const cleaned = cleanData(data);
-  const processed = cleaned.map(row => {
-    const newRow = {};
-    for (const [k, v] of Object.entries(row)) {
-      if (v instanceof Date) newRow[k] = v.toLocaleDateString('tr-TR');
-      else if (v === null || v === undefined) newRow[k] = "";
-      else newRow[k] = v;
-    }
-    return newRow;
-  });
-  const ws = XLSX.utils.json_to_sheet(processed);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, filename);
-  return true;
-}
-
-function downloadCsv(data, filename) {
-  if (!data || data.length === 0) return false;
-  const cleaned = cleanData(data);
-  const processed = cleaned.map(row => {
-    const newRow = {};
-    for (const [k, v] of Object.entries(row)) {
-      if (v instanceof Date) newRow[k] = v.toLocaleDateString('tr-TR');
-      else if (v === null || v === undefined) newRow[k] = "";
-      else newRow[k] = v;
-    }
-    return newRow;
-  });
-  const ws = XLSX.utils.json_to_sheet(processed);
-  const csv = XLSX.utils.sheet_to_csv(ws);
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.href = url;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  return true;
-}
-
-function exportAllExcel() {
-  if (!processedDetay && !processedListe && !processedSummary) {
-    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
-    return;
-  }
-  let successCount = 0;
-  if (processedDetay && processedDetay.length) {
-    downloadExcel(processedDetay, "DetayListeScoresAtt.xlsx", "DetayListe");
-    successCount++;
-  }
-  if (processedListe && processedListe.length) {
-    downloadExcel(processedListe, "ListeSeciliAnswersAtt.xlsx", "ListeSecili");
-    successCount++;
-  }
-  if (processedSummary && processedSummary.length) {
-    downloadExcel(processedSummary, "Summary.xlsx", "Summary");
-    successCount++;
-  }
-  if (successCount === 3) showToast("3 Excel dosyası indirildi.", 'ok');
-  else if (successCount > 0) showToast(`${successCount} dosya indirildi (eksik veri nedeniyle).`, 'warn');
-  else showToast("Hiç veri yok.", 'err');
-}
-
-function exportAllCsv() {
-  if (!processedDetay && !processedListe && !processedSummary) {
-    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
-    return;
-  }
-  let successCount = 0;
-  if (processedDetay && processedDetay.length) {
-    downloadCsv(processedDetay, "DetayListeScoresAtt.csv");
-    successCount++;
-  }
-  if (processedListe && processedListe.length) {
-    downloadCsv(processedListe, "ListeSeciliAnswersAtt.csv");
-    successCount++;
-  }
-  if (processedSummary && processedSummary.length) {
-    downloadCsv(processedSummary, "Summary.csv");
-    successCount++;
-  }
-  if (successCount === 3) showToast("3 CSV dosyası indirildi (çok daha hafif).", 'ok');
-  else if (successCount > 0) showToast(`${successCount} CSV indirildi.`, 'warn');
-  else showToast("Hiç veri yok.", 'err');
-}
-
+// ==================== UI HELPERS ====================
 function updateFileListUI() {
-  const detayDiv = getEl('detayFileList');
-  const listeDiv = getEl('listeFileList');
-  const detayStatus = getEl('detayStatus');
-  const listeStatus = getEl('listeStatus');
-  if (detayDiv) detayDiv.innerHTML = detayFilesList.length ? detayFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
-  if (listeDiv) listeDiv.innerHTML = listeFilesList.length ? listeFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
-  if (detayStatus) detayStatus.innerHTML = detayFilesList.length ? `<span class="icon">✅</span> ${detayFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
-  if (listeStatus) listeStatus.innerHTML = listeFilesList.length ? `<span class="icon">✅</span> ${listeFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+  const fmt = list => list.length
+    ? list.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('')
+    : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
+  const fmtSt = list => list.length
+    ? `<span class="icon">✅</span> ${list.length} dosya seçildi`
+    : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
+  getEl('detayFileList').innerHTML  = fmt(detayFilesList);
+  getEl('listeFileList').innerHTML  = fmt(listeFilesList);
+  getEl('detayStatus').innerHTML    = fmtSt(detayFilesList);
+  getEl('listeStatus').innerHTML    = fmtSt(listeFilesList);
 }
 
 function setupDropZone(dropId, inputId, isDetay) {
-  const drop = getEl(dropId);
-  const input = getEl(inputId);
+  const drop = getEl(dropId), input = getEl(inputId);
   if (!drop || !input) return;
-  const handleFiles = (files) => {
-    const fileArray = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
-    if (!fileArray.length) {
-      showToast("Sadece Excel veya CSV dosyaları desteklenir.", 'warn');
-      return;
-    }
-    const newItems = fileArray.map(f => ({ file: f, name: f.name }));
-    if (isDetay) detayFilesList.push(...newItems);
-    else listeFilesList.push(...newItems);
+  const handle = files => {
+    const valid = Array.from(files).filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
+    if (!valid.length) { showToast('Sadece Excel veya CSV desteklenir.', 'warn'); return; }
+    (isDetay ? detayFilesList : listeFilesList).push(...valid.map(f => ({ file: f, name: f.name })));
     updateFileListUI();
-    showToast(`${fileArray.length} dosya eklendi.`, 'ok');
+    showToast(`${valid.length} dosya eklendi.`, 'ok');
   };
-  input.addEventListener('change', e => handleFiles(e.target.files));
+  input.addEventListener('change', e => handle(e.target.files));
   drop.addEventListener('click', () => input.click());
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
   drop.addEventListener('drop', e => {
-    e.preventDefault();
-    drop.classList.remove('drag');
-    handleFiles(e.dataTransfer.files);
+    e.preventDefault(); drop.classList.remove('drag'); handle(e.dataTransfer.files);
   });
 }
 
 function clearAll() {
-  if (confirm("Tüm yüklenen dosyalar ve işlenmiş veriler silinecek. Devam?")) {
-    detayFilesList = [];
-    listeFilesList = [];
-    processedDetay = null;
-    processedListe = null;
-    processedSummary = null;
-    updateFileListUI();
-    const detayCont = getEl('detayTableContainer');
-    const listeCont = getEl('listeTableContainer');
-    const summaryCont = getEl('summaryTableContainer');
-    if (detayCont) detayCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
-    if (listeCont) listeCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
-    if (summaryCont) summaryCont.innerHTML = '<div class="empty-state"><span class="icon">📭</span> İşlem sonrası gösterilecek</div>';
-    showToast("Tüm veriler temizlendi.", 'ok');
-  }
+  if (!confirm('Tüm yüklenen dosyalar ve işlenmiş veriler silinecek. Devam?')) return;
+  detayFilesList = []; listeFilesList = [];
+  processedDetay = processedListe = processedSummary = null;
+  updateFileListUI();
+  getEl('detayTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
+  getEl('listeTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
+  getEl('summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
+  showToast('Temizlendi.', 'ok');
 }
 
 function initTabs() {
-  const btns = document.querySelectorAll('.tab-btn');
-  btns.forEach(btn => {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const tabId = btn.getAttribute('data-tab');
-      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-      const activePane = getEl(tabId);
-      if (activePane) activePane.classList.add('active');
-      btns.forEach(b => b.classList.remove('active'));
+      const id = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      getEl(id)?.classList.add('active');
       btn.classList.add('active');
     });
   });
@@ -994,43 +851,34 @@ function initTabs() {
 function setTheme(theme) {
   document.body.className = theme;
   localStorage.setItem('dataMergeTheme', theme);
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    if (btn.getAttribute('data-theme') === theme) btn.classList.add('active');
-    else btn.classList.remove('active');
-  });
+  document.querySelectorAll('.theme-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.getAttribute('data-theme') === theme)
+  );
 }
 
-function goHome() {
-  window.location.href = 'index.html';
-}
-
+// ==================== INIT ====================
 function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
-  const processBtn = getEl('processBtn');
-  const exportExcel = getEl('exportExcelBtn');
-  const exportCsv = getEl('exportCsvBtn');
-  const clearBtn = getEl('clearBtn');
-  const homeBtn = getEl('homeBtn');
-  if (processBtn) processBtn.addEventListener('click', processAll);
-  if (exportExcel) exportExcel.addEventListener('click', exportAllExcel);
-  if (exportCsv) exportCsv.addEventListener('click', exportAllCsv);
-  if (clearBtn) clearBtn.addEventListener('click', clearAll);
-  if (homeBtn) homeBtn.addEventListener('click', goHome);
+
+  getEl('processBtn').addEventListener('click', processAll);
+  getEl('exportExcelBtn').addEventListener('click', exportAllExcel);
+  getEl('exportCsvBtn').addEventListener('click', exportAllCsv);
+  getEl('clearBtn').addEventListener('click', clearAll);
+  getEl('homeBtn').addEventListener('click', () => location.href = 'index.html');
+
+  // Tema butonları
+  document.querySelectorAll('.theme-btn').forEach(btn =>
+    btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme')))
+  );
+
   initTabs();
-  // Tema butonları — event listener eksikti
-document.querySelectorAll('.theme-btn').forEach(btn => {
-  btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme')));
-});
-  const savedTheme = localStorage.getItem('dataMergeTheme') || 'grey';
-  setTheme(savedTheme);
+  setTheme(localStorage.getItem('dataMergeTheme') || 'grey');
   updateFileListUI();
-  const detayCont = getEl('detayTableContainer');
-  const listeCont = getEl('listeTableContainer');
-  const summaryCont = getEl('summaryTableContainer');
-  if (detayCont) detayCont.innerHTML = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
-  if (listeCont) listeCont.innerHTML = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
-  if (summaryCont) summaryCont.innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
+
+  getEl('detayTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
+  getEl('listeTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
+  getEl('summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
 }
 
 init();
