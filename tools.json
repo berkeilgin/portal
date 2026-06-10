@@ -524,6 +524,19 @@
       "isTest": true,
       "isBest": false,
       "order": 34
+    },
+    {
+      "id": "midasdosya",
+      "name": "Midas Data Düzenleme",
+      "nameEn": "Midas Data Managament",
+      "url": "midasduzenle.html",
+      "cat": "analitikuzman",
+      "icon": "logo.png",
+      "isEnabled": true,
+      "isNew": false,
+      "isTest": true,
+      "isBest": false,
+      "order": 35
     }
   ],
   "users": [
