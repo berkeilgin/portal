@@ -556,8 +556,38 @@ function readExcelFile(file) {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
-        resolve(rows);
+
+        // defval:null → gerçekten boş hücreleri null bırakır, phantom hücrelere "" doldurmaz
+        const rawRows = XLSX.utils.sheet_to_json(ws, { defval: null });
+
+        // Tüm değerleri boş/null olan phantom satırları at
+        const nonEmptyRows = rawRows.filter(row =>
+          Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== '')
+        );
+
+        if (!nonEmptyRows.length) { resolve([]); return; }
+
+        // Ghost sütunları tespit et: tüm satırlarda boş veya SheetJS __EMPTY header'ları
+        const allCols = Object.keys(nonEmptyRows[0]);
+        const activeCols = allCols.filter(col => {
+          if (/^__EMPTY/.test(col)) return false; // SheetJS'in boş header ürettiği sütunlar
+          return nonEmptyRows.some(row => {
+            const v = row[col];
+            return v !== null && v !== undefined && String(v).trim() !== '';
+          });
+        });
+
+        // Sadece aktif sütunları tut, null → "" normalize et
+        const normalized = nonEmptyRows.map(row => {
+          const newRow = {};
+          activeCols.forEach(col => {
+            const v = row[col];
+            newRow[col] = (v === null || v === undefined) ? '' : v;
+          });
+          return newRow;
+        });
+
+        resolve(normalized);
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
@@ -982,6 +1012,10 @@ function init() {
   if (clearBtn) clearBtn.addEventListener('click', clearAll);
   if (homeBtn) homeBtn.addEventListener('click', goHome);
   initTabs();
+  // Tema butonları — event listener eksikti
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme')));
+});
   const savedTheme = localStorage.getItem('dataMergeTheme') || 'grey';
   setTheme(savedTheme);
   updateFileListUI();
