@@ -3,113 +3,388 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Veri Birleştirme Aracı | DetayListe + ListeSecili</title>
+<title>Unpivot & Append | DetayListe + ListeSecili</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
+/* TEMA DEĞİŞKENLERİ – yüksek okunabilirlik için kontrast artırıldı */
 body {
-  --bg: #1f1f28;
-  --surface: #272734;
-  --card: #2e2e3e;
-  --card2: #35354a;
-  --border: rgba(255,255,255,0.09);
-  --border2: rgba(255,255,255,0.17);
-  --text: #e2e2f0;
-  --muted: #8888aa;
-  --accent: #06d6a0;
-  --accent2: #7c6dfa;
-  --accent3: #ff6b6b;
-  --accent4: #f4a261;
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card2: #f8f9fc;
+  --border: rgba(0, 0, 0, 0.1);
+  --border2: rgba(0, 0, 0, 0.2);
+  --text: #1e293b;
+  --text-light: #475569;
+  --muted: #64748b;
+  --accent: #10b981;
+  --accent2: #3b82f6;
+  --accent3: #ef4444;
+  --accent4: #f59e0b;
   --radius: 16px;
-  --font: 'Segoe UI', 'DM Sans', system-ui, sans-serif;
+  --font: 'Segoe UI', 'DM Sans', system-ui, -apple-system, sans-serif;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   transition: 0.2s;
   line-height: 1.5;
 }
-body.dark { --bg: #0d0d14; --surface: #141420; --card: #1a1a26; --card2: #20202e; --text: #eeeef5; --muted: #6a6a88; }
-body.light { --bg: #f5f5fa; --surface: #ffffff; --card: #ffffff; --card2: #f8f8ff; --border: rgba(0,0,0,0.12); --text: #111827; --muted: #4b5563; --accent: #10b981; --accent2: #6366f1; }
-body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; --border: rgba(255,0,130,0.1); --text: #f5eef8; --accent: #FF0082; --accent2: #9b30c0; }
+
+/* Koyu Tema */
+body.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --card: #1e293b;
+  --card2: #334155;
+  --border: rgba(255, 255, 255, 0.08);
+  --border2: rgba(255, 255, 255, 0.2);
+  --text: #f1f5f9;
+  --text-light: #cbd5e1;
+  --muted: #94a3b8;
+  --accent: #34d399;
+  --accent2: #60a5fa;
+  --accent3: #f87171;
+  --accent4: #fbbf24;
+}
+
+/* Açık Tema (özel) */
+body.light {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card2: #f1f5f9;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --text-light: #334155;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent2: #2563eb;
+  --accent3: #dc2626;
+  --accent4: #d97706;
+}
+
+/* TP teması (canlı) */
+body.tp {
+  --bg: #0b0816;
+  --surface: #18132b;
+  --card: #1f1a36;
+  --card2: #2a2342;
+  --border: rgba(255, 0, 130, 0.2);
+  --border2: rgba(255, 0, 130, 0.4);
+  --text: #f5eef8;
+  --text-light: #d9cdf0;
+  --muted: #b9a6e0;
+  --accent: #ff66b5;
+  --accent2: #c084fc;
+  --accent3: #ff7b7b;
+  --accent4: #fbbf24;
+}
 
 .header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
-  flex-wrap: wrap; gap: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
 }
-.logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.main { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; }
-.panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.5rem; }
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.main {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
 .upload-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem; margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
-.upload-card { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 1.25rem; transition: 0.2s; }
-.upload-card.state-loaded { border-left: 4px solid var(--accent); }
-.file-drop { border: 2px dashed var(--border2); border-radius: 1rem; padding: 1rem; text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 0.75rem; }
-.file-drop:hover, .file-drop.drag { border-color: var(--accent2); background: rgba(124,109,250,0.05); }
-.status-text { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
-.file-list { font-size: 0.7rem; margin-top: 8px; max-height: 100px; overflow-y: auto; color: var(--muted); }
-.btn { border: none; padding: 6px 16px; border-radius: 40px; font-weight: 600; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-.btn-primary { background: var(--accent2); color: white; }
-.btn-primary:hover { opacity: 0.9; }
-.btn-success { background: var(--accent); color: #1a1a26; }
-.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-.btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
-.theme-btn { background: transparent; border: 1px solid var(--border); padding: 4px 12px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; }
-.theme-btn.active { background: var(--accent2); color: white; }
-.table-wrapper { overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border); margin-top: 1rem; background: var(--surface); max-height: 400px; overflow-y: auto; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.data-table th, .data-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-.data-table th { background: var(--card2); font-weight: 600; position: sticky; top: 0; }
-.empty-state { text-align: center; padding: 2rem; color: var(--muted); }
-.action-bar { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 15px; }
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 18px; z-index: 2000; font-size: 0.85rem; animation: slideIn 0.2s ease; }
-@keyframes slideIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
-.footer { text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem; }
-.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; }
-.tab-btn { background: transparent; border: none; padding: 8px 18px; border-radius: 30px; cursor: pointer; color: var(--muted); font-weight: 600; }
-.tab-btn.active { background: var(--accent2); color: white; }
-.tab-pane { display: none; }
-.tab-pane.active { display: block; }
+
+.upload-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: 0.2s;
+}
+
+.file-drop {
+  border: 2px dashed var(--border2);
+  border-radius: 1rem;
+  padding: 1.2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.2s;
+  margin-bottom: 0.75rem;
+  background: var(--bg);
+}
+
+.file-drop:hover, .file-drop.drag {
+  border-color: var(--accent2);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.status-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent2);
+  margin-top: 0.5rem;
+}
+
+.file-list {
+  font-size: 0.7rem;
+  margin-top: 8px;
+  max-height: 110px;
+  overflow-y: auto;
+  color: var(--text-light);
+  background: var(--bg);
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.btn {
+  border: none;
+  padding: 8px 18px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s;
+}
+
+.btn-primary {
+  background: var(--accent2);
+  color: white;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background: var(--accent);
+  color: var(--text);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent2);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.theme-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.theme-btn.active {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent2);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  margin-top: 1rem;
+  background: var(--surface);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  background: var(--card2);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  color: var(--text);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.action-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0 15px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 20px;
+  z-index: 2000;
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 40px;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--accent2);
+  color: white;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+.icon {
+  font-size: 1.1rem;
+  display: inline-block;
+}
 </style>
 </head>
 <body>
 <div class="header">
-  <div class="logo">📊 Unpivot & Append Aracı | DetayListe + ListeSecili</div>
-  <div class="header-controls">
-    <div class="theme-switch">
-      <button class="theme-btn" data-theme="grey">Gri</button>
-      <button class="theme-btn" data-theme="dark">Koyu</button>
-      <button class="theme-btn" data-theme="light">Açık</button>
-      <button class="theme-btn" data-theme="tp">TP</button>
+  <div class="logo">
+    <span class="icon">📊</span> Unpivot & Append Pro
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <button class="btn btn-ghost" id="homeBtn" style="display: inline-flex; gap: 6px;">
+      <span class="icon">🏠</span> Ana Sayfa
+    </button>
+    <div class="theme-switch" style="display: flex; gap: 6px;">
+      <button class="theme-btn" data-theme="light">☀️ Açık</button>
+      <button class="theme-btn" data-theme="grey">🌓 Gri</button>
+      <button class="theme-btn" data-theme="dark">🌙 Koyu</button>
+      <button class="theme-btn" data-theme="tp">💜 TP</button>
     </div>
   </div>
 </div>
 <div class="main">
   <div class="panel">
-    <h2>📂 Dosya Yükleme (Birden Çok Seçilebilir)</h2>
+    <h2 style="display: flex; gap: 8px; align-items: center; margin-bottom: 1rem;">
+      <span class="icon">⚙️</span> Dosyaları Yükle (Birden Çok)
+    </h2>
     <div class="upload-grid">
       <!-- DetayListe Dosyaları -->
       <div class="upload-card" id="cardDetay">
-        <h3>📄 DetayListe Dosyaları</h3>
+        <h3><span class="icon">📄</span> DetayListe Dosyaları</h3>
         <div class="file-drop" id="dropDetay">
           <input type="file" id="detayFiles" accept=".xlsx,.xls,.csv" multiple style="display:none;">
-          <div>📂 Sürükleyin veya tıklayın (birden çok)</div>
-          <div style="font-size:0.7rem;">DetayListeChat, DetayListeIB, ...</div>
+          <div><span class="icon">📂</span> Sürükleyin veya tıklayın</div>
+          <div style="font-size:0.7rem; margin-top: 4px;">DetayListeChat, DetayListeIB ...</div>
         </div>
         <div class="status-text" id="detayStatus">Henüz dosya seçilmedi</div>
         <div class="file-list" id="detayFileList"></div>
       </div>
       <!-- ListeSecili Dosyaları -->
       <div class="upload-card" id="cardListe">
-        <h3>📑 ListeSecili Dosyaları</h3>
+        <h3><span class="icon">📑</span> ListeSecili Dosyaları</h3>
         <div class="file-drop" id="dropListe">
           <input type="file" id="listeFiles" accept=".xlsx,.xls,.csv" multiple style="display:none;">
-          <div>📂 Sürükleyin veya tıklayın (birden çok)</div>
-          <div style="font-size:0.7rem;">ListeSeciliCevapChat, ListeSeciliCevapIB, ...</div>
+          <div><span class="icon">📂</span> Sürükleyin veya tıklayın</div>
+          <div style="font-size:0.7rem; margin-top: 4px;">ListeSeciliCevapChat, ListeSeciliCevapIB ...</div>
         </div>
         <div class="status-text" id="listeStatus">Henüz dosya seçilmedi</div>
         <div class="file-list" id="listeFileList"></div>
@@ -117,33 +392,41 @@ body.tp { --bg: #0e0812; --surface: #14091c; --card: #1c1026; --card2: #231530; 
     </div>
 
     <div class="action-bar">
-      <button class="btn btn-primary" id="processBtn">⚙️ Birleştir & İşle (Unpivot + Append)</button>
-      <button class="btn btn-success" id="exportBtn">📎 Export (Excel - 3 Sayfa)</button>
-      <button class="btn btn-ghost" id="clearBtn">🗑️ Temizle</button>
+      <button class="btn btn-primary" id="processBtn">
+        <span class="icon">⚡</span> Birleştir & Unpivot
+      </button>
+      <button class="btn btn-success" id="exportBtn">
+        <span class="icon">💾</span> Excel Export (3 Sayfa)
+      </button>
+      <button class="btn btn-ghost" id="clearBtn">
+        <span class="icon">🗑️</span> Temizle
+      </button>
     </div>
 
-    <!-- Sekmeler: DetayListe Sonuç / ListeSecili Sonuç / Summary -->
+    <!-- Sekmeler -->
     <div class="tabs">
-      <button class="tab-btn active" data-tab="tabDetay">📌 DetayListe (Birleşik)</button>
-      <button class="tab-btn" data-tab="tabListe">📌 ListeSecili (Birleşik)</button>
-      <button class="tab-btn" data-tab="tabSummary">📊 Summary (Kalite No Bazında)</button>
+      <button class="tab-btn active" data-tab="tabDetay"><span class="icon">📌</span> DetayListe (Birleşik)</button>
+      <button class="tab-btn" data-tab="tabListe"><span class="icon">📌</span> ListeSecili (Birleşik)</button>
+      <button class="tab-btn" data-tab="tabSummary"><span class="icon">📊</span> Summary (Kalite No)</button>
     </div>
 
     <div id="tabDetay" class="tab-pane active">
-      <div class="table-wrapper"><table class="data-table" id="detayTable"><thead><tr><th>Yükleniyor...</th></tr></thead><tbody></tbody></table></div>
+      <div id="detayTableContainer" class="empty-state">📭 Henüz işlem yapılmadı</div>
     </div>
     <div id="tabListe" class="tab-pane">
-      <div class="table-wrapper"><table class="data-table" id="listeTable"><thead><tr><th>Yükleniyor...</th></tr></thead><tbody></tbody></table></div>
+      <div id="listeTableContainer" class="empty-state">📭 Henüz işlem yapılmadı</div>
     </div>
     <div id="tabSummary" class="tab-pane">
-      <div class="table-wrapper"><table class="data-table" id="summaryTable"><thead><tr><th>Yükleniyor...</th></tr></thead><tbody></tbody></table></div>
+      <div id="summaryTableContainer" class="empty-state">📭 İşlem sonrası gösterilecek</div>
     </div>
   </div>
 </div>
-<footer class="footer">Power Query mantığıyla Unpivot + Append | Müşteri Numarası sonrası tüm sütunlar Attribute-Value | Data sütunu dosya adından gelir</footer>
+<footer class="footer">
+  <span class="icon">🔄</span> Power Query mantığı: "Müşteri Numarası" sonrası tüm sütunlar Unpivot | Data sütunu = dosya adı
+</footer>
 
 <script>
-// ==================== SABİT SÜTUNLAR (Müşteri Numarası'na kadar olanlar) ====================
+// ==================== SABİT SÜTUNLAR ====================
 const FIXED_COLUMNS = [
   "Period Adı", "Proje Adı", "Grup Adı", "Takım Adı", "SantralNo", "Sicil",
   "Personel", "Form", "Dinleyen Tipi", "Dinleyen", "Kalite No", "Form Puan",
@@ -151,26 +434,31 @@ const FIXED_COLUMNS = [
   "Link", "Call ID", "Agent Kapama", "Csat Puanı", "Dakika : Saniye", "Müşteri Numarası"
 ];
 
-// State
+// Global state
 let detayFilesList = [];      // { file, name }
 let listeFilesList = [];
-let processedDetay = null;    // birleşik tablo (satırlar)
+let processedDetay = null;
 let processedListe = null;
 let processedSummary = null;
 
-// DOM
+// DOM helpers
 const $ = id => document.getElementById(id);
 
-// Toast
-function showToast(msg, type='ok') {
-  document.querySelectorAll('.toast').forEach(t=>t.remove());
-  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-  t.style.borderLeftColor={ok:'var(--accent)',err:'var(--accent3)',warn:'var(--accent4)'}[type];
+// Toast mesajı
+function showToast(msg, type = 'ok') {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<span class="icon">${type === 'ok' ? '✅' : type === 'err' ? '❌' : '⚠️'}</span> ${msg}`;
+  t.style.borderLeftColor = { ok: 'var(--accent)', err: 'var(--accent3)', warn: 'var(--accent4)' }[type];
   document.body.appendChild(t);
-  setTimeout(()=>{t.style.opacity='0'; setTimeout(()=>t.remove(),300);},3400);
+  setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 300);
+  }, 3500);
 }
 
-// Excel okuma
+// Excel okuma (ArrayBuffer)
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -181,46 +469,44 @@ function readExcelFile(file) {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
         resolve(rows);
-      } catch(err) { reject(err); }
+      } catch (err) {
+        reject(err);
+      }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
 }
 
-// Bir dosya için unpivot işlemi (sabit sütunlar + kalanlar attribute-value + data sütunu)
+// Tek dosya için unpivot (sabit sütunlar + kalanlar Attribute/Value + Data)
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
-  if (!rows.length) throw new Error(`${file.name} boş dosya`);
-  
-  // Mevcut sütunları kontrol et
+  if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
+
   const allCols = Object.keys(rows[0]);
-  const fixedPresent = FIXED_COLUMNS.filter(col => allCols.includes(col));
-  const missingFixed = FIXED_COLUMNS.filter(col => !allCols.includes(col));
-  if (missingFixed.length > 0) {
-    console.warn(`${file.name} eksik sabit sütunlar: ${missingFixed.join(', ')}`);
-    // Eksik olanları boş string olarak ekleyeceğiz
-  }
-  
   const unpivoted = [];
-  
+
   for (const row of rows) {
-    // Sabit sütun değerlerini al (eksikse boş string)
+    // Sabit sütun değerlerini al
     const fixedValues = {};
     for (const col of FIXED_COLUMNS) {
-      fixedValues[col] = row[col] !== undefined && row[col] !== null ? String(row[col]) : "";
+      let val = row[col];
+      if (val === undefined || val === null) val = "";
+      // Tarih objesi varsa string'e çevir
+      if (val instanceof Date) val = val.toISOString().split('T')[0];
+      fixedValues[col] = String(val).trim();
     }
-    
-    // Diğer sütunlar (sabit olmayanlar)
+
+    // Kalan sütunlar (sabit olmayan) -> Attribute/Value
     const otherCols = allCols.filter(col => !FIXED_COLUMNS.includes(col));
     for (const attr of otherCols) {
       let val = row[attr];
       if (val === undefined || val === null) val = "";
-      // Tip koruması: sayı ise sayı olarak bırak, ama hepsi value sütununda string olabilir; sonradan tip dönüşümü yapılacak
+      if (val instanceof Date) val = val.toISOString().split('T')[0];
       const newRow = {
         ...fixedValues,
         Attribute: attr,
-        Value: val,
+        Value: String(val),
         Data: fileBaseName   // dosya adından custom sütun
       };
       unpivoted.push(newRow);
@@ -229,8 +515,8 @@ async function unpivotFile(file, fileBaseName) {
   return unpivoted;
 }
 
-// Tüm dosya grubunu işle (detay veya liste)
-async function processGroup(filesArray, groupName) {
+// Birden çok dosyayı işle
+async function processGroup(filesArray) {
   if (!filesArray.length) return [];
   let allRows = [];
   for (const item of filesArray) {
@@ -238,53 +524,55 @@ async function processGroup(filesArray, groupName) {
       const baseName = item.name.replace(/\.(xlsx|xls|csv)$/i, '');
       const unpivoted = await unpivotFile(item.file, baseName);
       allRows.push(...unpivoted);
-    } catch(e) {
-      showToast(`${item.name} işlenirken hata: ${e.message}`, 'err');
-      throw e;
+    } catch (err) {
+      console.error(err);
+      showToast(`${item.name} işlenirken hata: ${err.message}`, 'err');
+      throw err;
     }
   }
   return allRows;
 }
 
-// Tarih dönüşümü (Yeni Kayıt Tarihi -> Date sütunu) ve tip dönüşümleri, sıralama
-function transformTable(rows, tableName) {
+// Dönüşüm: Date sütunu ekle, tip dönüşümleri (Form Puan, Csat), sıralama
+function transformTable(rows) {
   if (!rows.length) return [];
-  
+
   // 1. Date sütunu ekle (Yeni Kayıt Tarihi'nden)
   const withDate = rows.map(row => {
-    let dateVal = null;
+    let dateObj = null;
     const rawDate = row["Yeni Kayıt Tarihi"];
-    if (rawDate && typeof rawDate === 'string') {
-      // Örnek format: "28.02.2025 14:30:00" veya "2025-02-28 10:00"
+    if (rawDate && typeof rawDate === 'string' && rawDate.trim() !== "") {
       let cleaned = rawDate.trim();
-      let parts = cleaned.split(' ');
-      let datePart = parts[0];
-      let parsedDate = null;
-      // noktalı format (dd.mm.yyyy)
+      // format dd.mm.yyyy veya yyyy-mm-dd veya dd/mm/yyyy
+      let datePart = cleaned.split(' ')[0];
+      let parsed = null;
       if (datePart.includes('.')) {
-        let dmy = datePart.split('.');
-        if (dmy.length === 3) {
-          let day = parseInt(dmy[0],10), month = parseInt(dmy[1],10)-1, year = parseInt(dmy[2],10);
-          parsedDate = new Date(year, month, day);
+        let parts = datePart.split('.');
+        if (parts.length === 3) {
+          let day = parseInt(parts[0], 10);
+          let month = parseInt(parts[1], 10) - 1;
+          let year = parseInt(parts[2], 10);
+          parsed = new Date(year, month, day);
         }
       } else if (datePart.includes('/')) {
-        let mdy = datePart.split('/');
-        if (mdy.length === 3) parsedDate = new Date(mdy[2], mdy[1]-1, mdy[0]);
+        let parts = datePart.split('/');
+        if (parts.length === 3) {
+          let day = parseInt(parts[0], 10);
+          let month = parseInt(parts[1], 10) - 1;
+          let year = parseInt(parts[2], 10);
+          parsed = new Date(year, month, day);
+        }
       } else {
-        parsedDate = new Date(datePart);
+        parsed = new Date(datePart);
       }
-      if (parsedDate && !isNaN(parsedDate.getTime())) {
-        dateVal = parsedDate;
-      } else {
-        dateVal = null;
-      }
+      if (parsed && !isNaN(parsed.getTime())) dateObj = parsed;
     } else if (rawDate instanceof Date) {
-      dateVal = rawDate;
+      dateObj = rawDate;
     }
-    return { ...row, Date: dateVal };
+    return { ...row, Date: dateObj };
   });
-  
-  // 2. Tip dönüşümleri: Form Puan, Csat Puanı -> number
+
+  // 2. Sayısal dönüşümler
   const typed = withDate.map(row => {
     let formPuan = row["Form Puan"];
     let csat = row["Csat Puanı"];
@@ -299,56 +587,50 @@ function transformTable(rows, tableName) {
     }
     return newRow;
   });
-  
-  // 3. Sıralama: Date'e göre artan (null'lar en sona)
-  const sorted = [...typed].sort((a,b) => {
+
+  // 3. Sıralama (Date artan, null'lar en sonda)
+  const sorted = typed.sort((a, b) => {
     if (!a.Date && !b.Date) return 0;
     if (!a.Date) return 1;
     if (!b.Date) return -1;
     return a.Date - b.Date;
   });
-  
-  // 4. Gereksiz sütunları temizleme? Orijinal PQ'da "Yeni Kayıt Tarihi - Copy" vs siliniyor, biz sadece Date ekledik.
-  // Ayrıca Attribute ve Value kalacak.
   return sorted;
 }
 
-// Summary: DetayListe tablosundan Attribute ve Value sütunlarını kaldır, Kalite No bazında distinct
+// Summary: DetayListe'den Attribute & Value kaldır, Kalite No bazlı distinct
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
-  // Attribute ve Value'yu kaldır
-  const withoutAttrVal = detayRows.map(row => {
-    const newRow = { ...row };
-    delete newRow.Attribute;
-    delete newRow.Value;
-    delete newRow.Date;   // summary'de date'e gerek yok, ama isteğe bağlı
-    return newRow;
-  });
-  // Distinct: Kalite No bazında (ilk satırı al)
   const uniqueMap = new Map();
-  for (const row of withoutAttrVal) {
-    const kaliteNo = row["Kalite No"] !== undefined ? String(row["Kalite No"]).trim() : "";
+  for (const row of detayRows) {
+    const kaliteNo = row["Kalite No"] ? String(row["Kalite No"]).trim() : "";
     if (!kaliteNo) continue;
+    // Attribute ve Value'yu kaldırarak temiz satır
+    const cleaned = { ...row };
+    delete cleaned.Attribute;
+    delete cleaned.Value;
+    delete cleaned.Date;   // summary'de tarihe gerek yok
     if (!uniqueMap.has(kaliteNo)) {
-      uniqueMap.set(kaliteNo, row);
+      uniqueMap.set(kaliteNo, cleaned);
     }
   }
   return Array.from(uniqueMap.values());
 }
 
-// Tabloyu HTML'e render etme
-function renderTable(containerId, rows, maxRows = 500) {
-  const container = document.getElementById(containerId);
+// Tabloyu render et (performans için virtual yok, ama limit koy)
+function renderTable(containerId, rows, maxRows = 400) {
+  const container = $(containerId);
   if (!container) return;
   if (!rows || rows.length === 0) {
-    container.innerHTML = `<div class="empty-state">📭 Veri bulunamadı</div>`;
+    container.innerHTML = `<div class="empty-state"><span class="icon">📭</span> Veri bulunamadı</div>`;
     return;
   }
+
   const displayRows = rows.slice(0, maxRows);
   const allKeys = new Set();
   displayRows.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
   const columns = Array.from(allKeys);
-  
+
   const table = document.createElement('table');
   table.className = 'data-table';
   const thead = document.createElement('thead');
@@ -360,146 +642,137 @@ function renderTable(containerId, rows, maxRows = 500) {
   });
   thead.appendChild(headerRow);
   table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
   for (const row of displayRows) {
     const tr = document.createElement('tr');
     columns.forEach(col => {
       const td = document.createElement('td');
       let val = row[col];
-      if (val && typeof val === 'object' && val instanceof Date) {
+      if (val instanceof Date) {
         val = val.toLocaleDateString('tr-TR');
-      } else if (val === undefined || val === null) val = '';
-      td.textContent = String(val).substring(0, 80);
+      } else if (val === undefined || val === null) {
+        val = '';
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val).slice(0, 50);
+      } else {
+        val = String(val);
+      }
+      td.textContent = val.length > 100 ? val.slice(0, 100) + '…' : val;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
-  container.innerHTML = '';
+
   const wrapper = document.createElement('div');
   wrapper.className = 'table-wrapper';
   wrapper.appendChild(table);
+  container.innerHTML = '';
   container.appendChild(wrapper);
   if (rows.length > maxRows) {
     const info = document.createElement('div');
     info.className = 'empty-state';
-    info.textContent = `➕ Toplam ${rows.length} satır, ilk ${maxRows} gösteriliyor.`;
+    info.innerHTML = `<span class="icon">ℹ️</span> Toplam ${rows.length} satır, ilk ${maxRows} gösteriliyor.`;
     container.appendChild(info);
   }
 }
 
-// Ana işleme fonksiyonu
+// Ana işleme
 async function processAll() {
   if (detayFilesList.length === 0 && listeFilesList.length === 0) {
     showToast("Lütfen en az bir DetayListe veya ListeSecili dosyası yükleyin.", 'warn');
     return;
   }
-  showToast("İşlem başladı, lütfen bekleyin...", 'ok');
+  showToast("İşlem başladı, dosyalar okunuyor...", 'ok');
   try {
-    // 1. DetayListe grubunu işle
     let detayRaw = [];
-    if (detayFilesList.length) {
-      detayRaw = await processGroup(detayFilesList, 'Detay');
-    }
-    // 2. ListeSecili grubu işle
     let listeRaw = [];
-    if (listeFilesList.length) {
-      listeRaw = await processGroup(listeFilesList, 'Liste');
+
+    if (detayFilesList.length) {
+      detayRaw = await processGroup(detayFilesList);
     }
-    
-    // 3. Dönüşümleri uygula (Date, tipler, sıralama)
-    processedDetay = transformTable(detayRaw, 'Detay');
-    processedListe = transformTable(listeRaw, 'Liste');
-    
-    // 4. Summary (DetayListe üzerinden Attribute+Value kaldır, Kalite No distinct)
+    if (listeFilesList.length) {
+      listeRaw = await processGroup(listeFilesList);
+    }
+
+    processedDetay = transformTable(detayRaw);
+    processedListe = transformTable(listeRaw);
     processedSummary = buildSummary(processedDetay);
-    
-    // 5. Tabloları göster
-    renderTable('detayTable', processedDetay, 300);
-    renderTable('listeTable', processedListe, 300);
-    renderTable('summaryTable', processedSummary, 300);
-    
-    showToast(`✅ İşlem tamamlandı. Detay: ${processedDetay.length} satır, Liste: ${processedListe.length} satır, Summary: ${processedSummary.length} satır.`, 'ok');
+
+    renderTable('detayTableContainer', processedDetay, 400);
+    renderTable('listeTableContainer', processedListe, 400);
+    renderTable('summaryTableContainer', processedSummary, 400);
+
+    showToast(`✅ Tamam! Detay: ${processedDetay.length}, Liste: ${processedListe.length}, Summary: ${processedSummary.length}`, 'ok');
   } catch (err) {
     console.error(err);
     showToast(`Hata: ${err.message}`, 'err');
   }
 }
 
-// Export: Tek Excel dosyası, 3 sayfa
+// Excel export (3 sayfa)
 function exportToExcel() {
   if (!processedDetay && !processedListe && !processedSummary) {
-    showToast("Önce 'Birleştir & İşle' butonuna basın.", 'warn');
+    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
     return;
   }
   const wb = XLSX.utils.book_new();
-  
-  // DetayListe sayfası
-  if (processedDetay && processedDetay.length) {
-    const detaySheet = convertToSheet(processedDetay);
-    XLSX.utils.book_append_sheet(wb, detaySheet, "DetayListe_Birlesik");
-  } else {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Veri yok"]]), "DetayListe_Birlesik");
-  }
-  
-  // ListeSecili sayfası
-  if (processedListe && processedListe.length) {
-    const listeSheet = convertToSheet(processedListe);
-    XLSX.utils.book_append_sheet(wb, listeSheet, "ListeSecili_Birlesik");
-  } else {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Veri yok"]]), "ListeSecili_Birlesik");
-  }
-  
-  // Summary sayfası
-  if (processedSummary && processedSummary.length) {
-    const summarySheet = convertToSheet(processedSummary);
-    XLSX.utils.book_append_sheet(wb, summarySheet, "Summary_KaliteNo");
-  } else {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Veri yok"]]), "Summary_KaliteNo");
-  }
-  
-  XLSX.writeFile(wb, `Veri_Birlestirme_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+
+  const toSheet = (data, sheetName) => {
+    if (!data || !data.length) {
+      const emptySheet = XLSX.utils.aoa_to_sheet([["Veri yok"]]);
+      XLSX.utils.book_append_sheet(wb, emptySheet, sheetName);
+      return;
+    }
+    const processed = data.map(row => {
+      const newRow = {};
+      for (const [k, v] of Object.entries(row)) {
+        if (v instanceof Date) newRow[k] = v.toLocaleDateString('tr-TR');
+        else if (v === null || v === undefined) newRow[k] = "";
+        else newRow[k] = v;
+      }
+      return newRow;
+    });
+    const sheet = XLSX.utils.json_to_sheet(processed);
+    XLSX.utils.book_append_sheet(wb, sheet, sheetName);
+  };
+
+  toSheet(processedDetay, "DetayListe_Birlesik");
+  toSheet(processedListe, "ListeSecili_Birlesik");
+  toSheet(processedSummary, "Summary_KaliteNo");
+
+  const fileName = `Veri_Birlestirme_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xlsx`;
+  XLSX.writeFile(wb, fileName);
   showToast("✅ Excel dosyası oluşturuldu (3 sayfa).", 'ok');
 }
 
-// JSON -> sheet dönüşüm (tarihleri string yap)
-function convertToSheet(data) {
-  if (!data.length) return XLSX.utils.aoa_to_sheet([[]]);
-  const processed = data.map(row => {
-    const newRow = {};
-    for (const [k, v] of Object.entries(row)) {
-      if (v instanceof Date) {
-        newRow[k] = v.toLocaleDateString('tr-TR');
-      } else if (v === null || v === undefined) {
-        newRow[k] = "";
-      } else {
-        newRow[k] = v;
-      }
-    }
-    return newRow;
-  });
-  return XLSX.utils.json_to_sheet(processed);
-}
-
-// Dosya listesi güncelleme (UI)
+// Dosya listesi UI güncelle
 function updateFileListUI() {
   const detayDiv = $('#detayFileList');
   const listeDiv = $('#listeFileList');
-  detayDiv.innerHTML = detayFilesList.map(f => `<div>📄 ${f.name}</div>`).join('') || '<div>Henüz dosya yok</div>';
-  listeDiv.innerHTML = listeFilesList.map(f => `<div>📄 ${f.name}</div>`).join('') || '<div>Henüz dosya yok</div>';
-  $('#detayStatus').innerText = detayFilesList.length ? `${detayFilesList.length} dosya seçildi` : "Henüz dosya seçilmedi";
-  $('#listeStatus').innerText = listeFilesList.length ? `${listeFilesList.length} dosya seçildi` : "Henüz dosya seçilmedi";
+  detayDiv.innerHTML = detayFilesList.length ? detayFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
+  listeDiv.innerHTML = listeFilesList.length ? listeFilesList.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('') : '<div><span class="icon">📭</span> Henüz dosya yok</div>';
+  $('#detayStatus').innerHTML = detayFilesList.length ? `<span class="icon">✅</span> ${detayFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
+  $('#listeStatus').innerHTML = listeFilesList.length ? `<span class="icon">✅</span> ${listeFilesList.length} dosya seçildi` : `<span class="icon">⚠️</span> Henüz dosya seçilmedi`;
 }
 
-// Drag & Drop ve input handler (multiple)
+function escapeHtml(str) {
+  return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// Dosya ekleme (multiple)
 function setupDropZone(dropId, inputId, isDetay) {
   const drop = $(dropId);
   const input = $(inputId);
   if (!drop || !input) return;
-  
+
   const handleFiles = (files) => {
     const fileArray = Array.from(files).filter(f => f.name.match(/\.(xlsx|xls|csv)$/i));
-    if (!fileArray.length) return;
+    if (!fileArray.length) {
+      showToast("Sadece Excel veya CSV dosyaları desteklenir.", 'warn');
+      return;
+    }
     const newItems = fileArray.map(f => ({ file: f, name: f.name }));
     if (isDetay) {
       detayFilesList.push(...newItems);
@@ -507,19 +780,21 @@ function setupDropZone(dropId, inputId, isDetay) {
       listeFilesList.push(...newItems);
     }
     updateFileListUI();
+    showToast(`${fileArray.length} dosya eklendi.`, 'ok');
   };
-  
+
   input.addEventListener('change', e => handleFiles(e.target.files));
   drop.addEventListener('click', () => input.click());
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
   drop.addEventListener('drop', e => {
-    e.preventDefault(); drop.classList.remove('drag');
+    e.preventDefault();
+    drop.classList.remove('drag');
     handleFiles(e.dataTransfer.files);
   });
 }
 
-// Temizleme
+// Temizle
 function clearAll() {
   if (confirm("Tüm yüklenen dosyalar ve işlenmiş veriler silinecek. Devam?")) {
     detayFilesList = [];
@@ -528,21 +803,21 @@ function clearAll() {
     processedListe = null;
     processedSummary = null;
     updateFileListUI();
-    $('#detayTable').innerHTML = '<div class="empty-state">Henüz işlem yapılmadı</div>';
-    $('#listeTable').innerHTML = '<div class="empty-state">Henüz işlem yapılmadı</div>';
-    $('#summaryTable').innerHTML = '<div class="empty-state">Henüz işlem yapılmadı</div>';
+    $('#detayTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
+    $('#listeTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> Henüz işlem yapılmadı</div>';
+    $('#summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📭</span> İşlem sonrası gösterilecek</div>';
     showToast("Tüm veriler temizlendi.", 'ok');
   }
 }
 
-// Sekme geçişleri
+// Sekme
 function initTabs() {
   const btns = document.querySelectorAll('.tab-btn');
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
       document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
+      $(tabId).classList.add('active');
       btns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
@@ -550,27 +825,38 @@ function initTabs() {
 }
 
 // Tema
-function setTheme(t) {
-  document.body.className = t;
-  localStorage.setItem('dataMergeTheme', t);
-  document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === t));
+function setTheme(theme) {
+  document.body.className = theme;
+  localStorage.setItem('dataMergeTheme', theme);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    if (btn.dataset.theme === theme) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
 }
 
-// init
+// Ana Sayfa butonu
+function goHome() {
+  window.location.href = 'index.html';
+}
+
+// Initialization
 function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
   $('#processBtn').addEventListener('click', processAll);
   $('#exportBtn').addEventListener('click', exportToExcel);
   $('#clearBtn').addEventListener('click', clearAll);
+  $('#homeBtn').addEventListener('click', goHome);
   initTabs();
+
   const savedTheme = localStorage.getItem('dataMergeTheme') || 'grey';
   setTheme(savedTheme);
   updateFileListUI();
-  // Varsayılan tablo mesajları
-  $('#detayTable').innerHTML = '<div class="empty-state">📂 DetayListe dosyalarını yükleyip "Birleştir & İşle" butonuna tıklayın</div>';
-  $('#listeTable').innerHTML = '<div class="empty-state">📂 ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
-  $('#summaryTable').innerHTML = '<div class="empty-state">İşlem sonrası Summary görünecek</div>';
+
+  // Başlangıç mesajları
+  $('#detayTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
+  $('#listeTableContainer').innerHTML = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
+  $('#summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
 }
 init();
 </script>
