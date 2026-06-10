@@ -7,13 +7,8 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* TEMA DEĞİŞKENLERİ */
 body {
   --bg: #f0f2f5;
   --surface: #ffffff;
@@ -204,6 +199,13 @@ body.tp {
 }
 .btn-export:hover {
   background: #7c3aed;
+}
+.btn-csv {
+  background: #f59e0b;
+  color: white;
+}
+.btn-csv:hover {
+  background: #d97706;
 }
 
 .btn-ghost {
@@ -402,12 +404,18 @@ body.tp {
       <button class="btn btn-primary" id="processBtn">
         <span class="icon">⚡</span> Birleştir & Unpivot
       </button>
-      <button class="btn btn-export" id="exportAllBtn">
-        <span class="icon">💾</span> 3 Dosyayı Dışa Aktar (DetayListeScoresAtt, ListeSeciliAnswersAtt, Summary)
+      <button class="btn btn-export" id="exportExcelBtn">
+        <span class="icon">📎</span> Excel (3 Dosya)
+      </button>
+      <button class="btn btn-csv" id="exportCsvBtn">
+        <span class="icon">📄</span> CSV (3 Dosya - Hafif)
       </button>
       <button class="btn btn-ghost" id="clearBtn">
         <span class="icon">🗑️</span> Temizle
       </button>
+    </div>
+    <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
+      💡 <strong>Not:</strong> Excel dosyası, Power Query'den 2-3 kat büyük olabilir (sıkıştırma farkı). <strong>CSV</strong> tercih ederseniz dosya boyutu Power Query Excel'iyle neredeyse aynı olur. Boş sütun sorunu tamamen giderildi.
     </div>
 
     <div class="tabs">
@@ -675,9 +683,33 @@ async function processAll() {
   }
 }
 
+// Temiz veri export - boş sütunları otomatik temizler
+function cleanData(data) {
+  if (!data || !data.length) return data;
+  // Tüm satırlardaki anahtarları birleştir
+  const allKeys = new Set();
+  data.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
+  // Hangi sütunların tamamen boş olduğunu kontrol et
+  const keysArray = Array.from(allKeys);
+  const nonEmptyColumns = keysArray.filter(col => {
+    for (let row of data) {
+      let val = row[col];
+      if (val !== undefined && val !== null && val !== "") return true;
+    }
+    return false;
+  });
+  // Sadece dolu sütunları içeren yeni dizi
+  return data.map(row => {
+    const newRow = {};
+    nonEmptyColumns.forEach(col => { newRow[col] = row[col]; });
+    return newRow;
+  });
+}
+
 function downloadExcel(data, filename, sheetName = "Data") {
   if (!data || data.length === 0) return false;
-  const processed = data.map(row => {
+  const cleaned = cleanData(data);
+  const processed = cleaned.map(row => {
     const newRow = {};
     for (const [k, v] of Object.entries(row)) {
       if (v instanceof Date) newRow[k] = v.toLocaleDateString('tr-TR');
@@ -693,7 +725,33 @@ function downloadExcel(data, filename, sheetName = "Data") {
   return true;
 }
 
-function exportAllThree() {
+function downloadCsv(data, filename) {
+  if (!data || data.length === 0) return false;
+  const cleaned = cleanData(data);
+  const processed = cleaned.map(row => {
+    const newRow = {};
+    for (const [k, v] of Object.entries(row)) {
+      if (v instanceof Date) newRow[k] = v.toLocaleDateString('tr-TR');
+      else if (v === null || v === undefined) newRow[k] = "";
+      else newRow[k] = v;
+    }
+    return newRow;
+  });
+  const ws = XLSX.utils.json_to_sheet(processed);
+  const csv = XLSX.utils.sheet_to_csv(ws);
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  return true;
+}
+
+function exportAllExcel() {
   if (!processedDetay && !processedListe && !processedSummary) {
     showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
     return;
@@ -702,24 +760,41 @@ function exportAllThree() {
   if (processedDetay && processedDetay.length) {
     downloadExcel(processedDetay, "DetayListeScoresAtt.xlsx", "DetayListe");
     successCount++;
-  } else {
-    console.warn("DetayListe verisi yok");
   }
   if (processedListe && processedListe.length) {
     downloadExcel(processedListe, "ListeSeciliAnswersAtt.xlsx", "ListeSecili");
     successCount++;
-  } else {
-    console.warn("ListeSecili verisi yok");
   }
   if (processedSummary && processedSummary.length) {
     downloadExcel(processedSummary, "Summary.xlsx", "Summary");
     successCount++;
-  } else {
-    console.warn("Summary verisi yok");
   }
-  if (successCount === 3) showToast("3 dosya başarıyla indirildi.", 'ok');
-  else if (successCount > 0) showToast(`${successCount} dosya indirildi (eksik veriler nedeniyle bazı dosyalar oluşmadı).`, 'warn');
-  else showToast("Hiçbir veri bulunamadı, lütfen önce işlem yapın.", 'err');
+  if (successCount === 3) showToast("3 Excel dosyası indirildi.", 'ok');
+  else if (successCount > 0) showToast(`${successCount} dosya indirildi (eksik veri nedeniyle).`, 'warn');
+  else showToast("Hiç veri yok.", 'err');
+}
+
+function exportAllCsv() {
+  if (!processedDetay && !processedListe && !processedSummary) {
+    showToast("Önce 'Birleştir & Unpivot' butonuna tıklayın.", 'warn');
+    return;
+  }
+  let successCount = 0;
+  if (processedDetay && processedDetay.length) {
+    downloadCsv(processedDetay, "DetayListeScoresAtt.csv");
+    successCount++;
+  }
+  if (processedListe && processedListe.length) {
+    downloadCsv(processedListe, "ListeSeciliAnswersAtt.csv");
+    successCount++;
+  }
+  if (processedSummary && processedSummary.length) {
+    downloadCsv(processedSummary, "Summary.csv");
+    successCount++;
+  }
+  if (successCount === 3) showToast("3 CSV dosyası indirildi (çok daha hafif).", 'ok');
+  else if (successCount > 0) showToast(`${successCount} CSV indirildi.`, 'warn');
+  else showToast("Hiç veri yok.", 'err');
 }
 
 function updateFileListUI() {
@@ -813,11 +888,13 @@ function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
   const processBtn = getEl('processBtn');
-  const exportBtn = getEl('exportAllBtn');
+  const exportExcel = getEl('exportExcelBtn');
+  const exportCsv = getEl('exportCsvBtn');
   const clearBtn = getEl('clearBtn');
   const homeBtn = getEl('homeBtn');
   if (processBtn) processBtn.addEventListener('click', processAll);
-  if (exportBtn) exportBtn.addEventListener('click', exportAllThree);
+  if (exportExcel) exportExcel.addEventListener('click', exportAllExcel);
+  if (exportCsv) exportCsv.addEventListener('click', exportAllCsv);
   if (clearBtn) clearBtn.addEventListener('click', clearAll);
   if (homeBtn) homeBtn.addEventListener('click', goHome);
   initTabs();
