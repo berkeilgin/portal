@@ -557,37 +557,45 @@ function readExcelFile(file) {
         const wb = XLSX.read(data, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
 
-        // defval:null → gerçekten boş hücreleri null bırakır, phantom hücrelere "" doldurmaz
-        const rawRows = XLSX.utils.sheet_to_json(ws, { defval: null });
+        // !ref trim: phantom satır/sütunları okumadan kes
+        if (ws['!ref']) {
+          const range = XLSX.utils.decode_range(ws['!ref']);
 
-        // Tüm değerleri boş/null olan phantom satırları at
-        const nonEmptyRows = rawRows.filter(row =>
-          Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== '')
-        );
+          // Gerçek son satırı arkadan tara
+          let lastRow = range.s.r;
+          for (let R = range.e.r; R >= range.s.r; R--) {
+            let hasData = false;
+            for (let C = range.s.c; C <= range.e.c; C++) {
+              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+              if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+                hasData = true; break;
+              }
+            }
+            if (hasData) { lastRow = R; break; }
+          }
 
-        if (!nonEmptyRows.length) { resolve([]); return; }
+          // Gerçek son sütunu arkadan tara
+          let lastCol = range.s.c;
+          for (let C = range.e.c; C >= range.s.c; C--) {
+            let hasData = false;
+            for (let R = range.s.r; R <= lastRow; R++) {
+              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+              if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+                hasData = true; break;
+              }
+            }
+            if (hasData) { lastCol = C; break; }
+          }
 
-        // Ghost sütunları tespit et: tüm satırlarda boş veya SheetJS __EMPTY header'ları
-        const allCols = Object.keys(nonEmptyRows[0]);
-        const activeCols = allCols.filter(col => {
-          if (/^__EMPTY/.test(col)) return false; // SheetJS'in boş header ürettiği sütunlar
-          return nonEmptyRows.some(row => {
-            const v = row[col];
-            return v !== null && v !== undefined && String(v).trim() !== '';
+          // Range'i gerçek veriye göre kes — phantom hücreler artık scope dışı
+          ws['!ref'] = XLSX.utils.encode_range({
+            s: range.s,
+            e: { r: lastRow, c: lastCol }
           });
-        });
+        }
 
-        // Sadece aktif sütunları tut, null → "" normalize et
-        const normalized = nonEmptyRows.map(row => {
-          const newRow = {};
-          activeCols.forEach(col => {
-            const v = row[col];
-            newRow[col] = (v === null || v === undefined) ? '' : v;
-          });
-          return newRow;
-        });
-
-        resolve(normalized);
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        resolve(rows);
       } catch (err) { reject(err); }
     };
     reader.onerror = reject;
