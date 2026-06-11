@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>QA PowerQuery Converter</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+body{font-family:Segoe UI,sans-serif;background:#1f1f28;color:#eee;padding:24px}
+.card{background:#2e2e3e;padding:20px;border-radius:16px;margin-bottom:16px}
+.drop{border:2px dashed #666;padding:20px;border-radius:12px;text-align:center;cursor:pointer}
+button{background:#6366f1;color:#fff;border:0;padding:12px 18px;border-radius:12px;cursor:pointer}
+.log{background:#141420;padding:12px;border-radius:12px;white-space:pre-wrap;max-height:300px;overflow:auto}
+</style>
+</head>
+<body>
+<h1>QA PowerQuery → JS Converter</h1>
+
+<div class="card">
+<h3>📂 DetayListe Dosyaları (Multiple)</h3>
+<input id="detay" type="file" multiple accept=".xlsx,.xls">
+</div>
+
+<div class="card">
+<h3>📂 ListeSecili Dosyaları (Multiple)</h3>
+<input id="liste" type="file" multiple accept=".xlsx,.xls">
+</div>
+
+<div class="card">
+<button id="run">3 Export Oluştur</button>
+<p id="status"></p>
+</div>
+
+<div class="card">
+<h3>Log</h3>
+<div id="log" class="log"></div>
+</div>
+
+<script>
+const FIXED_UNTIL = "Müşteri Numarası";
+const log = m => document.getElementById("log").textContent += m + "\\n";
+
+function excelDate(v){
+  if(!v) return "";
+  try{
+    const s = String(v).replaceAll(".", "/");
+    const d = new Date(s.split(" ")[0]);
+    return isNaN(d) ? "" : d;
+  }catch(e){ return ""; }
+}
+
+async function readWorkbook(file){
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer,{type:"array",cellDates:true});
+  const sheet = wb.Sheets["DATA"] || wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet,{defval:null,raw:true});
+}
+
+function unpivot(rows,fileName){
+  if(!rows.length) return [];
+
+  const cols = Object.keys(rows[0]);
+  const idx = cols.indexOf(FIXED_UNTIL);
+
+  if(idx === -1)
+    throw new Error(`${fileName}: "${FIXED_UNTIL}" kolonu bulunamadı`);
+
+  const fixed = cols.slice(0, idx+1);
+  const dynamic = cols.slice(idx+1);
+
+  log(`${fileName} | Fixed=${fixed.length} Dynamic=${dynamic.length}`);
+
+  const dataName = fileName.replace(/\.xlsx?$/i,'');
+
+  const out = [];
+
+  for(const row of rows){
+    for(const attr of dynamic){
+      const base = {};
+      for(const f of fixed) base[f] = row[f];
+
+      base.Attribute = attr;
+      base.Value = row[attr];
+      base.Data = dataName;
+
+      out.push(base);
+    }
+  }
+  return out;
+}
+
+function applyFinalTransform(rows){
+  rows.forEach(r=>{
+    r.Date = excelDate(r["Yeni Kayıt Tarihi"]);
+  });
+
+  rows.sort((a,b)=>{
+    const da = a.Date ? new Date(a.Date).getTime() : 0;
+    const db = b.Date ? new Date(b.Date).getTime() : 0;
+    return da-db;
+  });
+
+  return rows;
+}
+
+function summary(rows){
+  const seen = new Set();
+  return rows.filter(r=>{
+    const key = r["Kalite No"];
+    if(!key || seen.has(key)) return false;
+    seen.add(key);
+
+    const copy = structuredClone(r);
+    delete copy.Attribute;
+    delete copy.Value;
+    return true;
+  });
+}
+
+function cleanGhostRows(rows){
+  return rows.filter(r =>
+    Object.values(r).some(v =>
+      v !== null &&
+      v !== "" &&
+      v !== undefined
+    )
+  );
+}
+
+function autoWidth(ws,data){
+  const cols = Object.keys(data[0] || {});
+  ws["!cols"] = cols.map(c=>({
+    wch: Math.min(
+      Math.max(c.length, ...data.slice(0,200).map(r=>String(r[c]??"").length)),
+      40
+    )
+  }));
+}
+
+function exportFile(name,data){
+  data = cleanGhostRows(data);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data,{skipHeader:false});
+
+  autoWidth(ws,data);
+
+  XLSX.utils.book_append_sheet(wb,ws,name.replace(".xlsx",""));
+  XLSX.writeFile(wb,name,{compression:true});
+}
+
+document.getElementById("run").onclick = async () => {
+  try{
+    document.getElementById("status").textContent = "İşleniyor...";
+    document.getElementById("log").textContent = "";
+
+    const detayFiles = [...document.getElementById("detay").files];
+    const listeFiles = [...document.getElementById("liste").files];
+
+    if(!detayFiles.length && !listeFiles.length){
+      alert("Dosya yükle");
+      return;
+    }
+
+    let detayAll = [];
+    let listeAll = [];
+
+    for(const f of detayFiles){
+      const rows = await readWorkbook(f);
+      detayAll.push(...unpivot(rows,f.name));
+      log(`✔ Detay işlendi: ${f.name}`);
+    }
+
+    for(const f of listeFiles){
+      const rows = await readWorkbook(f);
+      listeAll.push(...unpivot(rows,f.name));
+      log(`✔ Liste işlendi: ${f.name}`);
+    }
+
+    detayAll = applyFinalTransform(detayAll);
+    listeAll = applyFinalTransform(listeAll);
+
+    const summaryRows = summary(detayAll);
+
+    exportFile("DetayListeScoresAtt.xlsx", detayAll);
+    exportFile("ListeSeciliAnswersAtt.xlsx", listeAll);
+    exportFile("Summary.xlsx", summaryRows);
+
+    document.getElementById("status").textContent =
+      `Tamamlandı | Detay:${detayAll.length} Liste:${listeAll.length} Summary:${summaryRows.length}`;
+
+  }catch(e){
+    console.error(e);
+    alert(e.message);
+  }
+}
+</script>
+</body>
+</html>
