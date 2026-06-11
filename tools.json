@@ -521,7 +521,7 @@
       "icon": "logo.png",
       "isEnabled": true,
       "isNew": false,
-      "isTest": true,
+      "isTest": false,
       "isBest": false,
       "order": 34
     },
@@ -534,7 +534,7 @@
       "icon": "logo.png",
       "isEnabled": true,
       "isNew": false,
-      "isTest": true,
+      "isTest": false,
       "isBest": false,
       "order": 35
     }
