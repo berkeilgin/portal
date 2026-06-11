@@ -473,51 +473,71 @@ function readExcelFile(file) {
       try {
         const wb = XLSX.read(new Uint8Array(e.target.result), {
           type: 'array',
-          cellDates: true   // tarih hücrelerini JS Date olarak oku
+          cellDates: true
         });
         const ws = wb.Sheets[wb.SheetNames[0]];
+        if (!ws) { resolve([]); return; }
 
-        // array-of-arrays; blankrows:false SheetJS seviyesinde tamamen boş satırları atar
-        const aoa = XLSX.utils.sheet_to_json(ws, {
-          header: 1,
-          defval: null,
-          blankrows: false
+        // ============================================================
+        // PHANTOM-SAFE READ: sheet_to_json KULLANILMIYOR.
+        // sheet_to_json !ref range'ini satır×sütun iterate eder →
+        // !ref 65k×16k olunca 1 milyar "hücre" dolaşır, phantom satır/sütun
+        // üretir ve dosya şişer.
+        //
+        // Çözüm: Object.keys(ws) ile SADECE gerçekten var olan hücreleri
+        // iterate et. Phantom hücreler ws objesinde key olarak BULUNMAZ,
+        // dolayısıyla bu yaklaşım !ref'ten tamamen bağımsızdır.
+        // ============================================================
+        const sparse = {}; // sparse[rowIdx][colIdx] = rawValue
+
+        Object.keys(ws).forEach(key => {
+          if (key.startsWith('!')) return; // !ref, !margins vb. meta-key'leri atla
+          try {
+            const { r, c } = XLSX.utils.decode_cell(key);
+            const cell = ws[key];
+            // Gerçekten dolu hücreler: v tanımlı, null değil, boş string değil
+            if (!cell || cell.v === undefined || cell.v === null || cell.v === '') return;
+            if (!sparse[r]) sparse[r] = {};
+            sparse[r][c] = cell.v; // Date, number veya string
+          } catch (_) {}
         });
-        if (!aoa.length) { resolve([]); return; }
 
-        // İlk dolu satır = header
-        let hdrIdx = 0;
-        for (let i = 0; i < aoa.length; i++) {
-          if (aoa[i].some(v => v !== null && v !== undefined && String(v).trim() !== '')) {
-            hdrIdx = i; break;
-          }
-        }
-        const headers = aoa[hdrIdx];
+        const rowIdxs = Object.keys(sparse).map(Number).sort((a, b) => a - b);
+        if (!rowIdxs.length) { resolve([]); return; }
 
-        // Sadece header'ı olan (string, boş değil) sütunları tut → phantom sütunları eler
-        const validCols = [];
-        headers.forEach((h, ci) => {
-          const name = (h !== null && h !== undefined) ? String(h).trim() : '';
-          if (name !== '') validCols.push({ ci, name });
-        });
+        // İlk satır = header satırı
+        const hdrRowIdx = rowIdxs[0];
+        const hdrRow    = sparse[hdrRowIdx];
+
+        // Sadece header'ı dolu olan sütunları tut → phantom sütunları eler
+        const validCols = Object.keys(hdrRow)
+          .map(ci => ({ ci: Number(ci), name: String(hdrRow[ci]).trim() }))
+          .filter(({ name }) => name !== '')
+          .sort((a, b) => a.ci - b.ci);
+
         if (!validCols.length) { resolve([]); return; }
 
-        // Veri satırlarını oluştur; geçerli sütunlarda hiç veri yoksa satırı atla (phantom satır)
+        // Veri satırlarını oluştur (header sonrası)
         const rows = [];
-        for (let ri = hdrIdx + 1; ri < aoa.length; ri++) {
-          const arr = aoa[ri] || [];
+        for (let i = 1; i < rowIdxs.length; i++) {
+          const ri      = rowIdxs[i];
+          const rowData = sparse[ri] || {};
+
+          // Geçerli sütunlarda hiç veri yoksa satırı atla (phantom satır)
           const hasData = validCols.some(({ ci }) => {
-            const v = arr[ci];
-            return v !== null && v !== undefined && String(v).trim() !== '';
+            const v = rowData[ci];
+            return v !== undefined && v !== null && String(v).trim() !== '';
           });
-          if (!hasData) continue; // phantom/boş satır → atla
+          if (!hasData) continue;
 
           const obj = {};
           validCols.forEach(({ ci, name }) => {
-            obj[name] = arr[ci] ?? '';
+            const v = rowData[ci];
+            obj[name] = (v === undefined || v === null) ? '' : v;
           });
           rows.push(obj);
         }
+
         resolve(rows);
       } catch (err) { reject(err); }
     };
@@ -604,7 +624,13 @@ function transformTable(rows) {
       if (!b._sd) return -1;
       return a._sd - b._sd;
     })
-    .map(({ _sd, ...rest }) => rest); // internal key'i kaldır
+    .map(({ _sd, ...rest }) => ({
+      ...rest,
+      // Date = Yeni Kayıt Tarihi'nin GG.AA.YYYY formatında temiz kopyası
+      Date: _sd
+        ? `${String(_sd.getDate()).padStart(2,'0')}.${String(_sd.getMonth()+1).padStart(2,'0')}.${_sd.getFullYear()}`
+        : ''
+    }));
 }
 
 // ==================== SUMMARY ====================
