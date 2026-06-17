@@ -275,15 +275,15 @@ const HP_RULES = {
 const groups = {
   DM: {
     key: 'DM', name: 'DM',
-filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
-extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
-sheetPerProject: true,
+    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
+    // Değişiklik 1: DM için extraFilter eklendi
+    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
+    sheetPerProject: true,
     fileName: () => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   ML: {
     key: 'ML', name: 'ML',
     filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'ML',
-    // ML'nin mevcut extraFilter'ı (iki koşul) aynen kalır
     extraFilter: (rec) => {
       const pos = String(rec.reviewerPosition || '').trim().toLowerCase();
       const code = String(rec.position_code_type_full_name || '').trim().toLowerCase();
@@ -294,9 +294,10 @@ sheetPerProject: true,
   },
   DONUSUM: {
     key: 'DONUSUM', name: 'Dönüşüm Projeleri',
-filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
-extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
-sheetPerProject: false,
+    filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
+    // Değişiklik 1: Dönüşüm için extraFilter eklendi
+    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
+    sheetPerProject: false,
     fileName: () => `Dönüşüm Projeleri_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   }
 };
@@ -378,12 +379,13 @@ function getDistributedIdentsForGroup(gk, week) {
   distributionHistory[gk].forEach(e => { if (e.week < week && e.distributedIdents) e.distributedIdents.forEach(id => set.add(id)); });
   return set;
 }
+// Değişiklik 4: getCumulativeCountsForGroup – DM ve Dönüşüm için sadece OS atamalarını say
 function getCumulativeCountsForGroup(gk, week) {
   const cnt = new Map();
   distributionHistory[gk].forEach(e => {
     if (e.week < week && e.assignments) {
       e.assignments.forEach(a => {
-        // DM ve DONUSUM için: alan varsa sadece OS atamaları say
+        // DM ve DONUSUM için: eğer position_code_type_full_name varsa, sadece OS olanları say
         if ((gk === 'DM' || gk === 'DONUSUM') &&
             a.position_code_type_full_name !== undefined &&
             a.position_code_type_full_name !== '') {
@@ -456,7 +458,7 @@ function shuffle(arr) {
   }
   return a;
 }
-// YENİ
+// Değişiklik 2: calculateDistributionForGroup – extraFilter'ı gerçekten kullan
 function calculateDistributionForGroup(gk, week, groupDef) {
   let extraFilter = null;
   if (gk === 'ML') {
@@ -469,6 +471,7 @@ function calculateDistributionForGroup(gk, week, groupDef) {
     extraFilter = groupDef.extraFilter;
   }
   const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, extraFilter);
+
   if (!available.length) return [];
   if (gk === 'ML') {
     const HP_NAME = 'hewlett packard inc';
@@ -526,17 +529,17 @@ async function saveGroupDistribution(gk, week, selected) {
       else if (name === 'Halil Emre Ozdemir') hpGroup = 'HP_German';
       else hpGroup = 'HP_Turkish';
     }
+    // Değişiklik 3: position_code_type_full_name JSON'a eklendi
     return {
-return {
-  FeedbackCreatorName: rec.FeedbackCreatorName,
-  client_name: rec.client_name,
-  emp_monitor_ident: rec.emp_monitor_ident,
-  employee_ident: rec.employee_ident || '',
-  position_code_type_full_name: String(rec.position_code_type_full_name || '').trim(),
-  dil: ref?.Dil || '',
-  dagitimTuru: ref?.['Dağıtım Türü'] || '',
-  hpGroup: hpGroup || undefined
-};
+      FeedbackCreatorName: rec.FeedbackCreatorName,
+      client_name: rec.client_name,
+      emp_monitor_ident: rec.emp_monitor_ident,
+      employee_ident: rec.employee_ident || '',
+      position_code_type_full_name: String(rec.position_code_type_full_name || '').trim(),
+      dil: ref?.Dil || '',
+      dagitimTuru: ref?.['Dağıtım Türü'] || '',
+      hpGroup: hpGroup || undefined
+    };
   });
   const newEntry = { week, date: new Date().toISOString(), distributedIdents: selected.map(r => String(r.emp_monitor_ident)), assignments };
   const idx = distributionHistory[gk].findIndex(h => h.week === week);
@@ -900,6 +903,42 @@ function addFourthFileUploader() {
   uploadGrid.appendChild(newCard);
   setupDrop('dropCheckedStep2', 'checkedFileInputStep2', loadCheckedFileStep2);
 }
+// Değişiklik 5: repairHistoryWithPositionData fonksiyonu
+async function repairHistoryWithPositionData() {
+  if (!mainDataStep2.length) {
+    alert('Önce görüşme listesini (Ana Excel) yükleyin, ardından bu butona tıklayın.');
+    return;
+  }
+  // emp_monitor_ident → position_code_type_full_name haritası
+  const positionMap = new Map();
+  mainDataStep2.forEach(rec => {
+    const ident = String(rec.emp_monitor_ident || '').trim();
+    if (ident) positionMap.set(ident, String(rec.position_code_type_full_name || '').trim());
+  });
+
+  let updatedCount = 0, notFoundCount = 0;
+  Object.keys(distributionHistory).forEach(gk => {
+    distributionHistory[gk].forEach(entry => {
+      (entry.assignments || []).forEach(ass => {
+        const ident = String(ass.emp_monitor_ident || '').trim();
+        if (positionMap.has(ident)) {
+          ass.position_code_type_full_name = positionMap.get(ident);
+          updatedCount++;
+        } else {
+          notFoundCount++;
+        }
+      });
+    });
+  });
+
+  saveAllHistories();
+  alert(
+    `✅ Güncellendi: ${updatedCount} atama\n` +
+    `⚠️ Bulunamadı (Excel'de yok): ${notFoundCount} atama\n\n` +
+    `Güncellenmiş JSON indiriliyor...`
+  );
+  exportAllHistory();
+}
 function addExtraButtonsStep2() {
   const buttonContainer = document.getElementById('calculateBtnStep2')?.parentNode;
   if (!buttonContainer) return;
@@ -910,16 +949,6 @@ function addExtraButtonsStep2() {
     exportPreviewBtn.innerHTML = '📎 Önizlemeyi Dışa Aktar';
     exportPreviewBtn.style.marginLeft = '0.5rem';
     exportPreviewBtn.addEventListener('click', exportPreviewToExcel);
-    if (!document.getElementById('repairHistoryBtnStep2')) {
-  const repairBtn = document.createElement('button');
-  repairBtn.id = 'repairHistoryBtnStep2';
-  repairBtn.className = 'btn btn-ghost';
-  repairBtn.innerHTML = '🔧 Geçmişi Onar';
-  repairBtn.title = 'Eski JSON\'a position_code_type_full_name ekler ve güncellenmiş JSON\'u indirir';
-  repairBtn.style.marginLeft = '0.5rem';
-  repairBtn.addEventListener('click', repairHistoryWithPositionData);
-  buttonContainer.appendChild(repairBtn);
-}
     buttonContainer.insertBefore(exportPreviewBtn, document.getElementById('confirmBtnStep2'));
   }
   if (!document.getElementById('clearAllStep2Btn')) {
@@ -930,6 +959,17 @@ function addExtraButtonsStep2() {
     clearAllBtn.style.marginLeft = '0.5rem';
     clearAllBtn.addEventListener('click', clearAllStep2Data);
     buttonContainer.appendChild(clearAllBtn);
+  }
+  // Değişiklik 5: Geçmişi Onar butonu
+  if (!document.getElementById('repairHistoryBtnStep2')) {
+    const repairBtn = document.createElement('button');
+    repairBtn.id = 'repairHistoryBtnStep2';
+    repairBtn.className = 'btn btn-ghost';
+    repairBtn.innerHTML = '🔧 Geçmişi Onar';
+    repairBtn.title = 'Eski JSON\'a position_code_type_full_name ekler ve güncellenmiş JSON\'u indirir';
+    repairBtn.style.marginLeft = '0.5rem';
+    repairBtn.addEventListener('click', repairHistoryWithPositionData);
+    buttonContainer.appendChild(repairBtn);
   }
 }
 if (document.readyState === 'loading') {
@@ -1167,7 +1207,8 @@ function exportReportS3() {
           'Proje (client_name)': ass.client_name,
           'Monitoring ID (emp_monitor_ident)': ass.emp_monitor_ident,
           'Dil': ass.dil,
-          'Dağıtım Türü': ass.dagitimTuru
+          'Dağıtım Türü': ass.dagitimTuru,
+          'Pozisyon (position_code_type_full_name)': ass.position_code_type_full_name || ''
         });
       }
     }
@@ -1532,42 +1573,6 @@ function clearAllHistoryData() {
     distributionAreaStep4.style.display = 'none';
     exportBtnStep4.disabled = true;
   }
-}
-
-async function repairHistoryWithPositionData() {
-  if (!mainDataStep2.length) {
-    alert('Önce görüşme listesini (Ana Excel) yükleyin, ardından bu butona tıklayın.');
-    return;
-  }
-  // emp_monitor_ident → position_code_type_full_name haritası
-  const positionMap = new Map();
-  mainDataStep2.forEach(rec => {
-    const ident = String(rec.emp_monitor_ident || '').trim();
-    if (ident) positionMap.set(ident, String(rec.position_code_type_full_name || '').trim());
-  });
-
-  let updatedCount = 0, notFoundCount = 0;
-  Object.keys(distributionHistory).forEach(gk => {
-    distributionHistory[gk].forEach(entry => {
-      (entry.assignments || []).forEach(ass => {
-        const ident = String(ass.emp_monitor_ident || '').trim();
-        if (positionMap.has(ident)) {
-          ass.position_code_type_full_name = positionMap.get(ident);
-          updatedCount++;
-        } else {
-          notFoundCount++;
-        }
-      });
-    });
-  });
-
-  saveAllHistories();
-  alert(
-    `✅ Güncellendi: ${updatedCount} atama\n` +
-    `⚠️ Bulunamadı (Excel'de yok): ${notFoundCount} atama\n\n` +
-    `Güncellenmiş JSON indiriliyor...`
-  );
-  exportAllHistory();
 }
 
 // Drag & Drop ve çoklu dosya yükleme
