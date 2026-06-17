@@ -128,19 +128,21 @@ td { color:var(--text); }
       <div class="loader-bar" id="loaderStep2"><div class="loader-bar-inner"></div></div>
     </div>
 
-    <!-- STEP 3 (GÜNCELLENDİ - Grup Bazlı eklendi) -->
+    <!-- STEP 3 (GÜNCELLENDİ - 3. dosya eklendi, sütunlar güncellendi) -->
     <div id="step3" class="step-content">
-      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Kalan</em></div>
-      <div class="sdesc">Görüşme listesi (emp_monitor_ident veya Monitoring ID) ile dağıtım geçmişi eşleştirilir. Dağıtılan, Giriş Yapılan (CheckListCreated) ve Kalan adetleri hesaplanır.</div>
+      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Giriş Yapılmayan & Oran</em></div>
+      <div class="sdesc">Görüşme listesi, dağıtım geçmişi ve kontrol edilenler (giriş yapılan) dosyalarını yükleyin. Dağıtılan, Giriş Yapılan, Giriş Yapılmayan ve Giriş Oranı (%) hesaplanır.</div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>📄 Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">emp_monitor_ident (veya Monitoring ID), FeedbackCreatorName, client_name, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
-        <div class="upload-card"><h3>🗂️ Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
+        <div class="upload-card"><h3>📄 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">emp_monitor_ident (veya Monitoring ID), FeedbackCreatorName, client_name, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
+        <div class="upload-card"><h3>🗂️ 2. Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
+        <!-- YENİ KART: Kontrol Edilenler (Giriş Yapılan) -->
+        <div class="upload-card"><h3>✅ 3. Kontrol Edilenler (Giriş Yapılan)</h3><div class="file-drop" id="dropCheckedStep3"><input type="file" id="checkedFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (giriş yapılmış kayıtların ID'leri)</div></div><div class="upload-status" id="checkedStatusStep3">Henüz yüklenmedi</div></div>
       </div>
       <div class="report-tabs">
         <button class="btn btn-primary" id="reportTabProje">📊 Proje Bazlı</button>
         <button class="btn btn-ghost" id="reportTabProjeKisi">👥 Proje+Kişi</button>
         <button class="btn btn-ghost" id="reportTabKisi">🧑 Kişi Bazlı</button>
-        <button class="btn btn-ghost" id="reportTabGroup">📂 Grup Bazlı</button> <!-- YENİ EKLENDİ -->
+        <button class="btn btn-ghost" id="reportTabGroup">📂 Grup Bazlı</button>
       </div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
         <button class="btn btn-primary" id="calculateReportBtnStep3">📊 Raporu Oluştur</button>
