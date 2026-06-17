@@ -368,7 +368,7 @@ body.tp {
       </button>
     </div>
     <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
-      💡 <strong>Not:</strong> Export sırasında tarihler ISO (YYYY-MM-DD), sayısal boşluklar null olarak aktarılır.
+      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Boş Value satırları dahil edilir. Summary'de Data ve Date dahil.
     </div>
 
     <div class="tabs">
@@ -424,7 +424,7 @@ function showToast(msg, type = 'ok') {
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-// Period Adı → DD.MM.YYYY (orijinal)
+// Period Adı → GG.AA.YYYY
 function formatPeriodDate(val) {
   if (!val) return '';
   if (val instanceof Date) {
@@ -448,7 +448,7 @@ function formatPeriodDate(val) {
   return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
 }
 
-// Yeni Kayıt Tarihi → Date object (orijinal)
+// Yeni Kayıt Tarihi → Date object
 function parseDate(str) {
   if (!str) return null;
   if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
@@ -463,7 +463,7 @@ function parseDate(str) {
   return isNaN(dt.getTime()) ? null : dt;
 }
 
-// ==================== CORE: PHANTOM-SAFE EXCEL READ (orijinal) ====================
+// ==================== CORE: PHANTOM-SAFE EXCEL READ ====================
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -477,6 +477,7 @@ function readExcelFile(file) {
         if (!ws) { resolve([]); return; }
 
         const sparse = {};
+
         Object.keys(ws).forEach(key => {
           if (key.startsWith('!')) return;
           try {
@@ -528,7 +529,7 @@ function readExcelFile(file) {
   });
 }
 
-// ==================== UNPIVOT (orijinal) ====================
+// ==================== UNPIVOT ====================
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
   if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
@@ -558,7 +559,7 @@ async function unpivotFile(file, fileBaseName) {
       } else {
         v = String(v).trim();
       }
-      if (v === '') continue;
+      // FIX 1: Boş value olsa bile satırı ekle — SQL import için NULL yerine '' tercih edilir
       unpivoted.push({ ...fixed, Attribute: attr, Value: v, Data: fileBaseName });
     }
   }
@@ -580,17 +581,15 @@ async function processGroup(filesArray) {
   return all;
 }
 
-// ==================== TRANSFORM & SORT (orijinal) ====================
+// ==================== TRANSFORM & SORT ====================
 function transformTable(rows) {
   if (!rows.length) return [];
   return rows
     .map(row => {
       const r = { ...row };
       ['Form Puan', 'Csat Puanı'].forEach(k => {
-        if (r[k] !== undefined && r[k] !== '') {
-          const n = parseFloat(String(r[k]).replace(',', '.'));
-          r[k] = isNaN(n) ? '' : n;
-        }
+        const n = parseFloat(String(r[k]).replace(',', '.'));
+        r[k] = isNaN(n) ? '' : n;
       });
       r._sd = parseDate(r['Yeni Kayıt Tarihi']);
       return r;
@@ -609,7 +608,7 @@ function transformTable(rows) {
     }));
 }
 
-// ==================== SUMMARY (orijinal) ====================
+// ==================== SUMMARY ====================
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
   const seen = new Map();
@@ -624,43 +623,20 @@ function buildSummary(detayRows) {
   return Array.from(seen.values());
 }
 
-// ==================== EXPORT PIPELINE (SADECE BURASI DEĞİŞTİ) ====================
+// ==================== EXPORT PIPELINE ====================
 function serializeRows(data) {
-  // Tarih dönüşümü yardımcısı: DD.MM.YYYY → YYYY-MM-DD
-  function toISO(str) {
-    if (!str) return null;
-    const parts = str.split('.').map(Number);
-    if (parts.length === 3 && parts.every(p => !isNaN(p))) {
-      const [d, m, y] = parts;
-      const dt = new Date(y, m - 1, d);
-      if (!isNaN(dt.getTime())) {
-        return dt.toISOString().split('T')[0];
-      }
-    }
-    // Zaten ISO formatında olabilir (nadir)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    return str; // dönüştürülemezse olduğu gibi
-  }
-
   return data.map(row => {
     const out = {};
     for (const [k, v] of Object.entries(row)) {
       if (v instanceof Date) {
-        out[k] = v.toISOString().split('T')[0];
+        out[k] = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
       } else if (v === null || v === undefined) {
-        out[k] = null;
+        out[k] = '';
+      } else if (typeof v === 'string') {
+        // FIX 2: Satır sonu / tab karakterlerini temizle — SQL import hatalarını önler
+        out[k] = v.replace(/[\r\n\t]/g, ' ').trim();
       } else {
-        let val = v;
-        // Sayısal sütunlarda boş string → null
-        if (['Form Puan', 'Csat Puanı'].includes(k) && val === '') {
-          val = null;
-        }
-        // Tarih sütunlarını ISO'ya çevir
-        if (['Period Adı', 'Yeni Kayıt Tarihi', 'Date'].includes(k) && typeof val === 'string' && val !== '') {
-          const iso = toISO(val);
-          if (iso) val = iso;
-        }
-        out[k] = val;
+        out[k] = v;
       }
     }
     return out;
@@ -737,7 +713,7 @@ function exportAllCsv() {
   else            showToast('Hiç veri yok.', 'err');
 }
 
-// ==================== PROCESS ALL (orijinal) ====================
+// ==================== PROCESS ALL ====================
 async function processAll() {
   if (!detayFilesList.length && !listeFilesList.length) {
     showToast('Lütfen en az bir dosya yükleyin.', 'warn'); return;
@@ -761,7 +737,7 @@ async function processAll() {
   }
 }
 
-// ==================== TABLE RENDER (orijinal) ====================
+// ==================== TABLE RENDER ====================
 function renderTable(containerId, rows, maxRows = 400) {
   const container = getEl(containerId);
   if (!container) return;
@@ -814,7 +790,7 @@ function renderTable(containerId, rows, maxRows = 400) {
   }
 }
 
-// ==================== UI HELPERS (orijinal) ====================
+// ==================== UI HELPERS ====================
 function updateFileListUI() {
   const fmt = list => list.length
     ? list.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('')
