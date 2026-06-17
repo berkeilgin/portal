@@ -9,7 +9,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="css/theme.css">
 <style>
-/* Tüm stiller aynen korundu */
+/* Tüm stiller aynen korundu, sticky header eklendi */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; line-height:1.5; }
 .header { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; gap:1rem; }
@@ -46,10 +46,10 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 .stat-number { font-size:2rem; font-weight:800; font-family:'DM Mono',monospace; color:var(--text); }
 .stat-number.error { color:var(--accent3); }
 .stat-number.success { color:var(--accent); }
-.table-wrapper { overflow-x:auto; border-radius:1rem; border:1px solid var(--border); background:var(--surface); margin-top:1rem; }
+.table-wrapper { overflow-x:auto; border-radius:1rem; border:1px solid var(--border); background:var(--surface); margin-top:1rem; max-height:600px; overflow-y:auto; position:relative; }
 .error-table, .preview-table, .report-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
 th, td { padding:0.6rem 0.8rem; text-align:left; border-bottom:1px solid var(--border); }
-th { background:var(--bg); font-weight:600; color:var(--text); }
+th { background:var(--bg); font-weight:600; color:var(--text); position:sticky; top:0; z-index:10; }
 td { color:var(--text); }
 .badge-error { background:var(--accent3); color:white; padding:0.2rem 0.6rem; border-radius:2rem; font-size:0.7rem; display:inline-block; }
 .link-btn { background:var(--accent2); color:white; padding:0.25rem 0.75rem; border-radius:2rem; text-decoration:none; font-size:0.75rem; display:inline-flex; align-items:center; gap:0.25rem; }
@@ -60,6 +60,9 @@ td { color:var(--text); }
 .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }
 .modal-content { background:var(--surface); border-radius:1rem; max-width:80%; max-height:80%; overflow:auto; padding:1rem; }
 .report-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+.filter-row { display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+.filter-row input { background:var(--bg); border:1px solid var(--border); border-radius:0.5rem; padding:0.4rem 0.8rem; color:var(--text); font-size:0.85rem; flex:1; min-width:150px; }
+.filter-row input::placeholder { color:var(--muted); }
 @media (max-width:680px) { .main{padding:0 1rem;} .panel{padding:1.25rem;} .upload-grid{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -129,24 +132,39 @@ td { color:var(--text); }
 
     <!-- STEP 3 (Güncellendi) -->
     <div id="step3" class="step-content">
-      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Kalan</em></div>
-      <div class="sdesc">Görüşme listesi (emp_monitor_ident veya Monitoring ID) ile dağıtım geçmişi ve kontrol edilenler eşleştirilir. Dağıtılan, Giriş Yapılan (Kontrol Edilenler dosyasından) ve Giriş Yapılmayan adetleri hesaplanır.</div>
+      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Giriş Yapılmayan</em></div>
+      <div class="sdesc">Görüşme listesi, dağıtım geçmişi ve kontrol edilenler (giriş yapılan) dosyalarını yükleyin. Raporu oluşturmak için tüm dosyaları yükleyip "Raporu Oluştur" butonuna basın.</div>
       <div class="upload-grid">
         <div class="upload-card"><h3>📄 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">emp_monitor_ident (veya Monitoring ID), FeedbackCreatorName, client_name, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
         <div class="upload-card"><h3>🗂️ 2. Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
         <div class="upload-card"><h3>✅ 3. Kontrol Edilenler (Monitoring ID)</h3><div class="file-drop" id="dropCheckedStep3"><input type="file" id="checkedFileInputStep3" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (daha önce giriş yapılanlar)</div></div><div class="upload-status" id="checkedStatusStep3">Henüz yüklenmedi</div></div>
       </div>
-      <div class="report-tabs">
-        <button class="btn btn-primary" id="reportTabProje">📊 Proje Bazlı</button>
-        <button class="btn btn-ghost" id="reportTabProjeKisi">👥 Proje+Kişi</button>
-        <button class="btn btn-ghost" id="reportTabKisi">🧑 Kişi Bazlı</button>
-        <button class="btn btn-ghost" id="reportTabGroup">📂 Grup Bazlı</button>
-      </div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
         <button class="btn btn-primary" id="calculateReportBtnStep3">📊 Raporu Oluştur</button>
         <button class="btn btn-primary" id="exportReportBtnStep3" disabled>💾 Excel İndir</button>
       </div>
-      <div id="reportAreaStep3" style="display:none; margin-top:1rem;"><div class="table-wrapper"><table class="report-table"><thead id="reportHeaderStep3"></thead><tbody id="reportBodyStep3"></tbody></table></div></div>
+
+      <!-- Filtreler (STEP4 tarzı) -->
+      <div class="filter-row" id="reportFilterRowStep3" style="display:none;">
+        <input type="text" id="filterProjeStep3" placeholder="🔍 Proje filtrele...">
+        <input type="text" id="filterDeğerlendiriciStep3" placeholder="🔍 Değerlendirici filtrele...">
+        <input type="text" id="filterGrupStep3" placeholder="🔍 Grup filtrele...">
+      </div>
+
+      <div id="reportAreaStep3" style="display:none; margin-top:1rem;">
+        <div class="report-tabs">
+          <button class="btn btn-primary" id="reportTabProje">📊 Proje Bazlı</button>
+          <button class="btn btn-ghost" id="reportTabProjeKisi">👥 Proje+Kişi</button>
+          <button class="btn btn-ghost" id="reportTabKisi">🧑 Kişi Bazlı</button>
+          <button class="btn btn-ghost" id="reportTabGroup">📂 Grup Bazlı</button>
+        </div>
+        <div class="table-wrapper">
+          <table class="report-table">
+            <thead id="reportHeaderStep3"></thead>
+            <tbody id="reportBodyStep3"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="loader-bar" id="loaderStep3"><div class="loader-bar-inner"></div></div>
     </div>
 
