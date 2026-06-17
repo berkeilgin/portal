@@ -275,10 +275,9 @@ const HP_RULES = {
 const groups = {
   DM: {
     key: 'DM', name: 'DM',
-    filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
-    // 🆕 DM için extraFilter: sadece "operations supervisor" pozisyonuna sahip kayıtlar
-    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
-    sheetPerProject: true,
+filter: ref => ref.KaliteDesteği === 'Evet' && ref.Dil === 'DM',
+extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
+sheetPerProject: true,
     fileName: () => `DM_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   },
   ML: {
@@ -295,10 +294,9 @@ const groups = {
   },
   DONUSUM: {
     key: 'DONUSUM', name: 'Dönüşüm Projeleri',
-    filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
-    // 🆕 Dönüşüm için extraFilter: sadece "operations supervisor" pozisyonu
-    extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
-    sheetPerProject: false,
+filter: ref => ref.KaliteDesteği === 'Hayır' && ref.Dil === 'DM',
+extraFilter: rec => String(rec.position_code_type_full_name || '').trim().toLowerCase() === 'operations supervisor',
+sheetPerProject: false,
     fileName: () => `Dönüşüm Projeleri_Feedback Uyumluluk_(${formatDateForFilename()}).xlsx`
   }
 };
@@ -385,6 +383,12 @@ function getCumulativeCountsForGroup(gk, week) {
   distributionHistory[gk].forEach(e => {
     if (e.week < week && e.assignments) {
       e.assignments.forEach(a => {
+        // DM ve DONUSUM için: alan varsa sadece OS atamaları say
+        if ((gk === 'DM' || gk === 'DONUSUM') &&
+            a.position_code_type_full_name !== undefined &&
+            a.position_code_type_full_name !== '') {
+          if (String(a.position_code_type_full_name).trim().toLowerCase() !== 'operations supervisor') return;
+        }
         const key = `${a.FeedbackCreatorName}|${a.client_name}`;
         cnt.set(key, (cnt.get(key) || 0) + 1);
       });
@@ -452,16 +456,19 @@ function shuffle(arr) {
   }
   return a;
 }
+// YENİ
 function calculateDistributionForGroup(gk, week, groupDef) {
-  let extraFilterML = null;
+  let extraFilter = null;
   if (gk === 'ML') {
-    extraFilterML = (rec) => {
+    extraFilter = (rec) => {
       const pos = String(rec.reviewerPosition || '').trim().toLowerCase();
       const code = String(rec.position_code_type_full_name || '').trim().toLowerCase();
       return pos === 'quality assurance analyst i' && code === 'operations supervisor';
     };
+  } else if (groupDef.extraFilter) {
+    extraFilter = groupDef.extraFilter;
   }
-  const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, extraFilterML);
+  const available = getAvailableRecordsForGroup(gk, week, groupDef.filter, extraFilter);
   if (!available.length) return [];
   if (gk === 'ML') {
     const HP_NAME = 'hewlett packard inc';
@@ -520,14 +527,16 @@ async function saveGroupDistribution(gk, week, selected) {
       else hpGroup = 'HP_Turkish';
     }
     return {
-      FeedbackCreatorName: rec.FeedbackCreatorName,
-      client_name: rec.client_name,
-      emp_monitor_ident: rec.emp_monitor_ident,
-      employee_ident: rec.employee_ident || '',
-      dil: ref?.Dil || '',
-      dagitimTuru: ref?.['Dağıtım Türü'] || '',
-      hpGroup: hpGroup || undefined
-    };
+return {
+  FeedbackCreatorName: rec.FeedbackCreatorName,
+  client_name: rec.client_name,
+  emp_monitor_ident: rec.emp_monitor_ident,
+  employee_ident: rec.employee_ident || '',
+  position_code_type_full_name: String(rec.position_code_type_full_name || '').trim(),
+  dil: ref?.Dil || '',
+  dagitimTuru: ref?.['Dağıtım Türü'] || '',
+  hpGroup: hpGroup || undefined
+};
   });
   const newEntry = { week, date: new Date().toISOString(), distributedIdents: selected.map(r => String(r.emp_monitor_ident)), assignments };
   const idx = distributionHistory[gk].findIndex(h => h.week === week);
@@ -901,6 +910,16 @@ function addExtraButtonsStep2() {
     exportPreviewBtn.innerHTML = '📎 Önizlemeyi Dışa Aktar';
     exportPreviewBtn.style.marginLeft = '0.5rem';
     exportPreviewBtn.addEventListener('click', exportPreviewToExcel);
+    if (!document.getElementById('repairHistoryBtnStep2')) {
+  const repairBtn = document.createElement('button');
+  repairBtn.id = 'repairHistoryBtnStep2';
+  repairBtn.className = 'btn btn-ghost';
+  repairBtn.innerHTML = '🔧 Geçmişi Onar';
+  repairBtn.title = 'Eski JSON\'a position_code_type_full_name ekler ve güncellenmiş JSON\'u indirir';
+  repairBtn.style.marginLeft = '0.5rem';
+  repairBtn.addEventListener('click', repairHistoryWithPositionData);
+  buttonContainer.appendChild(repairBtn);
+}
     buttonContainer.insertBefore(exportPreviewBtn, document.getElementById('confirmBtnStep2'));
   }
   if (!document.getElementById('clearAllStep2Btn')) {
@@ -1513,6 +1532,42 @@ function clearAllHistoryData() {
     distributionAreaStep4.style.display = 'none';
     exportBtnStep4.disabled = true;
   }
+}
+
+async function repairHistoryWithPositionData() {
+  if (!mainDataStep2.length) {
+    alert('Önce görüşme listesini (Ana Excel) yükleyin, ardından bu butona tıklayın.');
+    return;
+  }
+  // emp_monitor_ident → position_code_type_full_name haritası
+  const positionMap = new Map();
+  mainDataStep2.forEach(rec => {
+    const ident = String(rec.emp_monitor_ident || '').trim();
+    if (ident) positionMap.set(ident, String(rec.position_code_type_full_name || '').trim());
+  });
+
+  let updatedCount = 0, notFoundCount = 0;
+  Object.keys(distributionHistory).forEach(gk => {
+    distributionHistory[gk].forEach(entry => {
+      (entry.assignments || []).forEach(ass => {
+        const ident = String(ass.emp_monitor_ident || '').trim();
+        if (positionMap.has(ident)) {
+          ass.position_code_type_full_name = positionMap.get(ident);
+          updatedCount++;
+        } else {
+          notFoundCount++;
+        }
+      });
+    });
+  });
+
+  saveAllHistories();
+  alert(
+    `✅ Güncellendi: ${updatedCount} atama\n` +
+    `⚠️ Bulunamadı (Excel'de yok): ${notFoundCount} atama\n\n` +
+    `Güncellenmiş JSON indiriliyor...`
+  );
+  exportAllHistory();
 }
 
 // Drag & Drop ve çoklu dosya yükleme
