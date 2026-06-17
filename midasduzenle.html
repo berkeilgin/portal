@@ -31,105 +31,292 @@ body {
   transition: 0.2s;
   line-height: 1.5;
 }
+
 body.dark {
-  --bg: #0f172a; --surface: #1e293b; --card: #1e293b; --card2: #334155;
-  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.2);
-  --text: #f1f5f9; --text-light: #cbd5e1; --muted: #94a3b8;
-  --accent: #34d399; --accent2: #60a5fa; --accent3: #f87171; --accent4: #fbbf24;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --card: #1e293b;
+  --card2: #334155;
+  --border: rgba(255, 255, 255, 0.08);
+  --border2: rgba(255, 255, 255, 0.2);
+  --text: #f1f5f9;
+  --text-light: #cbd5e1;
+  --muted: #94a3b8;
+  --accent: #34d399;
+  --accent2: #60a5fa;
+  --accent3: #f87171;
+  --accent4: #fbbf24;
 }
+
 body.light {
-  --bg: #f8fafc; --surface: #ffffff; --card: #ffffff; --card2: #f1f5f9;
-  --border: #e2e8f0; --border2: #cbd5e1; --text: #0f172a; --text-light: #334155;
-  --muted: #64748b; --accent: #059669; --accent2: #2563eb; --accent3: #dc2626; --accent4: #d97706;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card2: #f1f5f9;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --text-light: #334155;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent2: #2563eb;
+  --accent3: #dc2626;
+  --accent4: #d97706;
 }
+
 body.tp {
-  --bg: #0b0816; --surface: #18132b; --card: #1f1a36; --card2: #2a2342;
-  --border: rgba(255,0,130,0.2); --border2: rgba(255,0,130,0.4);
-  --text: #f5eef8; --text-light: #d9cdf0; --muted: #b9a6e0;
-  --accent: #ff66b5; --accent2: #c084fc; --accent3: #ff7b7b; --accent4: #fbbf24;
+  --bg: #0b0816;
+  --surface: #18132b;
+  --card: #1f1a36;
+  --card2: #2a2342;
+  --border: rgba(255, 0, 130, 0.2);
+  --border2: rgba(255, 0, 130, 0.4);
+  --text: #f5eef8;
+  --text-light: #d9cdf0;
+  --muted: #b9a6e0;
+  --accent: #ff66b5;
+  --accent2: #c084fc;
+  --accent3: #ff7b7b;
+  --accent4: #fbbf24;
 }
 
 .header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 24px; background: var(--surface);
-  border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
 .logo {
-  font-size: 1.5rem; font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 800;
   background: linear-gradient(135deg, var(--accent2), var(--accent));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  display: flex; align-items: center; gap: 8px;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.main { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; }
-.panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.5rem; }
-.upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.upload-card { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; padding: 1.25rem; transition: 0.2s; }
+
+.main {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.upload-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: 0.2s;
+}
+
 .file-drop {
-  border: 2px dashed var(--border2); border-radius: 1rem; padding: 1.2rem;
-  text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 0.75rem; background: var(--bg);
+  border: 2px dashed var(--border2);
+  border-radius: 1rem;
+  padding: 1.2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.2s;
+  margin-bottom: 0.75rem;
+  background: var(--bg);
 }
-.file-drop:hover, .file-drop.drag { border-color: var(--accent2); background: rgba(59,130,246,0.08); }
-.status-text { font-size: 0.8rem; font-weight: 500; color: var(--accent2); margin-top: 0.5rem; }
+
+.file-drop:hover, .file-drop.drag {
+  border-color: var(--accent2);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.status-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent2);
+  margin-top: 0.5rem;
+}
+
 .file-list {
-  font-size: 0.7rem; margin-top: 8px; max-height: 110px; overflow-y: auto;
-  color: var(--text-light); background: var(--bg); padding: 6px; border-radius: 12px;
+  font-size: 0.7rem;
+  margin-top: 8px;
+  max-height: 110px;
+  overflow-y: auto;
+  color: var(--text-light);
+  background: var(--bg);
+  padding: 6px;
+  border-radius: 12px;
 }
+
 .btn {
-  border: none; padding: 8px 18px; border-radius: 40px; font-weight: 600;
-  font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s;
 }
+
 .btn-primary { background: var(--accent2); color: white; }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-success { background: var(--accent); color: var(--text); }
 .btn-export { background: #8b5cf6; color: white; }
 .btn-export:hover { background: #7c3aed; }
 .btn-csv { background: #f59e0b; color: white; }
 .btn-csv:hover { background: #d97706; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-.btn-ghost:hover { border-color: var(--accent2); background: rgba(59,130,246,0.1); }
+.btn-ghost:hover { border-color: var(--accent2); background: rgba(59, 130, 246, 0.1); }
+
 .theme-btn {
-  background: transparent; border: 1px solid var(--border); padding: 6px 14px;
-  border-radius: 30px; font-size: 0.75rem; cursor: pointer; color: var(--text); font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
 }
-.theme-btn.active { background: var(--accent2); color: white; border-color: var(--accent2); }
+
+.theme-btn.active {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent2);
+}
+
 .table-wrapper {
-  overflow-x: auto; border-radius: 1rem; border: 1px solid var(--border);
-  margin-top: 1rem; background: var(--surface); max-height: 500px; overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  margin-top: 1rem;
+  background: var(--surface);
+  max-height: 500px;
+  overflow-y: auto;
 }
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-.data-table th { background: var(--card2); font-weight: 700; position: sticky; top: 0; color: var(--text); }
-.empty-state { text-align: center; padding: 2rem; color: var(--muted); }
-.action-bar { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 15px; align-items: center; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  background: var(--card2);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  color: var(--text);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.action-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0 15px;
+  align-items: center;
+}
+
 .toast {
-  position: fixed; bottom: 24px; right: 24px; background: var(--surface);
-  border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 20px;
-  z-index: 2000; font-size: 0.85rem; font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.2s ease;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 20px;
+  z-index: 2000;
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.2s ease;
 }
-@keyframes slideIn { from { opacity:0; transform:translateX(60px); } to { opacity:1; transform:translateX(0); } }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 .footer {
-  text-align: center; padding: 1.5rem; font-size: 0.75rem;
-  color: var(--muted); border-top: 1px solid var(--border); margin-top: 2rem;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
 }
-.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
 .tab-btn {
-  background: transparent; border: none; padding: 8px 20px; border-radius: 40px;
-  cursor: pointer; color: var(--muted); font-weight: 600; font-size: 0.85rem; transition: 0.2s;
+  background: transparent;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 40px;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: 0.2s;
 }
+
 .tab-btn.active { background: var(--accent2); color: white; }
+
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
+
 .icon { font-size: 1.1rem; display: inline-block; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div class="logo"><span class="icon">📊</span> Unpivot & Append Pro</div>
-  <div style="display:flex;gap:12px;align-items:center;">
-    <button class="btn btn-ghost" id="homeBtn" style="display:inline-flex;gap:6px;">
+  <div class="logo">
+    <span class="icon">📊</span> Unpivot & Append Pro
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <button class="btn btn-ghost" id="homeBtn" style="display: inline-flex; gap: 6px;">
       <span class="icon">🏠</span> Ana Sayfa
     </button>
-    <div class="theme-switch" style="display:flex;gap:6px;">
+    <div class="theme-switch" style="display: flex; gap: 6px;">
       <button class="theme-btn" data-theme="light">☀️ Açık</button>
       <button class="theme-btn" data-theme="grey">🌓 Gri</button>
       <button class="theme-btn" data-theme="dark">🌙 Koyu</button>
@@ -140,7 +327,7 @@ body.tp {
 
 <div class="main">
   <div class="panel">
-    <h2 style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;">
+    <h2 style="display: flex; gap: 8px; align-items: center; margin-bottom: 1rem;">
       <span class="icon">⚙️</span> Dosyaları Yükle (Birden Çok)
     </h2>
     <div class="upload-grid">
@@ -149,7 +336,7 @@ body.tp {
         <div class="file-drop" id="dropDetay">
           <input type="file" id="detayFiles" accept=".xlsx,.xls,.csv" multiple style="display:none;">
           <div><span class="icon">📂</span> Sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;margin-top:4px;">DetayListeChat, DetayListeIB ...</div>
+          <div style="font-size:0.7rem; margin-top: 4px;">DetayListeChat, DetayListeIB ...</div>
         </div>
         <div class="status-text" id="detayStatus">Henüz dosya seçilmedi</div>
         <div class="file-list" id="detayFileList"></div>
@@ -159,7 +346,7 @@ body.tp {
         <div class="file-drop" id="dropListe">
           <input type="file" id="listeFiles" accept=".xlsx,.xls,.csv" multiple style="display:none;">
           <div><span class="icon">📂</span> Sürükleyin veya tıklayın</div>
-          <div style="font-size:0.7rem;margin-top:4px;">ListeSeciliCevapChat, ListeSeciliCevapIB ...</div>
+          <div style="font-size:0.7rem; margin-top: 4px;">ListeSeciliCevapChat, ListeSeciliCevapIB ...</div>
         </div>
         <div class="status-text" id="listeStatus">Henüz dosya seçilmedi</div>
         <div class="file-list" id="listeFileList"></div>
@@ -167,13 +354,21 @@ body.tp {
     </div>
 
     <div class="action-bar">
-      <button class="btn btn-primary" id="processBtn"><span class="icon">⚡</span> Birleştir & Unpivot</button>
-      <button class="btn btn-export" id="exportExcelBtn"><span class="icon">📎</span> Excel (3 Dosya)</button>
-      <button class="btn btn-csv" id="exportCsvBtn"><span class="icon">📄</span> CSV (3 Dosya - SQL Ready)</button>
-      <button class="btn btn-ghost" id="clearBtn"><span class="icon">🗑️</span> Temizle</button>
+      <button class="btn btn-primary" id="processBtn">
+        <span class="icon">⚡</span> Birleştir & Unpivot
+      </button>
+      <button class="btn btn-export" id="exportExcelBtn">
+        <span class="icon">📎</span> Excel (3 Dosya)
+      </button>
+      <button class="btn btn-csv" id="exportCsvBtn">
+        <span class="icon">📄</span> CSV (3 Dosya - Hafif)
+      </button>
+      <button class="btn btn-ghost" id="clearBtn">
+        <span class="icon">🗑️</span> Temizle
+      </button>
     </div>
-    <div style="font-size:0.7rem;color:var(--accent4);margin-top:-8px;margin-bottom:12px;background:rgba(245,158,11,0.1);padding:6px 12px;border-radius:20px;">
-      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Başlıklar normalize edilir (trim + boşluk). Boş Value satırları dahil. SQL import için \r\n\t temizlenir.
+    <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
+      💡 <strong>Not:</strong> Export sırasında tarihler ISO (YYYY-MM-DD), sayısal boşluklar null olarak aktarılır.
     </div>
 
     <div class="tabs">
@@ -195,7 +390,7 @@ body.tp {
 </div>
 
 <footer class="footer">
-  <span class="icon">🔄</span> Power Query mantığı: "Müşteri Numarası" sonrası tüm sütunlar Unpivot | Data sütunu = dosya adı | phantom satır/sütun + başlık tutarsızlıkları otomatik temizlenir
+  <span class="icon">🔄</span> Power Query mantığı: "Müşteri Numarası" sonrası tüm sütunlar Unpivot | Data sütunu = dosya adı | phantom satır/sütun otomatik temizlenir
 </footer>
 
 <script>
@@ -207,9 +402,6 @@ const FIXED_COLUMNS = [
   "Link", "Call ID", "Agent Kapama", "Csat Puanı", "Dakika : Saniye", "Müşteri Numarası"
 ];
 
-// Normalize edilmiş FIXED_COLUMNS lookup — başlık karşılaştırmasında kullanılır
-const FIXED_COLUMNS_NORM = new Set(FIXED_COLUMNS.map(normalizeHeader));
-
 let detayFilesList = [];
 let listeFilesList = [];
 let processedDetay   = null;
@@ -218,6 +410,7 @@ let processedSummary = null;
 
 // ==================== UTILS ====================
 const getEl = id => document.getElementById(id.startsWith('#') ? id.slice(1) : id);
+
 const escapeHtml = str =>
   String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 
@@ -231,68 +424,55 @@ function showToast(msg, type = 'ok') {
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-// ==================== HEADER NORMALIZATION ====================
-// Farklı dosyalardaki başlıkların aynı sütunu göstermesi için:
-//   - Baştaki/sondaki boşlukları at
-//   - Birden fazla boşluğu tek boşluğa indir
-//   - SheetJS'in eklediği _1 / _2 dedup suffix'lerini temizle
-//   - Non-breaking space (0xA0) → normal boşluk
-function normalizeHeader(name) {
-  return String(name)
-    .replace(/\u00A0/g, ' ')   // non-breaking space → space
-    .trim()
-    .replace(/\s+/g, ' ')      // çoklu boşluk → tek boşluk
-    .replace(/_\d+$/, '');     // SheetJS _1 / _2 suffix'i temizle
-}
-
-// ==================== DATE HELPERS ====================
+// Period Adı → DD.MM.YYYY (orijinal)
 function formatPeriodDate(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    return `${String(val.getDate()).padStart(2,'0')}.${String(val.getMonth()+1).padStart(2,'0')}.${val.getFullYear()}`;
+    const dd = String(val.getDate()).padStart(2,'0');
+    const mm = String(val.getMonth()+1).padStart(2,'0');
+    return `${dd}.${mm}.${val.getFullYear()}`;
   }
   const s = String(val).trim().split(' ')[0];
   let d, m, y;
-  if (s.includes('-')) { [y,m,d] = s.split('-').map(Number); d = d||1; }
-  else if (s.includes('.')) {
+  if (s.includes('-')) {
+    [y, m, d] = s.split('-').map(Number); d = d || 1;
+  } else if (s.includes('.')) {
     const p = s.split('.');
-    if (p[0].length === 4) { [y,m,d] = p.map(Number); d = d||1; }
-    else { [d,m,y] = p.map(Number); }
-  } else if (s.includes('/')) { [d,m,y] = s.split('/').map(Number); }
-  else return s;
-  const dt = new Date(y, m-1, d);
+    if (p[0].length === 4) { [y, m, d] = p.map(Number); d = d || 1; }
+    else { [d, m, y] = p.map(Number); }
+  } else if (s.includes('/')) {
+    [d, m, y] = s.split('/').map(Number);
+  } else return s;
+  const dt = new Date(y, m - 1, d);
   if (isNaN(dt.getTime())) return s;
   return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
 }
 
+// Yeni Kayıt Tarihi → Date object (orijinal)
 function parseDate(str) {
   if (!str) return null;
   if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
   const s = String(str).trim().split(' ')[0];
   let d, m, y;
-  if (s.includes('.')) { [d,m,y] = s.split('.').map(Number); }
-  else if (s.includes('/')) { [d,m,y] = s.split('/').map(Number); }
-  else if (s.includes('-')) { [y,m,d] = s.split('-').map(Number); }
+  if (s.includes('.')) { [d, m, y] = s.split('.').map(Number); }
+  else if (s.includes('/')) { [d, m, y] = s.split('/').map(Number); }
+  else if (s.includes('-')) { [y, m, d] = s.split('-').map(Number); }
   else return null;
-  if (!d||!m||!y) return null;
-  const dt = new Date(y, m-1, d);
+  if (!d || !m || !y) return null;
+  const dt = new Date(y, m - 1, d);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
-function dateToStr(d) {
-  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
-}
-
-// ==================== CORE: PHANTOM-SAFE EXCEL READ ====================
-// Object.keys(ws) ile sadece gerçekten dolu hücreleri iterate eder;
-// !ref range'indeki phantom satır/sütunları tamamen atlar.
-// Başlıklar normalizeHeader() ile temizlenerek dosyalar arası eşleşme sağlanır.
+// ==================== CORE: PHANTOM-SAFE EXCEL READ (orijinal) ====================
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates:true });
+        const wb = XLSX.read(new Uint8Array(e.target.result), {
+          type: 'array',
+          cellDates: true
+        });
         const ws = wb.Sheets[wb.SheetNames[0]];
         if (!ws) { resolve([]); return; }
 
@@ -305,43 +485,35 @@ function readExcelFile(file) {
             if (!cell || cell.v === undefined || cell.v === null || cell.v === '') return;
             if (!sparse[r]) sparse[r] = {};
             sparse[r][c] = cell.v;
-          } catch(_) {}
+          } catch (_) {}
         });
 
-        const rowIdxs = Object.keys(sparse).map(Number).sort((a,b) => a-b);
+        const rowIdxs = Object.keys(sparse).map(Number).sort((a, b) => a - b);
         if (!rowIdxs.length) { resolve([]); return; }
 
-        const hdrRow = sparse[rowIdxs[0]];
+        const hdrRowIdx = rowIdxs[0];
+        const hdrRow    = sparse[hdrRowIdx];
 
-        // Başlıkları normalizeHeader ile temizle → dosyalar arası sütun eşleşmesi
         const validCols = Object.keys(hdrRow)
-          .map(ci => ({ ci: Number(ci), name: normalizeHeader(String(hdrRow[ci])) }))
+          .map(ci => ({ ci: Number(ci), name: String(hdrRow[ci]).trim() }))
           .filter(({ name }) => name !== '')
-          .sort((a,b) => a.ci - b.ci);
+          .sort((a, b) => a.ci - b.ci);
 
         if (!validCols.length) { resolve([]); return; }
-
-        // Aynı normalize başlığa sahip birden fazla sütun varsa ilkini al
-        const seenNames = new Set();
-        const uniqueCols = validCols.filter(({ name }) => {
-          if (seenNames.has(name)) return false;
-          seenNames.add(name);
-          return true;
-        });
 
         const rows = [];
         for (let i = 1; i < rowIdxs.length; i++) {
           const ri      = rowIdxs[i];
           const rowData = sparse[ri] || {};
 
-          const hasData = uniqueCols.some(({ ci }) => {
+          const hasData = validCols.some(({ ci }) => {
             const v = rowData[ci];
             return v !== undefined && v !== null && String(v).trim() !== '';
           });
           if (!hasData) continue;
 
           const obj = {};
-          uniqueCols.forEach(({ ci, name }) => {
+          validCols.forEach(({ ci, name }) => {
             const v = rowData[ci];
             obj[name] = (v === undefined || v === null) ? '' : v;
           });
@@ -349,54 +521,44 @@ function readExcelFile(file) {
         }
 
         resolve(rows);
-      } catch(err) { reject(err); }
+      } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
 }
 
-// ==================== UNPIVOT ====================
+// ==================== UNPIVOT (orijinal) ====================
 async function unpivotFile(file, fileBaseName) {
   const rows = await readExcelFile(file);
   if (!rows.length) throw new Error(`${file.name} boş veya okunamadı`);
 
   const allCols  = Object.keys(rows[0]);
-  // Normalize edilmiş başlık → orijinal FIXED_COLUMNS adı eşlemesi
-  const fixedNormToName = {};
-  FIXED_COLUMNS.forEach(fc => { fixedNormToName[normalizeHeader(fc)] = fc; });
-
-  // Attribute sütunları: normalize başlığı FIXED_COLUMNS içinde olmayanlar
-  const attrCols = allCols.filter(c => !FIXED_COLUMNS_NORM.has(normalizeHeader(c)));
-
+  const attrCols = allCols.filter(c => !FIXED_COLUMNS.includes(c));
   const unpivoted = [];
 
   for (const row of rows) {
     const fixed = {};
-
-    // Sabit sütunları normalize başlık üzerinden eşle
-    FIXED_COLUMNS.forEach(fc => {
-      const normFc = normalizeHeader(fc);
-      // Satırda hangi key normalize edilerek bu fc'ye karşılık geliyor?
-      const matchKey = allCols.find(k => normalizeHeader(k) === normFc);
-      let v = matchKey ? (row[matchKey] ?? '') : '';
-
-      if (fc === 'Period Adı') {
+    for (const col of FIXED_COLUMNS) {
+      let v = row[col] ?? '';
+      if (col === 'Period Adı') {
         v = formatPeriodDate(v);
       } else if (v instanceof Date) {
-        v = dateToStr(v);
+        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
       } else {
         v = String(v).trim();
       }
-      fixed[fc] = v;
-    });
+      fixed[col] = v;
+    }
 
     for (const attr of attrCols) {
       let v = row[attr] ?? '';
-      if (v instanceof Date) { v = dateToStr(v); }
-      else { v = String(v).trim(); }
-
-      // Boş olsa bile satırı ekle — SQL tarafında NULL olarak işlenir
+      if (v instanceof Date) {
+        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+      } else {
+        v = String(v).trim();
+      }
+      if (v === '') continue;
       unpivoted.push({ ...fixed, Attribute: attr, Value: v, Data: fileBaseName });
     }
   }
@@ -410,7 +572,7 @@ async function processGroup(filesArray) {
       const baseName = item.name.replace(/\.(xlsx|xls|csv)$/i, '');
       const rows = await unpivotFile(item.file, baseName);
       all.push(...rows);
-    } catch(err) {
+    } catch (err) {
       showToast(`${item.name} hata: ${err.message}`, 'err');
       throw err;
     }
@@ -418,20 +580,22 @@ async function processGroup(filesArray) {
   return all;
 }
 
-// ==================== TRANSFORM & SORT ====================
+// ==================== TRANSFORM & SORT (orijinal) ====================
 function transformTable(rows) {
   if (!rows.length) return [];
   return rows
     .map(row => {
       const r = { ...row };
       ['Form Puan', 'Csat Puanı'].forEach(k => {
-        const n = parseFloat(String(r[k]).replace(',', '.'));
-        r[k] = isNaN(n) ? '' : n;
+        if (r[k] !== undefined && r[k] !== '') {
+          const n = parseFloat(String(r[k]).replace(',', '.'));
+          r[k] = isNaN(n) ? '' : n;
+        }
       });
       r._sd = parseDate(r['Yeni Kayıt Tarihi']);
       return r;
     })
-    .sort((a,b) => {
+    .sort((a, b) => {
       if (!a._sd && !b._sd) return 0;
       if (!a._sd) return 1;
       if (!b._sd) return -1;
@@ -439,11 +603,13 @@ function transformTable(rows) {
     })
     .map(({ _sd, ...rest }) => ({
       ...rest,
-      Date: _sd ? dateToStr(_sd) : ''
+      Date: _sd
+        ? `${String(_sd.getDate()).padStart(2,'0')}.${String(_sd.getMonth()+1).padStart(2,'0')}.${_sd.getFullYear()}`
+        : ''
     }));
 }
 
-// ==================== SUMMARY ====================
+// ==================== SUMMARY (orijinal) ====================
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
   const seen = new Map();
@@ -458,26 +624,43 @@ function buildSummary(detayRows) {
   return Array.from(seen.values());
 }
 
-// ==================== EXPORT PIPELINE ====================
-// SQL uyumlu serialize:
-//   - Date → GG.AA.YYYY string
-//   - null/undefined → '' (SQL NULL olarak import edilir)
-//   - string → \r \n \t temizlenir (CSV satır bütünlüğü korunur)
-//   - number → sayısal tip korunur (BULK INSERT / COPY için önemli)
+// ==================== EXPORT PIPELINE (SADECE BURASI DEĞİŞTİ) ====================
 function serializeRows(data) {
+  // Tarih dönüşümü yardımcısı: DD.MM.YYYY → YYYY-MM-DD
+  function toISO(str) {
+    if (!str) return null;
+    const parts = str.split('.').map(Number);
+    if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+      const [d, m, y] = parts;
+      const dt = new Date(y, m - 1, d);
+      if (!isNaN(dt.getTime())) {
+        return dt.toISOString().split('T')[0];
+      }
+    }
+    // Zaten ISO formatında olabilir (nadir)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    return str; // dönüştürülemezse olduğu gibi
+  }
+
   return data.map(row => {
     const out = {};
     for (const [k, v] of Object.entries(row)) {
       if (v instanceof Date) {
-        out[k] = dateToStr(v);
+        out[k] = v.toISOString().split('T')[0];
       } else if (v === null || v === undefined) {
-        out[k] = '';
-      } else if (typeof v === 'string') {
-        // SQL import'ta satır sonu / tab karakterleri parse hatasına yol açar
-        out[k] = v.replace(/[\r\n\t]/g, ' ').trim();
+        out[k] = null;
       } else {
-        // number, boolean → olduğu gibi bırak (SheetJS doğru tip yazar)
-        out[k] = v;
+        let val = v;
+        // Sayısal sütunlarda boş string → null
+        if (['Form Puan', 'Csat Puanı'].includes(k) && val === '') {
+          val = null;
+        }
+        // Tarih sütunlarını ISO'ya çevir
+        if (['Period Adı', 'Yeni Kayıt Tarihi', 'Date'].includes(k) && typeof val === 'string' && val !== '') {
+          const iso = toISO(val);
+          if (iso) val = iso;
+        }
+        out[k] = val;
       }
     }
     return out;
@@ -517,7 +700,6 @@ function downloadCsv(data, filename) {
   if (!prepared) return false;
   const ws  = XLSX.utils.json_to_sheet(prepared);
   const csv = XLSX.utils.sheet_to_csv(ws);
-  // UTF-8 BOM → SQL Server / SSMS import için Türkçe karakter uyumu
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -555,7 +737,7 @@ function exportAllCsv() {
   else            showToast('Hiç veri yok.', 'err');
 }
 
-// ==================== PROCESS ALL ====================
+// ==================== PROCESS ALL (orijinal) ====================
 async function processAll() {
   if (!detayFilesList.length && !listeFilesList.length) {
     showToast('Lütfen en az bir dosya yükleyin.', 'warn'); return;
@@ -573,13 +755,13 @@ async function processAll() {
     renderTable('listeTableContainer',   processedListe,   400);
     renderTable('summaryTableContainer', processedSummary, 400);
     showToast(`✅ Detay: ${processedDetay.length} | Liste: ${processedListe.length} | Summary: ${processedSummary.length}`, 'ok');
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     showToast(`Hata: ${err.message}`, 'err');
   }
 }
 
-// ==================== TABLE RENDER ====================
+// ==================== TABLE RENDER (orijinal) ====================
 function renderTable(containerId, rows, maxRows = 400) {
   const container = getEl(containerId);
   if (!container) return;
@@ -608,10 +790,10 @@ function renderTable(containerId, rows, maxRows = 400) {
     columns.forEach(col => {
       const td = document.createElement('td');
       let v = row[col];
-      if (v instanceof Date)                  v = v.toLocaleDateString('tr-TR');
+      if (v instanceof Date)           v = v.toLocaleDateString('tr-TR');
       else if (v === null || v === undefined) v = '';
-      else                                    v = String(v);
-      td.textContent = v.length > 100 ? v.slice(0,100) + '…' : v;
+      else v = String(v);
+      td.textContent = v.length > 100 ? v.slice(0, 100) + '…' : v;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -632,7 +814,7 @@ function renderTable(containerId, rows, maxRows = 400) {
   }
 }
 
-// ==================== UI HELPERS ====================
+// ==================== UI HELPERS (orijinal) ====================
 function updateFileListUI() {
   const fmt = list => list.length
     ? list.map(f => `<div><span class="icon">📄</span> ${escapeHtml(f.name)}</div>`).join('')
@@ -652,7 +834,7 @@ function setupDropZone(dropId, inputId, isDetay) {
   const handle = files => {
     const valid = Array.from(files).filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
     if (!valid.length) { showToast('Sadece Excel veya CSV desteklenir.', 'warn'); return; }
-    (isDetay ? detayFilesList : listeFilesList).push(...valid.map(f => ({ file:f, name:f.name })));
+    (isDetay ? detayFilesList : listeFilesList).push(...valid.map(f => ({ file: f, name: f.name })));
     updateFileListUI();
     showToast(`${valid.length} dosya eklendi.`, 'ok');
   };
@@ -700,17 +882,21 @@ function setTheme(theme) {
 function init() {
   setupDropZone('dropDetay', 'detayFiles', true);
   setupDropZone('dropListe', 'listeFiles', false);
+
   getEl('processBtn').addEventListener('click', processAll);
   getEl('exportExcelBtn').addEventListener('click', exportAllExcel);
   getEl('exportCsvBtn').addEventListener('click', exportAllCsv);
   getEl('clearBtn').addEventListener('click', clearAll);
   getEl('homeBtn').addEventListener('click', () => location.href = 'index.html');
+
   document.querySelectorAll('.theme-btn').forEach(btn =>
     btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme')))
   );
+
   initTabs();
   setTheme(localStorage.getItem('dataMergeTheme') || 'grey');
   updateFileListUI();
+
   getEl('detayTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> DetayListe dosyalarını yükleyip "Birleştir & Unpivot" butonuna tıklayın</div>';
   getEl('listeTableContainer').innerHTML   = '<div class="empty-state"><span class="icon">📂</span> ListeSecili dosyalarını yükleyip işlemi başlatın</div>';
   getEl('summaryTableContainer').innerHTML = '<div class="empty-state"><span class="icon">⚙️</span> İşlem sonrası Summary görünecek</div>';
