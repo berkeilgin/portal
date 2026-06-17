@@ -993,8 +993,8 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (YENİ - Gelişmiş Raporlama) ====================
-let reportMainData = []; // Artık { monitorId, feedbackCreatorName, clientName, checkListCreated, position }
+// ==================== STEP 3 (GÜNCELLENDİ - Giriş Oranı & 4. Dosya Entegrasyonu) ====================
+let reportMainData = []; // { monitorId, feedbackCreatorName, clientName, checkListCreated, position }
 let reportHistory3 = { DM: [], ML: [], DONUSUM: [] };
 let currentReportView = 'proje';
 
@@ -1008,11 +1008,10 @@ const reportBodyS3 = document.getElementById('reportBodyStep3');
 const reportHeaderS3 = document.getElementById('reportHeaderStep3');
 const reportAreaS3 = document.getElementById('reportAreaStep3');
 
-// Sekmeler
 const tabProje = document.getElementById('reportTabProje');
 const tabProjeKisi = document.getElementById('reportTabProjeKisi');
 const tabKisi = document.getElementById('reportTabKisi');
-const tabGroup = document.getElementById('reportTabGroup'); // YENİ
+const tabGroup = document.getElementById('reportTabGroup');
 
 function showLoaderStep3(show) {
   const loader = document.getElementById('loaderStep3');
@@ -1028,7 +1027,7 @@ function findColumnNameStep3(columns, possibleNames) {
   return null;
 }
 
-// 1. Görüşme Listesini Yükle (Artık Step2'deki ana liste formatını da destekliyor)
+// 1. Görüşme Listesini Yükle
 function loadMainExcelS3(file) {
   if (!file) return;
   showLoaderStep3(true);
@@ -1041,7 +1040,6 @@ function loadMainExcelS3(file) {
       if (!rows.length) throw new Error('Dosya boş');
       const cols = Object.keys(rows[0]);
 
-      // Eşleştirme: Önce emp_monitor_ident, yoksa Monitoring ID
       const monCol = findColumnNameStep3(cols, ['emp_monitor_ident', 'Monitoring ID', 'monitoring id']);
       const fbCol = findColumnNameStep3(cols, ['FeedbackCreatorName', 'Feedback Creator Name']);
       const clientCol = findColumnNameStep3(cols, ['client_name', 'Client Name', 'Proje']);
@@ -1077,7 +1075,7 @@ function loadMainExcelS3(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// Geçmiş JSON yükleme (aynı)
+// Geçmiş JSON yükleme
 function loadHistoryJSONS3(file) {
   if (!file) return;
   showLoaderStep3(true);
@@ -1106,17 +1104,19 @@ function loadHistoryJSONS3(file) {
   reader.readAsText(file);
 }
 
-// Dağıtım Haritası Oluştur (monitorId -> detaylar)
+// Dağıtım Haritası Oluştur (checkedMonitoringIds set'ini de kullan)
 function buildDistributedMapS3() {
   const map = new Map();
   const groupMap = { DM: 'DM', ML: 'ML', DONUSUM: 'Dönüşüm' };
+  // checkedMonitoringIds global set'inden yararlan
+  const checkedSet = (typeof checkedMonitoringIds !== 'undefined') ? checkedMonitoringIds : new Set();
+
   for (const [gKey, entries] of Object.entries(reportHistory3)) {
     const groupName = groupMap[gKey] || gKey;
     for (const entry of entries || []) {
       for (const ass of entry.assignments || []) {
         const ident = String(ass.emp_monitor_ident || '').trim();
         if (ident) {
-          // En son dağıtım mı? Tarihe göre en sonuncuyu alalım (isteğe bağlı, şimdilik üzerine yazıyoruz)
           map.set(ident, {
             client_name: ass.client_name || '',
             feedbackCreatorName: ass.FeedbackCreatorName || '',
@@ -1126,7 +1126,8 @@ function buildDistributedMapS3() {
             hpGroup: ass.hpGroup || '',
             position: ass.position_code_type_full_name || '',
             dil: ass.dil || '',
-            dagitimTuru: ass.dagitimTuru || ''
+            dagitimTuru: ass.dagitimTuru || '',
+            isChecked: checkedSet.has(ident) // 4. dosyadan gelen kontrol
           });
         }
       }
@@ -1156,7 +1157,8 @@ function generateReportS3() {
       distDil: dist ? dist.dil : '',
       distDagitimTuru: dist ? dist.dagitimTuru : '',
       isDistributed: isDistributed,
-      hasCheckList: rec.checkListCreated !== '' && rec.checkListCreated !== '0' // Giriş yapılmış mı?
+      isChecked: dist ? dist.isChecked : false, // 4. dosyadan gelen bilgi
+      hasCheckList: rec.checkListCreated !== '' && rec.checkListCreated !== '0'
     };
   });
 
@@ -1165,52 +1167,67 @@ function generateReportS3() {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.clientName) return;
-      if (!map.has(rec.clientName)) map.set(rec.clientName, { total: 0, dist: 0, check: 0 });
+      if (!map.has(rec.clientName)) map.set(rec.clientName, { total: 0, dist: 0, checked: 0 });
       const s = map.get(rec.clientName);
       s.total++;
       if (rec.isDistributed) s.dist++;
-      if (rec.hasCheckList) s.check++;
+      if (rec.isDistributed && rec.isChecked) s.checked++; // Sadece dağıtılanlar içinde girilenler
     });
-    headers = ['Proje Adı', 'Dağıtılan', 'Giriş Yapılan', 'Kalan (Dağıtılmayan)', 'Toplam'];
-    rows = Array.from(map.entries()).map(([p, s]) => [p, s.dist, s.check, s.total - s.dist, s.total]);
+    headers = ['Proje Adı', 'Dağıtılan', 'Girilen', 'Kalan (Girilmeyen)', 'Giriş Oranı (%)', 'Toplam'];
+    rows = Array.from(map.entries()).map(([p, s]) => {
+      const kalan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+      return [p, s.dist, s.checked, kalan, oran, s.total];
+    });
   } else if (currentReportView === 'projekisi') {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.clientName || !rec.feedbackCreatorName) return;
       const key = `${rec.clientName}|${rec.feedbackCreatorName}`;
-      if (!map.has(key)) map.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, check: 0 });
+      if (!map.has(key)) map.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, checked: 0 });
       const s = map.get(key);
       s.total++;
       if (rec.isDistributed) s.dist++;
-      if (rec.hasCheckList) s.check++;
+      if (rec.isDistributed && rec.isChecked) s.checked++;
     });
-    headers = ['Proje', 'Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Kalan', 'Toplam'];
-    rows = Array.from(map.values()).map(v => [v.proje, v.kisi, v.dist, v.check, v.total - v.dist, v.total]);
+    headers = ['Proje', 'Değerlendirici', 'Dağıtılan', 'Girilen', 'Kalan (Girilmeyen)', 'Giriş Oranı (%)', 'Toplam'];
+    rows = Array.from(map.values()).map(v => {
+      const kalan = v.dist - v.checked;
+      const oran = v.dist > 0 ? ((v.checked / v.dist) * 100).toFixed(1) : 0;
+      return [v.proje, v.kisi, v.dist, v.checked, kalan, oran, v.total];
+    });
   } else if (currentReportView === 'kisi') {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.feedbackCreatorName) return;
-      if (!map.has(rec.feedbackCreatorName)) map.set(rec.feedbackCreatorName, { total: 0, dist: 0, check: 0 });
+      if (!map.has(rec.feedbackCreatorName)) map.set(rec.feedbackCreatorName, { total: 0, dist: 0, checked: 0 });
       const s = map.get(rec.feedbackCreatorName);
       s.total++;
       if (rec.isDistributed) s.dist++;
-      if (rec.hasCheckList) s.check++;
+      if (rec.isDistributed && rec.isChecked) s.checked++;
     });
-    headers = ['Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Kalan', 'Toplam'];
-    rows = Array.from(map.entries()).map(([k, s]) => [k, s.dist, s.check, s.total - s.dist, s.total]);
+    headers = ['Değerlendirici', 'Dağıtılan', 'Girilen', 'Kalan (Girilmeyen)', 'Giriş Oranı (%)', 'Toplam'];
+    rows = Array.from(map.entries()).map(([k, s]) => {
+      const kalan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+      return [k, s.dist, s.checked, kalan, oran, s.total];
+    });
   } else if (currentReportView === 'group') {
-    // Grup Bazlı (DM / ML / Dönüşüm / Dağıtılmadı)
     const map = new Map();
     enriched.forEach(rec => {
       const group = rec.distGroup || 'Dağıtılmadı';
-      if (!map.has(group)) map.set(group, { total: 0, dist: 0, check: 0 });
+      if (!map.has(group)) map.set(group, { total: 0, dist: 0, checked: 0 });
       const s = map.get(group);
       s.total++;
       if (rec.isDistributed) s.dist++;
-      if (rec.hasCheckList) s.check++;
+      if (rec.isDistributed && rec.isChecked) s.checked++;
     });
-    headers = ['Grup', 'Dağıtılan', 'Giriş Yapılan', 'Kalan (Dağıtılmayan)', 'Toplam'];
-    rows = Array.from(map.entries()).map(([g, s]) => [g, s.dist, s.check, s.total - s.dist, s.total]);
+    headers = ['Grup', 'Dağıtılan', 'Girilen', 'Kalan (Girilmeyen)', 'Giriş Oranı (%)', 'Toplam'];
+    rows = Array.from(map.entries()).map(([g, s]) => {
+      const kalan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+      return [g, s.dist, s.checked, kalan, oran, s.total];
+    });
   }
 
   renderReportTableS3(headers, rows);
@@ -1252,50 +1269,67 @@ function exportReportS3() {
       distDil: dist ? dist.dil : '',
       distDagitimTuru: dist ? dist.dagitimTuru : '',
       isDistributed: !!dist,
+      isChecked: dist ? dist.isChecked : false,
       hasCheckList: rec.checkListCreated !== '' && rec.checkListCreated !== '0'
     };
   });
 
   // 2. Proje Bazlı
   const projMap = new Map();
-  enriched.forEach(rec => { if (!rec.clientName) return; if (!projMap.has(rec.clientName)) projMap.set(rec.clientName, { total: 0, dist: 0, check: 0 }); const s = projMap.get(rec.clientName); s.total++; if (rec.isDistributed) s.dist++; if (rec.hasCheckList) s.check++; });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(projMap.entries()).map(([p, s]) => ({ 'Proje': p, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.check, 'Kalan': s.total - s.dist, 'Toplam': s.total }))), 'Proje_Bazlı');
+  enriched.forEach(rec => { if (!rec.clientName) return; if (!projMap.has(rec.clientName)) projMap.set(rec.clientName, { total: 0, dist: 0, checked: 0 }); const s = projMap.get(rec.clientName); s.total++; if (rec.isDistributed) s.dist++; if (rec.isDistributed && rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(projMap.entries()).map(([p, s]) => {
+    const kalan = s.dist - s.checked;
+    const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+    return { 'Proje': p, 'Dağıtılan': s.dist, 'Girilen': s.checked, 'Kalan (Girilmeyen)': kalan, 'Giriş Oranı %': oran, 'Toplam': s.total };
+  })), 'Proje_Bazlı');
 
   // 3. Proje+Kişi
   const pkMap = new Map();
-  enriched.forEach(rec => { if (!rec.clientName || !rec.feedbackCreatorName) return; const key = `${rec.clientName}|${rec.feedbackCreatorName}`; if (!pkMap.has(key)) pkMap.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, check: 0 }); const s = pkMap.get(key); s.total++; if (rec.isDistributed) s.dist++; if (rec.hasCheckList) s.check++; });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(pkMap.values()).map(v => ({ 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan': v.dist, 'Giriş Yapılan': v.check, 'Kalan': v.total - v.dist, 'Toplam': v.total }))), 'Proje_Kisi');
+  enriched.forEach(rec => { if (!rec.clientName || !rec.feedbackCreatorName) return; const key = `${rec.clientName}|${rec.feedbackCreatorName}`; if (!pkMap.has(key)) pkMap.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, checked: 0 }); const s = pkMap.get(key); s.total++; if (rec.isDistributed) s.dist++; if (rec.isDistributed && rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(pkMap.values()).map(v => {
+    const kalan = v.dist - v.checked;
+    const oran = v.dist > 0 ? ((v.checked / v.dist) * 100).toFixed(1) : 0;
+    return { 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan': v.dist, 'Girilen': v.checked, 'Kalan (Girilmeyen)': kalan, 'Giriş Oranı %': oran, 'Toplam': v.total };
+  })), 'Proje_Kisi');
 
   // 4. Kişi Bazlı
   const kisiMap = new Map();
-  enriched.forEach(rec => { if (!rec.feedbackCreatorName) return; if (!kisiMap.has(rec.feedbackCreatorName)) kisiMap.set(rec.feedbackCreatorName, { total: 0, dist: 0, check: 0 }); const s = kisiMap.get(rec.feedbackCreatorName); s.total++; if (rec.isDistributed) s.dist++; if (rec.hasCheckList) s.check++; });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(kisiMap.entries()).map(([k, s]) => ({ 'Değerlendirici': k, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.check, 'Kalan': s.total - s.dist, 'Toplam': s.total }))), 'Kisi_Bazlı');
+  enriched.forEach(rec => { if (!rec.feedbackCreatorName) return; if (!kisiMap.has(rec.feedbackCreatorName)) kisiMap.set(rec.feedbackCreatorName, { total: 0, dist: 0, checked: 0 }); const s = kisiMap.get(rec.feedbackCreatorName); s.total++; if (rec.isDistributed) s.dist++; if (rec.isDistributed && rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(kisiMap.entries()).map(([k, s]) => {
+    const kalan = s.dist - s.checked;
+    const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+    return { 'Değerlendirici': k, 'Dağıtılan': s.dist, 'Girilen': s.checked, 'Kalan (Girilmeyen)': kalan, 'Giriş Oranı %': oran, 'Toplam': s.total };
+  })), 'Kisi_Bazlı');
 
-  // 5. Grup Bazlı (DM/ML/Dönüşüm/Dağıtılmadı)
+  // 5. Grup Bazlı
   const groupMap = new Map();
   enriched.forEach(rec => {
     const g = rec.distGroup || 'Dağıtılmadı';
-    if (!groupMap.has(g)) groupMap.set(g, { total: 0, dist: 0, check: 0 });
+    if (!groupMap.has(g)) groupMap.set(g, { total: 0, dist: 0, checked: 0 });
     const s = groupMap.get(g);
     s.total++;
     if (rec.isDistributed) s.dist++;
-    if (rec.hasCheckList) s.check++;
+    if (rec.isDistributed && rec.isChecked) s.checked++;
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(groupMap.entries()).map(([g, s]) => ({ 'Grup': g, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.check, 'Kalan': s.total - s.dist, 'Toplam': s.total }))), 'Grup_Bazlı');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(groupMap.entries()).map(([g, s]) => {
+    const kalan = s.dist - s.checked;
+    const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) : 0;
+    return { 'Grup': g, 'Dağıtılan': s.dist, 'Girilen': s.checked, 'Kalan (Girilmeyen)': kalan, 'Giriş Oranı %': oran, 'Toplam': s.total };
+  })), 'Grup_Bazlı');
 
-  // 6. RAW DATA (Pivot için ideal)
+  // 6. RAW DATA (Pivot için)
   const rawData = enriched.map(rec => ({
     'Grup': rec.distGroup,
     'Proje': rec.clientName,
     'Değerlendirici': rec.feedbackCreatorName,
     'Monitoring ID': rec.monitorId,
     'Dağıtım Durumu': rec.isDistributed ? 'Evet' : 'Hayır',
+    'Giriş Yapıldı mı?': (rec.isDistributed && rec.isChecked) ? 'Evet' : 'Hayır',
     'Dağıtım Tarihi': rec.distDate,
     'HP Grubu (ML)': rec.distHpGroup,
     'Pozisyon': rec.distPosition || rec.position,
     'Dil': rec.distDil,
     'Dağıtım Türü': rec.distDagitimTuru,
-    'CheckList Girişi Var mı?': rec.hasCheckList ? 'Evet' : 'Hayır',
     'CheckListCreated (Ham)': rec.checkListCreated
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawData), 'RAW_Detay');
@@ -1330,7 +1364,6 @@ function initStep3() {
     });
   });
 
-  // Butonlar
   calculateBtnS3.addEventListener('click', generateReportS3);
   exportBtnS3.addEventListener('click', exportReportS3);
   tabProje.addEventListener('click', () => setReportViewS3('proje'));
@@ -1338,13 +1371,11 @@ function initStep3() {
   tabKisi.addEventListener('click', () => setReportViewS3('kisi'));
   if (tabGroup) tabGroup.addEventListener('click', () => setReportViewS3('group'));
 
-  // Başlangıçta tüm sekmeleri göster
   [tabProje, tabProjeKisi, tabKisi, tabGroup].forEach(b => b.style.display = 'inline-flex');
   reportAreaS3.style.display = 'none';
   exportBtnS3.disabled = true;
 }
 
-// Step 3'ü başlat
 initStep3();
 
 // ==================== STEP 4 (Gelişmiş Tablo - Hafta Yok, Çoklama Engelli) ====================
