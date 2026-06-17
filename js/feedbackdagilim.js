@@ -993,14 +993,14 @@ document.getElementById('viewHistoryBtnStep2').addEventListener('click', viewHis
 document.getElementById('clearHistoryBtnStep2').addEventListener('click', clearAllHistory);
 loadAllHistories();
 
-// ==================== STEP 3 (YENİ - Gelişmiş Raporlama) ====================
-let reportMainData = [];          // Görüşme listesi
-let reportHistory3 = { DM: [], ML: [], DONUSUM: [] }; // Dağıtım geçmişi
-let checkedMonitoringIdsStep3 = new Set(); // ✅ Kontrol Edilenler (Monitoring ID set'i)
+// ==================== STEP 3 (YENİ - 3 Veri Kaynaklı Raporlama) ====================
+let reportMainData = [];
+let reportHistory3 = { DM: [], ML: [], DONUSUM: [] };
+let checkedMonitoringIdsStep3 = new Set();
 let currentReportView = 'proje';
-let filteredRows = []; // Filtrelenmiş ve sıralanmış satırlar (gösterim için)
+let cachedReportRows = []; // Filtreleme için saklanan ham satırlar
+let cachedReportHeaders = [];
 
-// DOM elemanları
 const mainFileInputS3 = document.getElementById('mainFileInputStep3');
 const historyFileInputS3 = document.getElementById('historyFileInputStep3');
 const checkedFileInputS3 = document.getElementById('checkedFileInputStep3');
@@ -1012,13 +1012,11 @@ const exportBtnS3 = document.getElementById('exportReportBtnStep3');
 const reportBodyS3 = document.getElementById('reportBodyStep3');
 const reportHeaderS3 = document.getElementById('reportHeaderStep3');
 const reportAreaS3 = document.getElementById('reportAreaStep3');
+const filterProje = document.getElementById('filterProjeStep3');
+const filterDeğerlendirici = document.getElementById('filterDeğerlendiriciStep3');
+const filterGrup = document.getElementById('filterGrupStep3');
+const filterRow = document.getElementById('reportFilterRowStep3');
 
-// Filtre inputları
-const filterProject = document.getElementById('reportFilterProject');
-const filterReviewer = document.getElementById('reportFilterReviewer');
-const filterGroup = document.getElementById('reportFilterGroup');
-
-// Sekmeler
 const tabProje = document.getElementById('reportTabProje');
 const tabProjeKisi = document.getElementById('reportTabProjeKisi');
 const tabKisi = document.getElementById('reportTabKisi');
@@ -1069,7 +1067,7 @@ function loadMainExcelS3(file) {
 
       mainStatusS3.innerHTML = `✅ ${reportMainData.length} kayıt yüklendi. (Anahtar: ${monCol})`;
       mainStatusS3.style.color = 'var(--accent)';
-      // Otomatik rapor oluşturma yok, butonla yapılacak
+      // Otomatik rapor oluşturma KALDIRILDI - sadece buton ile oluşacak
     } catch (err) {
       mainStatusS3.innerHTML = `❌ ${err.message}`;
       reportMainData = [];
@@ -1176,27 +1174,62 @@ function buildDistributedMapS3() {
   return map;
 }
 
-// ---------- Raporu Oluştur (3 dosya kontrolü) ----------
+// ---------- Filtre uygulama ----------
+function applyFiltersToReport() {
+  const projeFilter = filterProje ? filterProje.value.toLowerCase().trim() : '';
+  const degerFilter = filterDeğerlendirici ? filterDeğerlendirici.value.toLowerCase().trim() : '';
+  const grupFilter = filterGrup ? filterGrup.value.toLowerCase().trim() : '';
+
+  if (!cachedReportRows.length) {
+    reportBodyS3.innerHTML = `<tr><td colspan="${cachedReportHeaders.length}">Veri yok</td></tr>`;
+    return;
+  }
+
+  const filtered = cachedReportRows.filter(row => {
+    // row bir dizi, indekslere göre filtrele
+    let proje = '', deger = '', grup = '';
+    if (currentReportView === 'proje') {
+      proje = row[0] || '';
+    } else if (currentReportView === 'projekisi') {
+      proje = row[0] || '';
+      deger = row[1] || '';
+    } else if (currentReportView === 'kisi') {
+      deger = row[0] || '';
+    } else if (currentReportView === 'group') {
+      grup = row[0] || '';
+    }
+    if (projeFilter && !proje.toLowerCase().includes(projeFilter)) return false;
+    if (degerFilter && !deger.toLowerCase().includes(degerFilter)) return false;
+    if (grupFilter && !grup.toLowerCase().includes(grupFilter)) return false;
+    return true;
+  });
+
+  if (filtered.length) {
+    reportBodyS3.innerHTML = filtered.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+  } else {
+    reportBodyS3.innerHTML = `<tr><td colspan="${cachedReportHeaders.length}">Filtreye uygun veri yok</td></tr>`;
+  }
+}
+
+// ---------- Rapor Oluştur ----------
 function generateReportS3() {
-  // 1. Kontrol: Görüşme listesi yüklü mü?
+  console.log('📊 generateReportS3 çalıştı, reportMainData uzunluğu:', reportMainData.length);
+  
   if (!reportMainData.length) {
-    alert('Lütfen önce "Görüşme Listesi" dosyasını yükleyin.');
+    alert('Önce görüşme listesini yükleyin.');
     return;
   }
-  // 2. Kontrol: Dağıtım geçmişi yüklü mü?
   if (!Object.values(reportHistory3).some(arr => arr.length)) {
-    alert('Lütfen "Dağıtım Geçmişi (JSON)" dosyasını yükleyin.');
+    alert('Dağıtım geçmişi (JSON) yüklenmemiş veya boş.');
     return;
   }
-  // 3. Kontrol: Kontrol edilenler yüklü mü?
   if (!checkedMonitoringIdsStep3.size) {
-    alert('Lütfen "Kontrol Edilenler (Monitoring ID)" dosyasını yükleyin.');
+    alert('Kontrol Edilenler (Monitoring ID) listesi yüklenmemiş veya boş.');
     return;
   }
 
   const distMap = buildDistributedMapS3();
 
-  // Her kaydı zenginleştir
   const enriched = reportMainData.map(rec => {
     const dist = distMap.get(rec.monitorId);
     const isDistributed = !!dist;
@@ -1214,99 +1247,94 @@ function generateReportS3() {
     };
   });
 
-  // Rapor verisini hazırla
-  let rows = [];
+  let headers, rows;
   if (currentReportView === 'proje') {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.clientName) return;
-      if (!map.has(rec.clientName)) map.set(rec.clientName, { dist: 0, checked: 0 });
+      if (!map.has(rec.clientName)) map.set(rec.clientName, { total: 0, dist: 0, checked: 0 });
       const s = map.get(rec.clientName);
+      s.total++;
       if (rec.isDistributed) s.dist++;
       if (rec.isChecked) s.checked++;
     });
-    rows = Array.from(map.entries()).map(([p, s]) => ({
-      project: p,
-      reviewer: '',
-      group: '',
-      dist: s.dist,
-      checked: s.checked,
-      notChecked: s.dist - s.checked,
-      rate: s.dist > 0 ? ((s.checked / s.dist) * 100) : 0
-    }));
+    headers = ['Proje Adı', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
+    rows = Array.from(map.entries()).map(([p, s]) => {
+      const girisYapilmayan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%';
+      return [p, s.dist, s.checked, girisYapilmayan, oran];
+    });
     // Sıralama: Proje A-Z
-    rows.sort((a, b) => a.project.localeCompare(b.project, 'tr'));
+    rows.sort((a,b) => a[0].localeCompare(b[0]));
   } else if (currentReportView === 'projekisi') {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.clientName || !rec.feedbackCreatorName) return;
       const key = `${rec.clientName}|${rec.feedbackCreatorName}`;
-      if (!map.has(key)) map.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, dist: 0, checked: 0 });
+      if (!map.has(key)) map.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, checked: 0 });
       const s = map.get(key);
+      s.total++;
       if (rec.isDistributed) s.dist++;
       if (rec.isChecked) s.checked++;
     });
-    rows = Array.from(map.values()).map(v => ({
-      project: v.proje,
-      reviewer: v.kisi,
-      group: '',
-      dist: v.dist,
-      checked: v.checked,
-      notChecked: v.dist - v.checked,
-      rate: v.dist > 0 ? ((v.checked / v.dist) * 100) : 0
-    }));
+    headers = ['Proje', 'Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
+    rows = Array.from(map.values()).map(v => {
+      const girisYapilmayan = v.dist - v.checked;
+      const oran = v.dist > 0 ? ((v.checked / v.dist) * 100).toFixed(1) + '%' : '0%';
+      return [v.proje, v.kisi, v.dist, v.checked, girisYapilmayan, oran];
+    });
     // Sıralama: Proje A-Z, sonra Değerlendirici A-Z
-    rows.sort((a, b) => {
-      if (a.project !== b.project) return a.project.localeCompare(b.project, 'tr');
-      return a.reviewer.localeCompare(b.reviewer, 'tr');
+    rows.sort((a,b) => {
+      if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+      return a[1].localeCompare(b[1]);
     });
   } else if (currentReportView === 'kisi') {
     const map = new Map();
     enriched.forEach(rec => {
       if (!rec.feedbackCreatorName) return;
-      if (!map.has(rec.feedbackCreatorName)) map.set(rec.feedbackCreatorName, { dist: 0, checked: 0 });
+      if (!map.has(rec.feedbackCreatorName)) map.set(rec.feedbackCreatorName, { total: 0, dist: 0, checked: 0 });
       const s = map.get(rec.feedbackCreatorName);
+      s.total++;
       if (rec.isDistributed) s.dist++;
       if (rec.isChecked) s.checked++;
     });
-    rows = Array.from(map.entries()).map(([k, s]) => ({
-      project: '',
-      reviewer: k,
-      group: '',
-      dist: s.dist,
-      checked: s.checked,
-      notChecked: s.dist - s.checked,
-      rate: s.dist > 0 ? ((s.checked / s.dist) * 100) : 0
-    }));
-    // Sıralama: Değerlendirici A-Z
-    rows.sort((a, b) => a.reviewer.localeCompare(b.reviewer, 'tr'));
+    headers = ['Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
+    rows = Array.from(map.entries()).map(([k, s]) => {
+      const girisYapilmayan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%';
+      return [k, s.dist, s.checked, girisYapilmayan, oran];
+    });
+    rows.sort((a,b) => a[0].localeCompare(b[0]));
   } else if (currentReportView === 'group') {
     const map = new Map();
     enriched.forEach(rec => {
       const group = rec.distGroup || 'Dağıtılmadı';
-      if (!map.has(group)) map.set(group, { dist: 0, checked: 0 });
+      if (!map.has(group)) map.set(group, { total: 0, dist: 0, checked: 0 });
       const s = map.get(group);
+      s.total++;
       if (rec.isDistributed) s.dist++;
       if (rec.isChecked) s.checked++;
     });
-    rows = Array.from(map.entries()).map(([g, s]) => ({
-      project: '',
-      reviewer: '',
-      group: g,
-      dist: s.dist,
-      checked: s.checked,
-      notChecked: s.dist - s.checked,
-      rate: s.dist > 0 ? ((s.checked / s.dist) * 100) : 0
-    }));
-    // Sıralama: Grup A-Z
-    rows.sort((a, b) => a.group.localeCompare(b.group, 'tr'));
+    headers = ['Grup', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
+    rows = Array.from(map.entries()).map(([g, s]) => {
+      const girisYapilmayan = s.dist - s.checked;
+      const oran = s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%';
+      return [g, s.dist, s.checked, girisYapilmayan, oran];
+    });
+    rows.sort((a,b) => a[0].localeCompare(b[0]));
   }
 
-  // Filtreleme için global değişkene ata
-  filteredRows = rows;
-  applyFiltersAndRenderS3();
+  // Önbelleğe al (filtreleme için)
+  cachedReportHeaders = headers;
+  cachedReportRows = rows;
+
+  // Tabloyu göster
+  reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+  applyFiltersToReport();
+
   reportAreaS3.style.display = 'block';
   exportBtnS3.disabled = false;
+  if (filterRow) filterRow.style.display = 'flex';
 
   // Sekme aktiflik
   [tabProje, tabProjeKisi, tabKisi, tabGroup].forEach(b => b.classList.remove('btn-primary', 'btn-ghost'));
@@ -1315,69 +1343,90 @@ function generateReportS3() {
   if (activeTab) activeTab.classList.replace('btn-ghost', 'btn-primary');
 }
 
-// ---------- Filtreleme ve Render ----------
-function applyFiltersAndRenderS3() {
-  const pFilter = filterProject.value.toLowerCase().trim();
-  const rFilter = filterReviewer.value.toLowerCase().trim();
-  const gFilter = filterGroup.value.toLowerCase().trim();
-
-  let display = filteredRows.filter(row => {
-    const projectOk = !pFilter || row.project.toLowerCase().includes(pFilter);
-    const reviewerOk = !rFilter || row.reviewer.toLowerCase().includes(rFilter);
-    const groupOk = !gFilter || row.group.toLowerCase().includes(gFilter);
-    return projectOk && reviewerOk && groupOk;
-  });
-
-  // Başlıkları belirle (Toplam ve Dağıtılmayan kaldırıldı)
-  let headers = [];
-  if (currentReportView === 'proje') {
-    headers = ['Proje', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
-  } else if (currentReportView === 'projekisi') {
-    headers = ['Proje', 'Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
-  } else if (currentReportView === 'kisi') {
-    headers = ['Değerlendirici', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
-  } else if (currentReportView === 'group') {
-    headers = ['Grup', 'Dağıtılan', 'Giriş Yapılan', 'Giriş Yapılmayan', 'Giriş Oranı'];
-  }
-
-  renderReportTableS3(headers, display);
-}
-
-function renderReportTableS3(headers, rows) {
-  reportHeaderS3.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-  reportBodyS3.innerHTML = rows.length
-    ? rows.map(row => {
-        const cells = [];
-        if (currentReportView === 'proje') {
-          cells.push(row.project, row.dist, row.checked, row.notChecked, row.rate.toFixed(1) + '%');
-        } else if (currentReportView === 'projekisi') {
-          cells.push(row.project, row.reviewer, row.dist, row.checked, row.notChecked, row.rate.toFixed(1) + '%');
-        } else if (currentReportView === 'kisi') {
-          cells.push(row.reviewer, row.dist, row.checked, row.notChecked, row.rate.toFixed(1) + '%');
-        } else if (currentReportView === 'group') {
-          cells.push(row.group, row.dist, row.checked, row.notChecked, row.rate.toFixed(1) + '%');
-        }
-        return `<tr>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
-      }).join('')
-    : `<tr><td colspan="${headers.length}">Filtrelerle eşleşen veri yok</td></tr>`;
-}
-
 // ---------- Export (Excel) ----------
 function exportReportS3() {
-  // ... (önceki export fonksiyonu aynen kalabilir, ancak Toplam/Dağıtılmayan sütunları kaldırılmalı)
-  // Ben kısalık adına burada tekrar yazmıyorum, ama aynı mantıkla güncellenmeli.
-  // Aşağıda özet olarak değişmesi gereken yerleri belirtiyorum.
-  // Detaylı kod tam sürümde mevcut.
+  if (!cachedReportRows.length) {
+    alert('Rapor verisi yok. Önce "Raporu Oluştur" butonuna tıklayın.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const distMap = buildDistributedMapS3();
+
+  const enriched = reportMainData.map(rec => {
+    const dist = distMap.get(rec.monitorId);
+    return {
+      ...rec,
+      distGroup: dist ? dist.group : 'Dağıtılmadı',
+      distDate: dist ? dist.date : '',
+      distHpGroup: dist ? dist.hpGroup : '',
+      distPosition: dist ? dist.position : rec.position,
+      distDil: dist ? dist.dil : '',
+      distDagitimTuru: dist ? dist.dagitimTuru : '',
+      isDistributed: !!dist,
+      isChecked: checkedMonitoringIdsStep3.has(rec.monitorId)
+    };
+  });
+
+  // 1. Proje Bazlı
+  const projMap = new Map();
+  enriched.forEach(rec => { if (!rec.clientName) return; if (!projMap.has(rec.clientName)) projMap.set(rec.clientName, { total: 0, dist: 0, checked: 0 }); const s = projMap.get(rec.clientName); s.total++; if (rec.isDistributed) s.dist++; if (rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(projMap.entries()).map(([p, s]) => ({ 'Proje': p, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.checked, 'Giriş Yapılmayan': s.dist - s.checked, 'Giriş Oranı': s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%' }))), 'Proje_Bazlı');
+
+  // 2. Proje+Kişi
+  const pkMap = new Map();
+  enriched.forEach(rec => { if (!rec.clientName || !rec.feedbackCreatorName) return; const key = `${rec.clientName}|${rec.feedbackCreatorName}`; if (!pkMap.has(key)) pkMap.set(key, { proje: rec.clientName, kisi: rec.feedbackCreatorName, total: 0, dist: 0, checked: 0 }); const s = pkMap.get(key); s.total++; if (rec.isDistributed) s.dist++; if (rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(pkMap.values()).map(v => ({ 'Proje': v.proje, 'Değerlendirici': v.kisi, 'Dağıtılan': v.dist, 'Giriş Yapılan': v.checked, 'Giriş Yapılmayan': v.dist - v.checked, 'Giriş Oranı': v.dist > 0 ? ((v.checked / v.dist) * 100).toFixed(1) + '%' : '0%' }))), 'Proje_Kisi');
+
+  // 3. Kişi Bazlı
+  const kisiMap = new Map();
+  enriched.forEach(rec => { if (!rec.feedbackCreatorName) return; if (!kisiMap.has(rec.feedbackCreatorName)) kisiMap.set(rec.feedbackCreatorName, { total: 0, dist: 0, checked: 0 }); const s = kisiMap.get(rec.feedbackCreatorName); s.total++; if (rec.isDistributed) s.dist++; if (rec.isChecked) s.checked++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(kisiMap.entries()).map(([k, s]) => ({ 'Değerlendirici': k, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.checked, 'Giriş Yapılmayan': s.dist - s.checked, 'Giriş Oranı': s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%' }))), 'Kisi_Bazlı');
+
+  // 4. Grup Bazlı
+  const groupMap = new Map();
+  enriched.forEach(rec => {
+    const g = rec.distGroup || 'Dağıtılmadı';
+    if (!groupMap.has(g)) groupMap.set(g, { total: 0, dist: 0, checked: 0 });
+    const s = groupMap.get(g);
+    s.total++;
+    if (rec.isDistributed) s.dist++;
+    if (rec.isChecked) s.checked++;
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Array.from(groupMap.entries()).map(([g, s]) => ({ 'Grup': g, 'Dağıtılan': s.dist, 'Giriş Yapılan': s.checked, 'Giriş Yapılmayan': s.dist - s.checked, 'Giriş Oranı': s.dist > 0 ? ((s.checked / s.dist) * 100).toFixed(1) + '%' : '0%' }))), 'Grup_Bazlı');
+
+  // 5. RAW DATA
+  const rawData = enriched.map(rec => ({
+    'Grup': rec.distGroup,
+    'Proje': rec.clientName,
+    'Değerlendirici': rec.feedbackCreatorName,
+    'Monitoring ID': rec.monitorId,
+    'Dağıtım Durumu': rec.isDistributed ? 'Evet' : 'Hayır',
+    'Giriş Yapıldı mı?': rec.isChecked ? 'Evet' : 'Hayır',
+    'Dağıtım Tarihi': rec.distDate,
+    'HP Grubu (ML)': rec.distHpGroup,
+    'Pozisyon': rec.distPosition || rec.position,
+    'Dil': rec.distDil,
+    'Dağıtım Türü': rec.distDagitimTuru
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawData), 'RAW_Detay');
+
+  XLSX.writeFile(wb, `Feedback_Rapor_${formatDateForFilename()}.xlsx`);
 }
 
 // ---------- Görünüm Değiştirme ----------
 function setReportViewS3(view) {
   currentReportView = view;
-  if (reportMainData.length && Object.values(reportHistory3).some(arr => arr.length) && checkedMonitoringIdsStep3.size) {
+  if (cachedReportRows.length) {
+    // Rapor zaten oluşturulmuşsa tekrar oluştur
     generateReportS3();
-  } else {
-    alert('Raporu oluşturmak için tüm dosyaları yükleyin.');
   }
+}
+
+// ---------- Filtre event'leri ----------
+function setupFilters() {
+  if (filterProje) filterProje.addEventListener('input', applyFiltersToReport);
+  if (filterDeğerlendirici) filterDeğerlendirici.addEventListener('input', applyFiltersToReport);
+  if (filterGrup) filterGrup.addEventListener('input', applyFiltersToReport);
 }
 
 // ---------- Başlangıç ----------
@@ -1386,9 +1435,11 @@ function initStep3() {
   const dropHistory = document.getElementById('dropHistoryStep3');
   const dropChecked = document.getElementById('dropCheckedStep3');
 
-  if (!dropMain || !dropHistory || !dropChecked) return;
+  if (!dropMain || !dropHistory || !dropChecked) {
+    console.error('Step3 drop alanları bulunamadı!');
+    return;
+  }
 
-  // Ana liste
   dropMain.addEventListener('click', e => { if (e.target !== mainFileInputS3) mainFileInputS3.click(); });
   mainFileInputS3.addEventListener('change', e => { if (e.target.files[0]) loadMainExcelS3(e.target.files[0]); });
   dropMain.addEventListener('dragover', e => e.preventDefault());
@@ -1397,7 +1448,6 @@ function initStep3() {
     if (e.dataTransfer.files[0]) loadMainExcelS3(e.dataTransfer.files[0]);
   });
 
-  // Geçmiş JSON
   dropHistory.addEventListener('click', e => { if (e.target !== historyFileInputS3) historyFileInputS3.click(); });
   historyFileInputS3.addEventListener('change', e => { if (e.target.files[0]) loadHistoryJSONS3(e.target.files[0]); });
   dropHistory.addEventListener('dragover', e => e.preventDefault());
@@ -1406,7 +1456,6 @@ function initStep3() {
     if (e.dataTransfer.files[0]) loadHistoryJSONS3(e.dataTransfer.files[0]);
   });
 
-  // Kontrol Edilenler
   dropChecked.addEventListener('click', e => { if (e.target !== checkedFileInputS3) checkedFileInputS3.click(); });
   checkedFileInputS3.addEventListener('change', e => { if (e.target.files[0]) loadCheckedFileStep3(e.target.files[0]); });
   dropChecked.addEventListener('dragover', e => e.preventDefault());
@@ -1415,22 +1464,34 @@ function initStep3() {
     if (e.dataTransfer.files[0]) loadCheckedFileStep3(e.dataTransfer.files[0]);
   });
 
-  // Butonlar
-  calculateBtnS3.addEventListener('click', generateReportS3);
-  exportBtnS3.addEventListener('click', exportReportS3);
-  tabProje.addEventListener('click', () => setReportViewS3('proje'));
-  tabProjeKisi.addEventListener('click', () => setReportViewS3('projekisi'));
-  tabKisi.addEventListener('click', () => setReportViewS3('kisi'));
+  // Butonlara event
+  if (calculateBtnS3) {
+    calculateBtnS3.addEventListener('click', generateReportS3);
+    console.log('📊 Raporu Oluştur butonuna event bağlandı.');
+  } else {
+    console.error('calculateBtnS3 bulunamadı!');
+  }
+
+  if (exportBtnS3) {
+    exportBtnS3.addEventListener('click', exportReportS3);
+  }
+
+  // Sekmeler
+  if (tabProje) tabProje.addEventListener('click', () => setReportViewS3('proje'));
+  if (tabProjeKisi) tabProjeKisi.addEventListener('click', () => setReportViewS3('projekisi'));
+  if (tabKisi) tabKisi.addEventListener('click', () => setReportViewS3('kisi'));
   if (tabGroup) tabGroup.addEventListener('click', () => setReportViewS3('group'));
 
-  // Filtre inputlarına olay ekle
-  if (filterProject) filterProject.addEventListener('input', applyFiltersAndRenderS3);
-  if (filterReviewer) filterReviewer.addEventListener('input', applyFiltersAndRenderS3);
-  if (filterGroup) filterGroup.addEventListener('input', applyFiltersAndRenderS3);
+  [tabProje, tabProjeKisi, tabKisi, tabGroup].forEach(b => {
+    if (b) b.style.display = 'inline-flex';
+  });
 
-  [tabProje, tabProjeKisi, tabKisi, tabGroup].forEach(b => b.style.display = 'inline-flex');
+  // Filtreleri kur
+  setupFilters();
+
   reportAreaS3.style.display = 'none';
   exportBtnS3.disabled = true;
+  if (filterRow) filterRow.style.display = 'none';
 }
 
 initStep3();
