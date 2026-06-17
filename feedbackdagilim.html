@@ -105,7 +105,7 @@ td { color:var(--text); }
         <div class="upload-card"><h3>📞 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep2"><input type="file" id="mainFileInputStep2" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">FeedbackCreatorName, client_name, emp_monitor_ident, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep2">Henüz yüklenmedi</div></div>
         <div class="upload-card"><h3>🗑️ 2. Silinenler</h3><div class="file-drop" id="dropDeletedStep2"><input type="file" id="deletedFileInputStep2" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Ident sütunu zorunlu</div></div><div class="upload-status" id="deletedStatusStep2">Henüz yüklenmedi</div></div>
         <div class="upload-card"><h3>📑 3. Referans Listesi</h3><div class="file-drop" id="dropRefStep2"><input type="file" id="refFileInputStep2" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Proje, KaliteDesteği, Dil, Dağıtım Türü</div></div><div class="upload-status" id="refStatusStep2">Henüz yüklenmedi</div></div>
-        <!-- 4. Kart: Kontrol Edilenler (JavaScript'teki addFourthFileUploader ile eklenen kart) -->
+        <!-- 4. Kart: Kontrol Edilenler -->
         <div class="upload-card"><h3>✅ 4. Kontrol Edilenler (Monitoring ID)</h3><div class="file-drop" id="dropCheckedStep2"><input type="file" id="checkedFileInputStep2" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (daha önce dağıtılıp kontrol edilenler)</div></div><div class="upload-status" id="checkedStatusStep2">Henüz yüklenmedi</div></div>
       </div>
       <div class="week-selector">
@@ -121,22 +121,20 @@ td { color:var(--text); }
       <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
         <button class="btn btn-primary" id="calculateBtnStep2">📐 Dağıtımı Hesapla</button>
         <button class="btn btn-primary" id="confirmBtnStep2" disabled>✅ Dağıtımı Onayla & 3 Excel İndir</button>
-        <!-- Geçmişi Onar butonu -->
         <button class="btn btn-ghost" id="repairHistoryBtnStep2" title="Eski JSON'a position_code_type_full_name ekler ve güncellenmiş JSON'u indirir">🔧 Geçmişi Onar</button>
       </div>
       <div id="previewAreaStep2" style="display:none; margin-top:1rem;"><h3>📋 Önizleme</h3><div class="table-wrapper"><table class="preview-table"><thead><tr><th>Grup</th><th>Değerlendirici</th><th>Proje</th><th>Ident</th><th>Link</th></tr></thead><tbody id="previewBodyStep2"></tbody></table></div></div>
       <div class="loader-bar" id="loaderStep2"><div class="loader-bar-inner"></div></div>
     </div>
 
-    <!-- STEP 3 (GÜNCELLENDİ - 3. dosya eklendi, sütunlar güncellendi) -->
+    <!-- STEP 3 (Güncellendi) -->
     <div id="step3" class="step-content">
-      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Giriş Yapılmayan & Oran</em></div>
-      <div class="sdesc">Görüşme listesi, dağıtım geçmişi ve kontrol edilenler (giriş yapılan) dosyalarını yükleyin. Dağıtılan, Giriş Yapılan, Giriş Yapılmayan ve Giriş Oranı (%) hesaplanır.</div>
+      <div class="pt">Raporlama <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Dağıtılan / Giriş Yapılan / Kalan</em></div>
+      <div class="sdesc">Görüşme listesi (emp_monitor_ident veya Monitoring ID) ile dağıtım geçmişi ve kontrol edilenler eşleştirilir. Dağıtılan, Giriş Yapılan (Kontrol Edilenler dosyasından) ve Giriş Yapılmayan adetleri hesaplanır.</div>
       <div class="upload-grid">
-        <div class="upload-card"><h3>📄 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">emp_monitor_ident (veya Monitoring ID), FeedbackCreatorName, client_name, CheckListCreated, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
+        <div class="upload-card"><h3>📄 1. Görüşme Listesi</h3><div class="file-drop" id="dropMainStep3"><input type="file" id="mainFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">emp_monitor_ident (veya Monitoring ID), FeedbackCreatorName, client_name, position_code_type_full_name</div></div><div class="upload-status" id="mainStatusStep3">Bekleniyor...</div></div>
         <div class="upload-card"><h3>🗂️ 2. Dağıtım Geçmişi (JSON)</h3><div class="file-drop" id="dropHistoryStep3"><input type="file" id="historyFileInputStep3" accept=".json"><div>📂 Step2'den dışa aktarılan JSON'u yükleyin</div></div><div class="upload-status" id="historyStatusStep3">Henüz yüklenmedi</div></div>
-        <!-- YENİ KART: Kontrol Edilenler (Giriş Yapılan) -->
-        <div class="upload-card"><h3>✅ 3. Kontrol Edilenler (Giriş Yapılan)</h3><div class="file-drop" id="dropCheckedStep3"><input type="file" id="checkedFileInputStep3" accept=".xlsx,.xls,.csv"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (giriş yapılmış kayıtların ID'leri)</div></div><div class="upload-status" id="checkedStatusStep3">Henüz yüklenmedi</div></div>
+        <div class="upload-card"><h3>✅ 3. Kontrol Edilenler (Monitoring ID)</h3><div class="file-drop" id="dropCheckedStep3"><input type="file" id="checkedFileInputStep3" accept=".csv,.xlsx,.xls"><div>📂 Sürükle/tıkla</div><div style="font-size:0.7rem;">Monitoring ID sütunu zorunlu (daha önce giriş yapılanlar)</div></div><div class="upload-status" id="checkedStatusStep3">Henüz yüklenmedi</div></div>
       </div>
       <div class="report-tabs">
         <button class="btn btn-primary" id="reportTabProje">📊 Proje Bazlı</button>
@@ -157,7 +155,6 @@ td { color:var(--text); }
       <div class="pt">Geçmiş Dağıtım <em style="background:linear-gradient(135deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;">Filtrele & Sırala</em></div>
       <div class="sdesc">Birden fazla JSON dosyası yükleyin (üst üste eklenir, aynı dosya tekrar yüklenemez). Tablo üzerinde filtreleme ve sıralama yapabilir, Excel’e aktarabilirsiniz.</div>
 
-      <!-- Dosya yükleme alanı -->
       <div class="upload-card" style="margin-bottom:1.5rem;">
         <h3>📁 Geçmiş JSON Dosyaları (çoklu seçim)</h3>
         <div class="file-drop" id="dropHistoryStep4">
@@ -169,7 +166,6 @@ td { color:var(--text); }
         <div class="loader-bar" id="loaderStep4"><div class="loader-bar-inner"></div></div>
       </div>
 
-      <!-- Tablo ve butonlar -->
       <div id="distributionAreaStep4" style="margin-top: 1rem; display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
           <div>
