@@ -368,7 +368,7 @@ body.tp {
       </button>
     </div>
     <div style="font-size:0.7rem; color: var(--accent4); margin-top: -8px; margin-bottom: 12px; background: rgba(245,158,11,0.1); padding: 6px 12px; border-radius: 20px;">
-      💡 <strong>Not:</strong> Period Adı GG.AA.YYYY formatında. Unpivot'ta boş Value satırları eklenmez. Summary'de Data ve Date dahil.
+      💡 <strong>Not:</strong> Tarihler ISO (YYYY-MM-DD) formatında dışa aktarılır. Sayısal alanlarda boş değerler null olarak işlenir.
     </div>
 
     <div class="tabs">
@@ -424,31 +424,31 @@ function showToast(msg, type = 'ok') {
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-// Period Adı → GG.AA.YYYY
+// ISO formatında (YYYY-MM-DD) döndürür
 function formatPeriodDate(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    const dd = String(val.getDate()).padStart(2,'0');
-    const mm = String(val.getMonth()+1).padStart(2,'0');
-    return `${dd}.${mm}.${val.getFullYear()}`;
+    if (isNaN(val.getTime())) return '';
+    return val.toISOString().split('T')[0];
   }
   const s = String(val).trim().split(' ')[0];
   let d, m, y;
   if (s.includes('-')) {
-    [y, m, d] = s.split('-').map(Number); d = d || 1;
+    [y, m, d] = s.split('-').map(Number);
   } else if (s.includes('.')) {
     const p = s.split('.');
-    if (p[0].length === 4) { [y, m, d] = p.map(Number); d = d || 1; }
+    if (p[0].length === 4) { [y, m, d] = p.map(Number); }
     else { [d, m, y] = p.map(Number); }
   } else if (s.includes('/')) {
     [d, m, y] = s.split('/').map(Number);
   } else return s;
+  if (!d) d = 1;
   const dt = new Date(y, m - 1, d);
   if (isNaN(dt.getTime())) return s;
-  return `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
+  return dt.toISOString().split('T')[0];
 }
 
-// Yeni Kayıt Tarihi → Date object
+// Tarih string'ini Date nesnesine çevirir (sıralama ve ISO çıktı için)
 function parseDate(str) {
   if (!str) return null;
   if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
@@ -464,8 +464,6 @@ function parseDate(str) {
 }
 
 // ==================== CORE: PHANTOM-SAFE EXCEL READ ====================
-// Strateji: header:1 ile array-of-arrays → headersız sütunları at → tamamen boş satırları at
-// Bu yöntem SheetJS'in !ref'i ne kadar geniş olursa olsun gerçek veriyi yakalar.
 function readExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -478,38 +476,24 @@ function readExcelFile(file) {
         const ws = wb.Sheets[wb.SheetNames[0]];
         if (!ws) { resolve([]); return; }
 
-        // ============================================================
-        // PHANTOM-SAFE READ: sheet_to_json KULLANILMIYOR.
-        // sheet_to_json !ref range'ini satır×sütun iterate eder →
-        // !ref 65k×16k olunca 1 milyar "hücre" dolaşır, phantom satır/sütun
-        // üretir ve dosya şişer.
-        //
-        // Çözüm: Object.keys(ws) ile SADECE gerçekten var olan hücreleri
-        // iterate et. Phantom hücreler ws objesinde key olarak BULUNMAZ,
-        // dolayısıyla bu yaklaşım !ref'ten tamamen bağımsızdır.
-        // ============================================================
-        const sparse = {}; // sparse[rowIdx][colIdx] = rawValue
-
+        const sparse = {};
         Object.keys(ws).forEach(key => {
-          if (key.startsWith('!')) return; // !ref, !margins vb. meta-key'leri atla
+          if (key.startsWith('!')) return;
           try {
             const { r, c } = XLSX.utils.decode_cell(key);
             const cell = ws[key];
-            // Gerçekten dolu hücreler: v tanımlı, null değil, boş string değil
             if (!cell || cell.v === undefined || cell.v === null || cell.v === '') return;
             if (!sparse[r]) sparse[r] = {};
-            sparse[r][c] = cell.v; // Date, number veya string
+            sparse[r][c] = cell.v;
           } catch (_) {}
         });
 
         const rowIdxs = Object.keys(sparse).map(Number).sort((a, b) => a - b);
         if (!rowIdxs.length) { resolve([]); return; }
 
-        // İlk satır = header satırı
         const hdrRowIdx = rowIdxs[0];
         const hdrRow    = sparse[hdrRowIdx];
 
-        // Sadece header'ı dolu olan sütunları tut → phantom sütunları eler
         const validCols = Object.keys(hdrRow)
           .map(ci => ({ ci: Number(ci), name: String(hdrRow[ci]).trim() }))
           .filter(({ name }) => name !== '')
@@ -517,13 +501,11 @@ function readExcelFile(file) {
 
         if (!validCols.length) { resolve([]); return; }
 
-        // Veri satırlarını oluştur (header sonrası)
         const rows = [];
         for (let i = 1; i < rowIdxs.length; i++) {
           const ri      = rowIdxs[i];
           const rowData = sparse[ri] || {};
 
-          // Geçerli sütunlarda hiç veri yoksa satırı atla (phantom satır)
           const hasData = validCols.some(({ ci }) => {
             const v = rowData[ci];
             return v !== undefined && v !== null && String(v).trim() !== '';
@@ -556,30 +538,28 @@ async function unpivotFile(file, fileBaseName) {
   const unpivoted = [];
 
   for (const row of rows) {
-    // Sabit sütun değerlerini al
     const fixed = {};
     for (const col of FIXED_COLUMNS) {
       let v = row[col] ?? '';
       if (col === 'Period Adı') {
         v = formatPeriodDate(v);
       } else if (v instanceof Date) {
-        // Tarih sütunlarını okunabilir string'e çevir (Yeni Kayıt Tarihi vb.)
-        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+        // Tarih sütunlarını ISO formatına çevir
+        v = v.toISOString().split('T')[0];
       } else {
         v = String(v).trim();
       }
       fixed[col] = v;
     }
 
-    // Her boş olmayan attribute için bir satır üret
     for (const attr of attrCols) {
       let v = row[attr] ?? '';
       if (v instanceof Date) {
-        v = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+        v = v.toISOString().split('T')[0];
       } else {
         v = String(v).trim();
       }
-      if (v === '') continue; // boş value → satır ekleme
+      if (v === '') continue;
       unpivoted.push({ ...fixed, Attribute: attr, Value: v, Data: fileBaseName });
     }
   }
@@ -607,14 +587,16 @@ function transformTable(rows) {
   return rows
     .map(row => {
       const r = { ...row };
-      // Sayısal alanlar
+      // Sayısal alanlar: geçersiz veya boş ise null
       ['Form Puan', 'Csat Puanı'].forEach(k => {
         if (r[k] !== undefined && r[k] !== '') {
           const n = parseFloat(String(r[k]).replace(',', '.'));
-          r[k] = isNaN(n) ? '' : n;
+          r[k] = isNaN(n) ? null : n;
+        } else {
+          r[k] = null;
         }
       });
-      // Sıralama için internal key
+      // Sıralama için tarih nesnesini sakla
       r._sd = parseDate(r['Yeni Kayıt Tarihi']);
       return r;
     })
@@ -626,15 +608,12 @@ function transformTable(rows) {
     })
     .map(({ _sd, ...rest }) => ({
       ...rest,
-      // Date = Yeni Kayıt Tarihi'nin GG.AA.YYYY formatında temiz kopyası
-      Date: _sd
-        ? `${String(_sd.getDate()).padStart(2,'0')}.${String(_sd.getMonth()+1).padStart(2,'0')}.${_sd.getFullYear()}`
-        : ''
+      // Date sütununu ISO formatında ekle
+      Date: _sd ? _sd.toISOString().split('T')[0] : ''
     }));
 }
 
 // ==================== SUMMARY ====================
-// Kalite No başına ilk satırı tut; Attribute ve Value'yu çıkar, Data'yı BIRAK
 function buildSummary(detayRows) {
   if (!detayRows.length) return [];
   const seen = new Map();
@@ -642,7 +621,7 @@ function buildSummary(detayRows) {
     const kaliteNo = String(row['Kalite No'] ?? '').trim();
     if (!kaliteNo) continue;
     if (!seen.has(kaliteNo)) {
-      const { Attribute, Value, ...rest } = row; // sadece bu ikisini çıkar
+      const { Attribute, Value, ...rest } = row;
       seen.set(kaliteNo, rest);
     }
   }
@@ -650,18 +629,14 @@ function buildSummary(detayRows) {
 }
 
 // ==================== EXPORT PIPELINE ====================
-// 1) serialize  → Date objeleri & null/undefined → string
-// 2) dropEmpty  → tüm satırlarda boş olan sütunları at (phantom sütun güvencesi)
-// 3) download   → xlsx / csv
-
 function serializeRows(data) {
   return data.map(row => {
     const out = {};
     for (const [k, v] of Object.entries(row)) {
       if (v instanceof Date) {
-        out[k] = `${String(v.getDate()).padStart(2,'0')}.${String(v.getMonth()+1).padStart(2,'0')}.${v.getFullYear()}`;
+        out[k] = v.toISOString().split('T')[0];
       } else if (v === null || v === undefined) {
-        out[k] = '';
+        out[k] = null;    // SQL için null olarak kalsın
       } else {
         out[k] = v;
       }
@@ -747,7 +722,6 @@ async function processAll() {
   }
   showToast('İşlem başladı, dosyalar okunuyor...', 'ok');
   try {
-    // İki grubu paralel oku
     const [detayRaw, listeRaw] = await Promise.all([
       detayFilesList.length ? processGroup(detayFilesList) : Promise.resolve([]),
       listeFilesList.length ? processGroup(listeFilesList) : Promise.resolve([])
@@ -794,7 +768,7 @@ function renderTable(containerId, rows, maxRows = 400) {
     columns.forEach(col => {
       const td = document.createElement('td');
       let v = row[col];
-      if (v instanceof Date)           v = v.toLocaleDateString('tr-TR');
+      if (v instanceof Date)           v = v.toISOString().split('T')[0];
       else if (v === null || v === undefined) v = '';
       else v = String(v);
       td.textContent = v.length > 100 ? v.slice(0, 100) + '…' : v;
@@ -893,7 +867,6 @@ function init() {
   getEl('clearBtn').addEventListener('click', clearAll);
   getEl('homeBtn').addEventListener('click', () => location.href = 'index.html');
 
-  // Tema butonları
   document.querySelectorAll('.theme-btn').forEach(btn =>
     btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme')))
   );
